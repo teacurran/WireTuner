@@ -1,0 +1,17 @@
+# WireTuner .gitignore
+
+# CodeMachine memory (should not be committed)
+.codemachine/memory
+
+# Node modules (if used in future)
+node_modules
+
+# macOS system files
+.DS_Store
+
+# Flutter/Dart (when added in future)
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+.packages
+build/
