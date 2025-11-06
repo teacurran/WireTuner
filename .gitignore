@@ -49,10 +49,11 @@ app.*.map.json
 *.g.dart
 *.freezed.dart
 
-# CodeMachine (exclude logs, memory, prompts, agents, template, scripts)
+# CodeMachine internal files
 .codemachine/memory/
 .codemachine/logs/
 .codemachine/prompts/
 .codemachine/agents/
 .codemachine/template.json
 .codemachine/scripts/
+# Note: .codemachine/artifacts/ is intentionally NOT ignored (task tracking)
