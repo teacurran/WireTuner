@@ -55,7 +55,7 @@
     "acceptance_criteria": "PlantUML file validates and renders correctly, All 5 workflows covered: pen tool creation, document load, undo, drag, SVG export, Sequence of method calls/events matches architecture specifications, Actors, components, and messages clearly labeled",
     "dependencies": ["I1.T1"],
     "parallelizable": true,
-    "done": false
+    "done": true
   },
   {
     "task_id": "I1.T4",
