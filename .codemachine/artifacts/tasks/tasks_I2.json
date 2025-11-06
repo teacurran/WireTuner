@@ -109,7 +109,7 @@
     "acceptance_criteria": "serialize() produces Uint8List from Document\ndeserialize() reconstructs Document accurately\nCompression reduces size by ~10:1 (verify with test data)\nUnit tests confirm round-trip preserves all document data",
     "dependencies": [],
     "parallelizable": true,
-    "done": false
+    "done": true
   },
   {
     "task_id": "I2.T6",
