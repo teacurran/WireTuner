@@ -1,0 +1,162 @@
+@startuml
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Component.puml
+
+title Component Diagram - WireTuner Architecture Overview
+
+' UI Layer
+Container_Boundary(ui_layer, "UI Layer") {
+  Component(main_window, "Main Window", "Flutter Widget", "Root application window and layout")
+  Component(toolbar, "Toolbar", "Flutter Widget", "Tool selection and quick actions")
+  Component(tool_panel, "Tool Panel", "Flutter Widget", "Tool-specific options and settings")
+  Component(canvas_widget, "Canvas Widget", "Flutter Widget", "Viewport for vector content")
+  Component(dialogs, "Dialogs", "Flutter Widget", "Modals for file operations and settings")
+}
+
+' Canvas Renderer
+Container_Boundary(canvas_renderer, "Canvas Renderer") {
+  Component(custom_painter, "Vector Painter", "CustomPainter", "60 FPS vector rendering with viewport transforms")
+  Component(tessellator, "Curve Tessellator", "Dart Service", "Converts bezier curves to renderable polygons")
+}
+
+' Tool System
+Container_Boundary(tool_system, "Tool System") {
+  Component(tool_manager, "Tool Manager", "Dart Service", "Active tool tracking and switching")
+  Component(tool_interface, "ITool Interface", "Abstract Interface", "onPointerDown/Move/Up, onKeyPress, render")
+
+  Component(pen_tool, "Pen Tool", "State Machine", "Creates paths with straight/bezier segments")
+  Component(selection_tool, "Selection Tool", "Dart Service", "Selects and moves entire objects")
+  Component(direct_selection_tool, "Direct Selection Tool", "Dart Service", "Selects and moves anchors and BCPs")
+  Component(rect_tool, "Rectangle Tool", "Dart Service", "Creates rectangle shapes by drag")
+  Component(ellipse_tool, "Ellipse Tool", "Dart Service", "Creates ellipse shapes by drag")
+  Component(polygon_tool, "Polygon Tool", "Dart Service", "Creates n-sided polygons")
+  Component(star_tool, "Star Tool", "Dart Service", "Creates n-pointed stars")
+
+  Component(cursor_manager, "Cursor Manager", "Dart Service", "Updates cursor based on tool and context")
+  Component(overlay_renderer, "Overlay Renderer", "CustomPainter", "Draws tool-specific UI (handles, guides)")
+}
+
+' Event Sourcing Core
+Container_Boundary(event_core, "Event Sourcing Core") {
+  Component(event_recorder, "Event Recorder", "Dart Service", "Samples input at 50ms, creates events")
+  Component(event_sampler, "Event Sampler", "Dart Service", "Throttles high-frequency input to 50ms")
+  Component(event_dispatcher, "Event Dispatcher", "Dart Service", "Routes events to appropriate handlers")
+  Component(event_handler, "Event Handler Registry", "Map<EventType, Handler>", "Applies events to document state")
+
+  Component(snapshot_manager, "Snapshot Manager", "Dart Service", "Triggers/stores snapshots every 1000 events")
+  Component(snapshot_serializer, "Snapshot Serializer", "Codec", "Document to binary serialization")
+
+  Component(event_replayer, "Event Replayer", "Dart Service", "Reconstructs state from snapshot + events")
+  Component(event_navigator, "Event Navigator", "Dart Service", "Undo/redo by event index navigation")
+
+  Component(event_model, "Event Model", "Sealed Class Hierarchy", "CreatePath, AddAnchor, MoveObject, etc.")
+}
+
+' Vector Engine
+Container_Boundary(vector_engine, "Vector Engine") {
+  Component(document, "Document", "Immutable Class", "Root container: layers, artboards, objects")
+  Component(path, "Path", "Immutable Class", "Sequence of segments, open or closed")
+  Component(shape, "Shape", "Immutable Class", "Rectangle, Ellipse, Polygon, Star")
+  Component(segment, "Segment", "Immutable Class", "Line, Bezier curve, or arc")
+  Component(anchor, "Anchor Point", "Immutable Struct", "Position + handles (BCP)")
+  Component(style, "Style", "Immutable Class", "Fill, stroke, opacity properties")
+  Component(transform, "Transform", "Immutable Class", "Translation, rotation, scale matrix")
+
+  Component(geometry_service, "Geometry Service", "Dart Service", "Bezier math, intersections, bounds")
+  Component(hit_test_service, "Hit Test Service", "Dart Service", "Point-in-path, distance to curve")
+  Component(path_operations, "Path Operations", "Dart Service", "Boolean ops, offset, simplify")
+}
+
+' Persistence Layer
+Container_Boundary(persistence_layer, "Persistence Layer") {
+  ContainerDb(event_store, "Event Store", "SQLite")
+  ContainerDb(snapshot_store, "Snapshot Store", "SQLite")
+}
+
+' Import/Export Services
+Container_Boundary(import_export, "Import/Export Services") {
+  Component(svg_exporter, "SVG Exporter", "Dart Service", "Converts Document to SVG 1.1 XML")
+  Component(pdf_exporter, "PDF Exporter", "Dart Service", "Generates PDF 1.7 documents")
+  Component(ai_importer, "AI Importer", "Dart Service", "Parses Adobe Illustrator files (PDF-based)")
+  Component(svg_importer, "SVG Importer", "Dart Service", "Parses SVG into Document events")
+}
+
+' ============================================
+' Relationships - Data Flow and Dependencies
+' ============================================
+
+' UI Layer to Tool System
+Rel(canvas_widget, tool_manager, "Routes pointer/keyboard events to", "User input")
+Rel(toolbar, tool_manager, "Switches active tool in", "Tool selection")
+Rel(tool_panel, tool_manager, "Configures options for", "Tool settings")
+
+' Tool System Internal
+Rel(tool_manager, tool_interface, "Manages instances of", "Active tool delegation")
+Rel(pen_tool, tool_interface, "Implements", "")
+Rel(selection_tool, tool_interface, "Implements", "")
+Rel(direct_selection_tool, tool_interface, "Implements", "")
+Rel(rect_tool, tool_interface, "Implements", "")
+Rel(ellipse_tool, tool_interface, "Implements", "")
+Rel(polygon_tool, tool_interface, "Implements", "")
+Rel(star_tool, tool_interface, "Implements", "")
+Rel(tool_manager, cursor_manager, "Updates cursor via", "Tool state changes")
+Rel(tool_interface, overlay_renderer, "Renders feedback via", "Tool-specific overlays")
+
+' Tool System to Event Sourcing
+Rel(tool_manager, event_recorder, "Generates events via", "User actions")
+Rel(tool_interface, document, "Queries current state from", "Hit testing, bounds")
+
+' Event Sourcing Core Internal
+Rel(event_recorder, event_sampler, "Uses", "50ms throttling")
+Rel(event_sampler, event_model, "Creates instances of", "Event objects")
+Rel(event_recorder, event_dispatcher, "Sends events to", "Event routing")
+Rel(event_dispatcher, event_handler, "Looks up handler in", "EventType mapping")
+Rel(event_handler, document, "Mutates (creates new)", "Immutable copy")
+
+Rel(event_recorder, snapshot_manager, "Notifies on event count", "Every 1000 events")
+Rel(snapshot_manager, snapshot_serializer, "Uses to encode", "Binary serialization")
+Rel(snapshot_serializer, document, "Serializes from", "Document state")
+
+Rel(event_replayer, event_handler, "Applies events via", "State reconstruction")
+Rel(event_navigator, event_replayer, "Uses for state at index", "Undo/redo navigation")
+
+' Event Sourcing to Persistence
+Rel(event_recorder, event_store, "Persists to", "Append-only SQL INSERT")
+Rel(snapshot_manager, snapshot_store, "Persists to", "BLOB SQL INSERT")
+Rel(event_replayer, event_store, "Reads events from", "SQL SELECT")
+Rel(event_replayer, snapshot_store, "Loads base snapshot from", "SQL SELECT")
+
+' Vector Engine Internal
+Rel(document, path, "Contains 0..n", "")
+Rel(document, shape, "Contains 0..n", "")
+Rel(path, segment, "Composed of 2..n", "Segment sequence")
+Rel(segment, anchor, "Defined by 2..4", "Control points")
+Rel(path, style, "Styled with", "")
+Rel(shape, style, "Styled with", "")
+Rel(path, transform, "Transformed by", "Matrix")
+Rel(shape, transform, "Transformed by", "Matrix")
+
+Rel(hit_test_service, geometry_service, "Uses", "Distance/intersection functions")
+Rel(path_operations, geometry_service, "Uses", "Curve manipulation")
+
+' Vector Engine to Canvas Renderer
+Rel(document, custom_painter, "Provides data to", "Rendering pipeline")
+Rel(geometry_service, tessellator, "Supports", "Curve tessellation")
+Rel(custom_painter, tessellator, "Uses", "Polygon generation")
+
+' Canvas Renderer to UI
+Rel(custom_painter, canvas_widget, "Renders into", "CustomPaint widget")
+Rel(overlay_renderer, canvas_widget, "Renders on top of", "Tool overlay layer")
+
+' Import/Export to Vector Engine
+Rel(svg_importer, event_recorder, "Generates events via", "Parsed SVG elements")
+Rel(ai_importer, event_recorder, "Generates events via", "Parsed AI objects")
+Rel(svg_exporter, document, "Reads state from", "Export operation")
+Rel(pdf_exporter, document, "Reads state from", "Export operation")
+
+' Import/Export to UI
+Rel(dialogs, svg_importer, "Triggers import via", "File open dialog")
+Rel(dialogs, ai_importer, "Triggers import via", "File open dialog")
+Rel(dialogs, svg_exporter, "Triggers export via", "File save dialog")
+Rel(dialogs, pdf_exporter, "Triggers export via", "File save dialog")
+
+@enduml
