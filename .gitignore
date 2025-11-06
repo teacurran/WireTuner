@@ -57,3 +57,6 @@ app.*.map.json
 .codemachine/template.json
 .codemachine/scripts/
 # Note: .codemachine/artifacts/ is intentionally NOT ignored (task tracking)
+
+# Test coverage reports
+coverage/
