@@ -1,0 +1,46 @@
+name: wiretuner
+description: A professional event-sourced vector drawing application for macOS and Windows built with Flutter.
+publish_to: 'none'
+version: 0.1.0+1
+
+environment:
+  sdk: '>=3.2.0 <4.0.0'
+  flutter: '>=3.16.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  # State Management
+  provider: ^6.0.0
+
+  # Database & Persistence
+  sqflite_common_ffi: ^2.3.0
+
+  # Mathematics & Geometry
+  vector_math: ^2.1.0
+
+  # Logging
+  logger: ^2.0.0
+
+  # UI Components
+  cupertino_icons: ^1.0.8
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+
+  # Code Generation
+  freezed: ^2.4.0
+  build_runner: ^2.4.0
+
+  # Linting
+  flutter_lints: ^3.0.0
+
+flutter:
+  uses-material-design: true
+
+  # Assets will be added as needed in future iterations
+  # assets:
+  #   - assets/icons/
+  #   - assets/fonts/

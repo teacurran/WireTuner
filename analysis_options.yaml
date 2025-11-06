@@ -1,0 +1,59 @@
+# WireTuner Analysis Options
+# Strict linting configuration for code quality enforcement
+
+include: package:flutter_lints/flutter.yaml
+
+analyzer:
+  exclude:
+    - "**/*.g.dart"
+    - "**/*.freezed.dart"
+    - "build/**"
+
+  errors:
+    # Treat missing required parameters as errors
+    missing_required_param: error
+    # Ignore invalid annotation target warnings from freezed
+    invalid_annotation_target: ignore
+
+  language:
+    strict-casts: true
+    strict-inference: true
+    strict-raw-types: true
+
+linter:
+  rules:
+    # Enforce strict type safety
+    - avoid_dynamic_calls
+    - avoid_type_to_string
+    - cancel_subscriptions
+    - close_sinks
+    - unnecessary_null_checks
+
+    # Code style and consistency
+    - prefer_const_constructors
+    - prefer_const_declarations
+    - prefer_const_literals_to_create_immutables
+    - prefer_final_fields
+    - prefer_final_locals
+    - prefer_single_quotes
+    - sort_constructors_first
+    - sort_unnamed_constructors_first
+
+    # Best practices
+    - avoid_print
+    - avoid_unnecessary_containers
+    - use_key_in_widget_constructors
+    - prefer_expression_function_bodies
+    - prefer_if_null_operators
+    - prefer_null_aware_operators
+    - require_trailing_commas
+    - sized_box_for_whitespace
+    - use_build_context_synchronously
+
+    # Documentation
+    - public_member_api_docs
+    - package_api_docs
+
+    # Error handling
+    - only_throw_errors
+    - use_rethrow_when_possible

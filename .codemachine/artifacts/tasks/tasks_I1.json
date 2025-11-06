@@ -21,7 +21,7 @@
     "acceptance_criteria": "`flutter pub get` succeeds without errors, `flutter analyze` passes with zero issues, `flutter run -d macos` launches application window, `flutter run -d windows` launches application window (if on Windows), All required dependencies listed in pubspec.yaml, Directory structure matches plan Section 3",
     "dependencies": [],
     "parallelizable": false,
-    "done": false
+    "done": true
   },
   {
     "task_id": "I1.T2",
