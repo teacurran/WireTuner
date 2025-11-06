@@ -1,5 +1,3 @@
-/// Tests for SnapshotSerializer.
-///
 /// **Setup Required**: Before running tests, generate code:
 /// ```
 /// flutter pub run build_runner build --delete-conflicting-outputs
@@ -26,23 +24,19 @@ class Document with _$Document {
     DateTime? modifiedAt,
   }) = _Document;
 
-  factory Document.fromJson(Map<String, dynamic> json) =>
-      _$DocumentFromJson(json);
+  factory Document.fromJson(Map<String, dynamic> json) => _$DocumentFromJson(json);
 }
 
 void main() {
-  late SnapshotSerializer<Document> serializer;
+  late SnapshotSerializer serializer;
 
   setUp(() {
-    serializer = SnapshotSerializer<Document>(
-      fromJson: Document.fromJson,
-      enableCompression: true,
-    );
+    serializer = SnapshotSerializer(enableCompression: true);
   });
 
   group('SnapshotSerializer - Basic Serialization', () {
     test('serialize produces Uint8List', () {
-      final document = Document(id: 'doc-1', title: 'Test');
+      final document = const Document(id: 'doc-1', title: 'Test');
       final bytes = serializer.serialize(document);
 
       expect(bytes, isA<Uint8List>());
@@ -53,13 +47,14 @@ void main() {
       final original = Document(
         id: 'doc-123',
         title: 'Test Document',
-        layers: ['layer-1', 'layer-2'],
+        layers: const ['layer-1', 'layer-2'],
         version: 1,
         createdAt: DateTime(2025, 1, 1),
       );
 
       final bytes = serializer.serialize(original);
-      final deserialized = serializer.deserialize(bytes);
+      final jsonMap = serializer.deserialize(bytes) as Map<String, dynamic>;
+      final deserialized = Document.fromJson(jsonMap);
 
       expect(deserialized, equals(original));
     });
@@ -68,14 +63,15 @@ void main() {
       final original = Document(
         id: 'doc-456',
         title: 'Complex Document',
-        layers: ['layer-1', 'layer-2', 'layer-3'],
+        layers: const ['layer-1', 'layer-2', 'layer-3'],
         version: 42,
         createdAt: DateTime(2025, 1, 1, 10, 30),
         modifiedAt: DateTime(2025, 1, 2, 14, 45),
       );
 
       final bytes = serializer.serialize(original);
-      final deserialized = serializer.deserialize(bytes);
+      final jsonMap = serializer.deserialize(bytes) as Map<String, dynamic>;
+      final deserialized = Document.fromJson(jsonMap);
 
       expect(deserialized.id, equals(original.id));
       expect(deserialized.title, equals(original.title));
@@ -95,14 +91,8 @@ void main() {
         version: 1,
       );
 
-      final uncompressedSerializer = SnapshotSerializer<Document>(
-        fromJson: Document.fromJson,
-        enableCompression: false,
-      );
-      final compressedSerializer = SnapshotSerializer<Document>(
-        fromJson: Document.fromJson,
-        enableCompression: true,
-      );
+      final uncompressedSerializer = SnapshotSerializer(enableCompression: false);
+      final compressedSerializer = SnapshotSerializer(enableCompression: true);
 
       final uncompressedBytes = uncompressedSerializer.serialize(document);
       final compressedBytes = compressedSerializer.serialize(document);
@@ -112,9 +102,8 @@ void main() {
       final compressionRatio = uncompressedBytes.length / compressedBytes.length;
       expect(compressionRatio, greaterThan(2.0));
 
-      // ignore: avoid_print
       print('Compression: ${uncompressedBytes.length} → ${compressedBytes.length} '
-          '(${compressionRatio.toStringAsFixed(2)}:1)');
+            '(${compressionRatio.toStringAsFixed(2)}:1)');
     });
 
     test('compression ratio ~10:1 for realistic documents', () {
@@ -126,14 +115,8 @@ void main() {
         version: 100,
       );
 
-      final uncompressedSerializer = SnapshotSerializer<Document>(
-        fromJson: Document.fromJson,
-        enableCompression: false,
-      );
-      final compressedSerializer = SnapshotSerializer<Document>(
-        fromJson: Document.fromJson,
-        enableCompression: true,
-      );
+      final uncompressedSerializer = SnapshotSerializer(enableCompression: false);
+      final compressedSerializer = SnapshotSerializer(enableCompression: true);
 
       final uncompressedBytes = uncompressedSerializer.serialize(document);
       final compressedBytes = compressedSerializer.serialize(document);
@@ -143,27 +126,21 @@ void main() {
       // Verify significant compression (at least 5:1, aiming for 10:1)
       expect(compressionRatio, greaterThan(5.0));
 
-      // ignore: avoid_print
-      print(
-          'Large document compression: ${uncompressedBytes.length} → ${compressedBytes.length} '
-          '(${compressionRatio.toStringAsFixed(2)}:1)');
+      print('Large document compression: ${uncompressedBytes.length} → ${compressedBytes.length} '
+            '(${compressionRatio.toStringAsFixed(2)}:1)');
     });
 
     test('deserialize handles both compressed and uncompressed', () {
-      final document = Document(id: 'doc-1', title: 'Test');
+      const document = Document(id: 'doc-1', title: 'Test');
 
-      final compressedBytes = SnapshotSerializer<Document>(
-        fromJson: Document.fromJson,
-        enableCompression: true,
-      ).serialize(document);
-      final uncompressedBytes = SnapshotSerializer<Document>(
-        fromJson: Document.fromJson,
-        enableCompression: false,
-      ).serialize(document);
+      final compressedBytes = SnapshotSerializer(enableCompression: true).serialize(document);
+      final uncompressedBytes = SnapshotSerializer(enableCompression: false).serialize(document);
 
       // Both should deserialize successfully
-      final fromCompressed = serializer.deserialize(compressedBytes);
-      final fromUncompressed = serializer.deserialize(uncompressedBytes);
+      final fromCompressedMap = serializer.deserialize(compressedBytes) as Map<String, dynamic>;
+      final fromUncompressedMap = serializer.deserialize(uncompressedBytes) as Map<String, dynamic>;
+      final fromCompressed = Document.fromJson(fromCompressedMap);
+      final fromUncompressed = Document.fromJson(fromUncompressedMap);
 
       expect(fromCompressed, equals(document));
       expect(fromUncompressed, equals(document));
@@ -172,16 +149,17 @@ void main() {
 
   group('SnapshotSerializer - Edge Cases', () {
     test('empty document serializes correctly', () {
-      final document = Document(id: '', title: '', layers: [], version: 0);
+      const document = Document(id: '', title: '', layers: [], version: 0);
 
       final bytes = serializer.serialize(document);
-      final deserialized = serializer.deserialize(bytes);
+      final jsonMap = serializer.deserialize(bytes) as Map<String, dynamic>;
+      final deserialized = Document.fromJson(jsonMap);
 
       expect(deserialized, equals(document));
     });
 
     test('null optional fields preserved', () {
-      final document = Document(
+      const document = Document(
         id: 'doc-1',
         title: 'Test',
         createdAt: null,
@@ -189,21 +167,23 @@ void main() {
       );
 
       final bytes = serializer.serialize(document);
-      final deserialized = serializer.deserialize(bytes);
+      final jsonMap = serializer.deserialize(bytes) as Map<String, dynamic>;
+      final deserialized = Document.fromJson(jsonMap);
 
       expect(deserialized.createdAt, isNull);
       expect(deserialized.modifiedAt, isNull);
     });
 
     test('special characters in strings preserved', () {
-      final document = Document(
+      const document = Document(
         id: 'doc-1',
         title: 'Test "Document" with \'quotes\' and\nnewlines\t\tand émoji 🎨',
         layers: ['layer-1', 'layer "2"', "layer '3'"],
       );
 
       final bytes = serializer.serialize(document);
-      final deserialized = serializer.deserialize(bytes);
+      final jsonMap = serializer.deserialize(bytes) as Map<String, dynamic>;
+      final deserialized = Document.fromJson(jsonMap);
 
       expect(deserialized.title, equals(document.title));
       expect(deserialized.layers, equals(document.layers));
@@ -232,7 +212,7 @@ void main() {
 
     test('deserialize throws on malformed JSON', () {
       // Valid UTF-8 but invalid JSON
-      final invalidJson = '{"id": "doc-1", broken json}';
+      const invalidJson = '{"id": "doc-1", broken json}';
       final bytes = Uint8List.fromList(invalidJson.codeUnits);
 
       expect(
