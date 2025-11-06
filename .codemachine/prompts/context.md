@@ -10,20 +10,25 @@ This is the full specification of the task you must complete.
 
 ```json
 {
-  "task_id": "I1.T3",
+  "task_id": "I1.T4",
   "iteration_id": "I1",
   "iteration_goal": "Establish project infrastructure, initialize Flutter project, integrate SQLite, and document event sourcing architecture",
-  "description": "Generate PlantUML Sequence Diagrams for 5 critical event flows: (1) Creating a path with the Pen Tool, (2) Loading a document (event replay), (3) Undo operation (event navigation), (4) Dragging an anchor point (50ms sampling), (5) Exporting to SVG. Save as `docs/diagrams/event_sourcing_sequences.puml`. Each diagram should show interactions between User, UI components, Event Recorder, Event Store, Event Replayer, Document State, and Canvas Renderer.",
-  "agent_type_hint": "DocumentationAgent",
-  "inputs": "Architecture blueprint Section 4.4 (Interaction Flows - Sequence Diagrams), Plan Section 2.1 (Communication Patterns)",
+  "description": "Integrate SQLite into the Flutter project using `sqflite_common_ffi` package. Create `lib/infrastructure/persistence/database_provider.dart` to manage SQLite connection lifecycle (open, close, transaction management). Implement initialization logic to create database file in application support directory. Write unit tests to verify database connection succeeds on both macOS and Windows.",
+  "agent_type_hint": "BackendAgent",
+  "inputs": "Architecture blueprint Section 3.2 (Technology Stack - SQLite), Plan Section 2 (Database: SQLite via sqflite_common_ffi), Ticket T002 (SQLite Integration)",
   "target_files": [
-    "docs/diagrams/event_sourcing_sequences.puml"
+    "lib/infrastructure/persistence/database_provider.dart",
+    "test/infrastructure/persistence/database_provider_test.dart"
   ],
-  "input_files": [],
-  "deliverables": "PlantUML file with 5 sequence diagrams, Diagrams render without syntax errors, Each diagram accurately represents the workflow described in architecture blueprint",
-  "acceptance_criteria": "PlantUML file validates and renders correctly, All 5 workflows covered: pen tool creation, document load, undo, drag, SVG export, Sequence of method calls/events matches architecture specifications, Actors, components, and messages clearly labeled",
-  "dependencies": ["I1.T1"],
-  "parallelizable": true,
+  "input_files": [
+    "pubspec.yaml"
+  ],
+  "deliverables": "DatabaseProvider class with open(), close(), getDatabase() methods, Database file created in correct application support directory, Unit tests confirming database opens successfully, Error handling for database initialization failures",
+  "acceptance_criteria": "`flutter test test/infrastructure/persistence/database_provider_test.dart` passes, Database file created at correct path (~/Library/Application Support/WireTuner/ on macOS, %APPDATA%\\WireTuner\\ on Windows), No hardcoded paths; uses platform-specific path resolution, Connection can be opened and closed without errors",
+  "dependencies": [
+    "I1.T1"
+  ],
+  "parallelizable": false,
   "done": false
 }
 ```
@@ -34,154 +39,115 @@ This is the full specification of the task you must complete.
 
 The following are the relevant sections from the architecture and plan documents, which I found by analyzing the task description.
 
-### Context: Communication Patterns (from 04_Behavior_and_Communication.md)
+### Context: stack-persistence (from 02_Architecture_Overview.md)
 
-The task requires understanding the communication patterns used throughout the system.
+```markdown
+<!-- anchor: stack-persistence -->
+#### Data & Persistence
 
-**Event-Driven Pattern (Core Architecture):**
-- User Input → Tool Controller → Event Recorder → Event Store (SQLite)
-- Event Recorder → Event Dispatcher → Event Handlers → New Document State → UI Rebuild (Provider)
+| Component | Technology | Package/Library | Justification |
+|-----------|-----------|-----------------|---------------|
+| **Event Store** | SQLite | `sqflite_common_ffi` | Embedded database, ACID compliance, zero-config, portable files |
+| **Schema** | SQL DDL | - | Direct SQL for event log, snapshot, document tables |
+| **File Format** | .wiretuner (SQLite) | - | Self-contained file format, readable with standard SQLite tools |
+```
 
-**Example Events:**
-- `CreatePathEvent(pathId, style)`
-- `AddAnchorEvent(pathId, position, handles)`
-- `MoveObjectEvent(objectId, delta)`
-- `ModifyStyleEvent(objectId, fillColor, strokeWidth)`
+### Context: decision-sqlite (from 06_Rationale_and_Future.md)
 
-**Characteristics:**
-- **Asynchronous**: Events processed in next frame to avoid blocking UI
-- **Ordered**: Event sequence numbers ensure deterministic replay
-- **Sampled**: High-frequency inputs (e.g., drag) throttled to 50ms
-- **Durable**: All events persisted to SQLite immediately
+```markdown
+<!-- anchor: decision-sqlite -->
+#### Decision 3: SQLite for Event Storage & File Format
 
-**Synchronous Request/Response Pattern:**
-- Tool → Document.getObjectById(id) → VectorObject
-- Tool → GeometryService.hitTest(path, point) → bool
-- Canvas Renderer → Document.getAllObjects() → List<VectorObject>
+**Choice**: Use SQLite as the native .wiretuner file format
 
-**Publish/Subscribe Pattern (UI Reactivity):**
-- Event Handler applies event → Document state changes → DocumentProvider.notifyListeners()
-- Widgets rebuild (Consumer/Selector)
+**Rationale:**
+1. **Embedded**: No separate database server, zero configuration
+2. **ACID Guarantees**: Ensures event log integrity even during crashes
+3. **Portable**: .wiretuner files are standard SQLite databases, readable with any SQLite tool
+4. **Performance**: More than adequate for 50ms sampling rate (20 events/second max)
+5. **Battle-Tested**: SQLite is the most deployed database engine globally
 
-### Context: Flow 1 - Creating a Path with the Pen Tool (from 04_Behavior_and_Communication.md)
+**Trade-offs:**
+- **Not Text-Based**: Unlike JSON/XML, binary format (but SQLite's ubiquity mitigates this)
+- **Single-User**: SQLite not designed for concurrent access (acceptable for desktop app)
+- **File Size**: Potentially larger than custom binary format (mitigated by snapshot compression)
 
-**Complete PlantUML sequence diagram exists in the architecture document at lines 93-167**
+**Alternatives Considered:**
+- **JSON File + Append-Only Log**: Simpler but no ACID guarantees, harder to query
+- **Custom Binary Format**: More compact but requires custom serialization, less tooling
+- **PostgreSQL**: Overkill, requires server, not portable
 
-Key participants:
-- User (actor)
-- Canvas Widget
-- Tool Manager
-- Pen Tool
-- Event Recorder
-- Event Store
-- Event Dispatcher
-- Document State
-- Canvas Renderer
+**Verdict**: SQLite is the ideal choice for a local-first desktop application.
 
-Flow includes:
-1. **First Click (Start Path)**: Creates CreatePathEvent, state changes IDLE → CREATING_PATH
-2. **Subsequent Clicks**: AddAnchorEvent for each anchor point, creates line segments
-3. **Finish Path**: Double-click or Enter triggers FinishPathEvent, state returns to IDLE
+---
+```
 
-### Context: Flow 2 - Loading a Document (Event Replay) (from 04_Behavior_and_Communication.md)
+### Context: reliability-data-integrity (from 05_Operational_Architecture.md)
 
-**Complete PlantUML sequence diagram exists in the architecture document at lines 174-227**
+```markdown
+<!-- anchor: reliability-data-integrity -->
+##### Data Integrity
 
-Key participants:
-- User
-- File Dialog
-- Document Service
-- Event Store
-- Snapshot Store
-- Event Replayer
-- Event Dispatcher
-- Document State
-- UI Layer
-- Canvas Renderer
+**Event Log Integrity:**
+- **Checksums**: SQLite's internal page checksums detect corruption
+- **Validation**: On document load, verify event sequence numbers are contiguous
+- **Error Handling**: If gap detected, warn user and skip to next valid event
 
-Flow includes:
-1. User selects .wiretuner file
-2. Query max event sequence from database
-3. Load most recent snapshot (e.g., at sequence 5000)
-4. Replay subsequent events (e.g., 5001-5432)
-5. Loop through events, dispatching and applying each
-6. Render final reconstructed document
+**Snapshot Integrity:**
+- **Versioning**: Each snapshot tagged with format version
+- **Validation**: Deserialize snapshot, check for null fields, validate object IDs
 
-**Important Note**: Replay of 432 events typically takes 20-50ms
+**Export Integrity:**
+- **SVG Validation**: Validate generated SVG against SVG 1.1 schema before writing
+- **PDF Validation**: Check PDF structure integrity (valid xref table, trailer)
+```
 
-### Context: Flow 3 - Undo Operation (Event Navigation) (from 04_Behavior_and_Communication.md)
+### Context: Ticket T002 - SQLite Integration
 
-**Complete PlantUML sequence diagram exists in the architecture document at lines 234-285**
+**Full ticket details from `.codemachine/inputs/tickets/T002-sqlite-integration.md`:**
 
-Key participants:
-- User
-- UI Layer
-- Event Navigator
-- Event Store
-- Snapshot Store
-- Event Replayer
-- Document State
-- Canvas Renderer
+This ticket provides a complete reference implementation including:
 
-Flow includes:
-1. User presses Cmd+Z (macOS) or Ctrl+Z (Windows)
-2. Event Navigator determines current and target sequence (e.g., 5432 → 5431)
-3. Load appropriate snapshot (e.g., at sequence 5000)
-4. Replay events up to target sequence (5001-5431)
-5. Display document with last action undone
+**Key Requirements:**
+1. Use `sqflite_common_ffi` for desktop SQLite support
+2. Database file extension: `.wiretuner`
+3. Schema version tracking in database
+4. Connection pooling/management
+5. Thread-safe database operations
 
-**Important Note**: Undo/Redo is time travel to a specific event sequence number. Redo would navigate forward (e.g., to 5432).
+**Critical Implementation Notes:**
+- Database files should be created in platform-specific application support directories
+- Must use `sqfliteFfiInit()` and set `databaseFactory = databaseFactoryFfi` for desktop support
+- Schema versioning is critical for forward compatibility
+- Include `onCreate` and `onUpgrade` callbacks for schema management
 
-### Context: Flow 4 - Dragging an Anchor Point (50ms Sampling) (from 04_Behavior_and_Communication.md)
+**Platform-Specific Paths:**
+- macOS: `~/Library/Application Support/WireTuner/`
+- Windows: `%APPDATA%\WireTuner\`
 
-**Complete PlantUML sequence diagram exists in the architecture document at lines 292-373**
+**Reference Code Pattern (from ticket):**
+```dart
+class DatabaseService {
+  static const int currentSchemaVersion = 1;
+  Database? _database;
 
-Key participants:
-- User
-- Canvas Widget
-- Tool Manager
-- Direct Selection Tool
-- Event Sampler
-- Event Recorder
-- Event Store
-- Document State
-- Canvas Renderer
+  Future<void> initialize() async {
+    // Initialize FFI for desktop platforms
+    sqfliteFfiInit();
+    databaseFactory = databaseFactoryFfi;
+  }
 
-Flow includes:
-1. **Drag Start**: Mouse down on anchor, hit test to identify anchor, state changes to DRAGGING_ANCHOR
-2. **Drag Movement**: Mouse move events sampled at 50ms intervals
-   - Within 50ms: Buffer movement (don't emit event)
-   - 50ms elapsed: Emit MoveAnchorEvent, persist to store, update UI
-3. **Continuous Dragging**: Loop of sampled events (~20 events/second)
-4. **Drag End**: Mouse up, flush any buffered final position, return to IDLE state
-
-**Important Note**: 50ms sampling creates smooth playback while limiting event volume. A 2-second drag generates ~40 events instead of 200+.
-
-### Context: Flow 5 - Exporting to SVG (from 04_Behavior_and_Communication.md)
-
-**Complete PlantUML sequence diagram exists in the architecture document at lines 380-434**
-
-Key participants:
-- User
-- UI Menu
-- Export Service
-- SVG Exporter
-- Document State
-- Geometry Service
-- File System
-
-Flow includes:
-1. User selects File → Export → SVG
-2. File save dialog shown, user chooses path
-3. Export Service gets all objects from Document State
-4. Loop through each VectorObject:
-   - If Path: Generate `<path d="M x y C ...">` element with style attributes
-   - If Shape: Convert to Path using Geometry Service, then generate SVG path
-   - Apply transform matrix as "transform" attribute
-5. Write XML to file system
-6. Show success notification
-
-**Important Note**: SVG exporter handles Bezier curve conversion, transform matrices, color format conversion (RGBA → hex), and coordinate system mapping (Y-axis flip).
+  Future<Database> openDocument(String filePath) async {
+    _database = await openDatabase(
+      filePath,
+      version: currentSchemaVersion,
+      onCreate: _onCreate,
+      onUpgrade: _onUpgrade,
+    );
+    return _database!;
+  }
+}
+```
 
 ---
 
@@ -191,73 +157,99 @@ The following analysis is based on my direct review of the current codebase. Use
 
 ### Relevant Existing Code
 
-*   **File:** `docs/diagrams/component_overview.puml`
-    *   **Summary:** This file contains the existing C4 Level 3 Component Diagram for the WireTuner architecture. It demonstrates the PlantUML style and formatting conventions being used in this project.
-    *   **Recommendation:** You MUST follow the exact same PlantUML formatting style as this file. Key conventions:
-        - Uses `@startuml` / `@enduml` tags
-        - Includes C4 imports when using C4 syntax (but sequence diagrams don't use C4 imports)
-        - Uses clear title comments
-        - Has well-organized sections with comments
-        - Uses consistent indentation and spacing
-        - Professional, clean formatting throughout
+*   **File:** `pubspec.yaml`
+    *   **Summary:** This file already contains the `sqflite_common_ffi: ^2.3.0` dependency. The dependency is ready to use.
+    *   **Recommendation:** You DO NOT need to add the sqflite dependency - it's already present. Focus on implementing the DatabaseProvider class.
 
-*   **File:** `.codemachine/artifacts/architecture/04_Behavior_and_Communication.md`
-    *   **Summary:** This file contains the COMPLETE PlantUML source code for all 5 required sequence diagrams, embedded within markdown code fences (~~~plantuml).
-    *   **Recommendation:** You MUST extract the PlantUML code from this file. The diagrams are located at:
-        - Flow 1 (Pen Tool): Lines 93-167
-        - Flow 2 (Load Document): Lines 174-227
-        - Flow 3 (Undo): Lines 234-285
-        - Flow 4 (Drag Anchor): Lines 292-373
-        - Flow 5 (Export SVG): Lines 380-434
-    *   **Important:** The code is enclosed in `~~~plantuml` and `~~~` markers. You need to extract just the PlantUML content (from `@startuml` to `@enduml`) for each diagram.
+*   **File:** `lib/main.dart`
+    *   **Summary:** This is the application entry point. Currently initializes logging and runs the App widget.
+    *   **Recommendation:** You will need to modify this file to initialize the DatabaseProvider before running the app. Follow the pattern shown in Ticket T002 - call `WidgetsFlutterBinding.ensureInitialized()` and initialize the database service.
+    *   **Important:** The main.dart currently uses a Logger instance. You SHOULD also use the logger package for any database initialization logging.
 
-*   **Directory:** `docs/diagrams/`
-    *   **Summary:** This directory already exists and contains the component_overview.puml file.
-    *   **Recommendation:** You SHOULD create the new file `event_sourcing_sequences.puml` in this same directory. The directory is already set up with proper permissions.
+*   **File:** `lib/app.dart`
+    *   **Summary:** Root application widget that sets up MaterialApp with Material Design 3 theme. Currently shows a placeholder home page.
+    *   **Recommendation:** You do NOT need to modify this file for task I1.T4. The DatabaseProvider should be initialized in main.dart before the App widget is created.
+
+*   **Directory:** `lib/infrastructure/persistence/`
+    *   **Summary:** This directory exists but is currently empty. This is where you will create `database_provider.dart`.
+    *   **Recommendation:** Create the DatabaseProvider class in this directory following the layered architecture pattern.
+
+*   **File:** `analysis_options.yaml`
+    *   **Summary:** Strict linting configuration is enabled with comprehensive rules.
+    *   **Recommendation:** Your code MUST comply with these rules. Pay special attention to:
+        - `public_member_api_docs` - All public members need documentation comments
+        - `prefer_const_constructors` - Use const constructors where possible
+        - `prefer_single_quotes` - Use single quotes for strings
+        - `require_trailing_commas` - Add trailing commas to parameter lists
+        - `avoid_print` - Use the logger package instead of print statements
 
 ### Implementation Tips & Notes
 
-*   **Tip:** The architecture document already contains complete, production-ready PlantUML code for all 5 sequence diagrams. Your task is NOT to write new diagrams from scratch, but to extract and consolidate the existing diagrams into a single file.
+*   **Tip #1 - Platform-Specific Paths:** You MUST use platform-specific path resolution. Do NOT hardcode paths like `~/Library/Application Support/`. The ticket mentions `path_provider` package but it's NOT yet in pubspec.yaml. You have two options:
+    1. Add `path_provider: ^2.1.0` to pubspec.yaml dependencies (RECOMMENDED)
+    2. Use `Platform.environment` and manual path construction (NOT recommended, less robust)
 
-*   **Tip:** Each diagram in the architecture document is self-contained with its own `@startuml` and `@enduml` tags. You need to combine all 5 diagrams into one file, ensuring each diagram remains complete and separate.
+*   **Tip #2 - Naming Convention:** The task specifies creating `database_provider.dart`, but Ticket T002 uses the name `database_service.dart`. Based on the task specification and directory structure, you SHOULD use `database_provider.dart` as specified in the target_files. The class name should be `DatabaseProvider` (not DatabaseService).
 
-*   **Tip:** Add clear section headers/comments between each diagram to make the file easy to navigate. For example:
+*   **Tip #3 - Error Handling:** The architecture blueprint emphasizes ACID guarantees and data integrity. Your DatabaseProvider MUST:
+    - Handle file I/O errors gracefully (permissions, disk full, etc.)
+    - Validate that database files are actually SQLite databases
+    - Provide clear error messages for debugging
+    - Use try-catch blocks with proper exception handling
+
+*   **Tip #4 - Testing Strategy:** Your unit tests MUST:
+    - Create test databases in a temporary directory (NOT the real app directory)
+    - Clean up test files in `tearDown()` method
+    - Test both success and failure cases (e.g., opening non-existent file, corrupted database)
+    - Use the pattern shown in Ticket T002's test code as a reference
+    - Ensure tests can run on both macOS and Windows (use platform-agnostic paths)
+
+*   **Tip #5 - Initialization Pattern:** Follow the exact initialization pattern from Ticket T002:
+    ```dart
+    sqfliteFfiInit();
+    databaseFactory = databaseFactoryFfi;
     ```
-    ' ============================================
-    ' Flow 1: Creating a Path with the Pen Tool
-    ' ============================================
-    ```
+    This MUST be called before any database operations. It should be in an `initialize()` method that's called from main.dart.
 
-*   **Tip:** The PlantUML syntax in the architecture document uses proper participant definitions, alt/loop blocks, and notes. This is the correct approach - do not simplify or modify the logic.
+*   **Note #1 - Schema Not Required Yet:** Task I1.T4 is about creating the DatabaseProvider (connection management). The actual schema creation is in task I1.T5. For this task, you only need to:
+    - Open/close database connections
+    - Create empty database files
+    - You do NOT need to create tables yet (that comes in I1.T5)
 
-*   **Note:** The existing component_overview.puml uses C4-PlantUML includes (`!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Component.puml`), but sequence diagrams use standard PlantUML syntax and do NOT need these includes.
+*   **Note #2 - File Extension:** Database files MUST use the `.wiretuner` extension as specified in the architecture. When creating new documents, ensure the file path ends with `.wiretuner`.
 
-*   **Note:** Each sequence diagram includes important notes (using `note right`, `note left` syntax) that explain critical implementation details. These notes MUST be preserved as they provide valuable context.
+*   **Warning #1 - Thread Safety:** The architecture mentions "thread-safe database operations". However, since SQLite itself handles locking and Flutter is single-threaded by default, you don't need complex synchronization. The main concern is ensuring you don't access a closed database. Include proper null checks and state management.
 
-*   **Warning:** Do not modify the participant names, message sequences, or flow logic. The diagrams in the architecture document have been carefully designed to match the actual implementation architecture. Your job is to consolidate them, not redesign them.
+*   **Warning #2 - Desktop-Only Package:** `sqflite_common_ffi` is desktop-only. The code will NOT work on mobile platforms. This is acceptable per the project requirements (macOS/Windows desktop only), but be aware if you test on mobile emulators.
 
-*   **Quality Check:** After creating the file, verify that:
-    1. All 5 diagrams are present
-    2. Each diagram has proper `@startuml` / `@enduml` markers
-    3. Section comments clearly separate the diagrams
-    4. No PlantUML syntax errors (check for matching quotes, proper alt/end blocks, etc.)
-    5. All notes and annotations are preserved
+### Acceptance Criteria Checklist
 
-*   **File Organization Best Practice:** Structure the file as:
-    ```
-    ' Header comment with file purpose and date
+To verify your implementation is complete, ensure:
 
-    ' Flow 1 section comment
-    @startuml
-    [diagram 1 content]
-    @enduml
+- [ ] `DatabaseProvider` class created in `lib/infrastructure/persistence/database_provider.dart`
+- [ ] Class includes `initialize()` method that calls `sqfliteFfiInit()` and sets `databaseFactory`
+- [ ] Class includes `open(String filePath)` method that opens a database connection
+- [ ] Class includes `close()` method that closes the database connection
+- [ ] Class includes `getDatabase()` method that returns the current Database instance
+- [ ] Database files are created in platform-specific app support directory (use `path_provider`)
+- [ ] Error handling for common failure cases (permissions, corrupted files, etc.)
+- [ ] All public methods have documentation comments (required by linter)
+- [ ] Unit tests created in `test/infrastructure/persistence/database_provider_test.dart`
+- [ ] Tests verify database can be opened and closed
+- [ ] Tests verify database file is created at correct path
+- [ ] Tests clean up temporary files in tearDown()
+- [ ] `flutter test test/infrastructure/persistence/database_provider_test.dart` passes
+- [ ] `flutter analyze` shows no errors or warnings
+- [ ] Updated `lib/main.dart` to initialize DatabaseProvider before running app
 
-    ' Flow 2 section comment
-    @startuml
-    [diagram 2 content]
-    @enduml
+### Code Quality Requirements
 
-    [... continue for all 5 diagrams]
-    ```
-
-*   **Validation:** The acceptance criteria requires that diagrams "render without syntax errors". You can validate PlantUML syntax at plantuml.com or using a local PlantUML processor. Make sure to test the file after creation.
+Your implementation must:
+1. Follow the Dart style guide and project linting rules
+2. Include comprehensive documentation comments for all public APIs
+3. Use single quotes for strings
+4. Add trailing commas to all parameter lists
+5. Use `const` constructors where possible
+6. Use the `logger` package for any logging (NOT print statements)
+7. Handle all exceptions with try-catch blocks
+8. Provide user-friendly error messages

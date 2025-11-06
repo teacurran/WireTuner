@@ -75,7 +75,7 @@
     "acceptance_criteria": "`flutter test test/infrastructure/persistence/database_provider_test.dart` passes, Database file created at correct path (~/Library/Application Support/WireTuner/ on macOS, %APPDATA%\\WireTuner\\ on Windows), No hardcoded paths; uses platform-specific path resolution, Connection can be opened and closed without errors",
     "dependencies": ["I1.T1"],
     "parallelizable": false,
-    "done": false
+    "done": true
   },
   {
     "task_id": "I1.T5",
