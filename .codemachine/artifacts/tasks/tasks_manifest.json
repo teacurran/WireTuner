@@ -1,11 +1,16 @@
 {
-  "I1": "tasks_I1.json",
-  "I2": "tasks_I2.json",
-  "I3": "tasks_I3.json",
-  "I4": "tasks_I4.json",
-  "I5": "tasks_I5.json",
-  "I6": "tasks_I6.json",
-  "I7": "tasks_I7.json",
-  "I8": "tasks_I8.json",
-  "I9": "tasks_I9.json"
+  "description": "Manifest of all iteration task files",
+  "total_iterations": 9,
+  "task_files": [
+    "tasks_I1.json",
+    "tasks_I2.json",
+    "tasks_I3.json",
+    "tasks_I4.json",
+    "tasks_I5.json",
+    "tasks_I6.json",
+    "tasks_I7.json",
+    "tasks_I8.json",
+    "tasks_I9.json"
+  ],
+  "generated_at": "auto-generated"
 }

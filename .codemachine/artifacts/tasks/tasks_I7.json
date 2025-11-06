@@ -5,21 +5,21 @@
     "iteration_goal": "Implement shape creation tools (Rectangle, Ellipse, Polygon, Star) with drag-to-create interaction",
     "description": "Implement RectangleTool in `lib/application/tools/rectangle_tool.dart`. Click-and-drag to define bounding box, create Shape with ShapeType.RECTANGLE on pointer up. Generate CreateShapeEvent with parameters {width, height, position}. Support Shift+drag for square constraint. Write integration tests.",
     "agent_type_hint": "BackendAgent",
-    "inputs": "Ticket T025 (Rectangle Tool), Shape model from I3.T4",
+    "inputs": "Ticket T025 (Rectangle Tool)\nShape model from I3.T4",
     "target_files": [
       "lib/application/tools/rectangle_tool.dart",
-      "lib/domain/events/object_events.dart",
-      "test/application/tools/rectangle_tool_test.dart",
-      "integration_test/rectangle_tool_workflow_test.dart"
+      "lib/domain/events/object_events.dart"
     ],
     "input_files": [
-      "lib/application/tools/tool_interface.dart",
-      "lib/domain/models/shape.dart",
-      "lib/infrastructure/event_sourcing/event_recorder.dart"
+      "lib/application/tools/tool_interface.dart"
     ],
-    "deliverables": "RectangleTool with drag-to-create, Shift modifier for square constraint, CreateShapeEvent recording, Integration tests",
-    "acceptance_criteria": "Drag creates rectangle with correct dimensions, Shift+drag creates square (width = height), CreateShapeEvent persisted on pointer up, Rectangle renders in canvas, Integration test creates rectangle successfully",
-    "dependencies": ["I5.T1", "I3.T4", "I2.T3"],
+    "deliverables": "RectangleTool with drag-to-create\nShift modifier for square constraint\nCreateShapeEvent recording\nIntegration tests",
+    "acceptance_criteria": "Drag creates rectangle with correct dimensions\nShift+drag creates square (width = height)\nCreateShapeEvent persisted on pointer up\nRectangle renders in canvas\nIntegration test creates rectangle successfully",
+    "dependencies": [
+      "I5.T1",
+      "I3.T4",
+      "I2.T3"
+    ],
     "parallelizable": true,
     "done": false
   },
@@ -36,12 +36,14 @@
       "integration_test/ellipse_tool_workflow_test.dart"
     ],
     "input_files": [
-      "lib/application/tools/tool_interface.dart",
-      "lib/domain/models/shape.dart"
+      "lib/application/tools/tool_interface.dart"
     ],
-    "deliverables": "EllipseTool with drag-to-create, Shift modifier for circle, Integration tests",
-    "acceptance_criteria": "Drag creates ellipse inscribed in bounding box, Shift+drag creates circle, CreateShapeEvent persisted, Ellipse renders with Bezier approximation, Integration test creates ellipse successfully",
-    "dependencies": ["I7.T1", "I3.T4"],
+    "deliverables": "EllipseTool with drag-to-create\nShift modifier for circle\nIntegration tests",
+    "acceptance_criteria": "Drag creates ellipse inscribed in bounding box\nShift+drag creates circle\nCreateShapeEvent persisted\nEllipse renders with Bezier approximation\nIntegration test creates ellipse successfully",
+    "dependencies": [
+      "I7.T1",
+      "I3.T4"
+    ],
     "parallelizable": true,
     "done": false
   },
@@ -58,12 +60,14 @@
       "integration_test/polygon_tool_workflow_test.dart"
     ],
     "input_files": [
-      "lib/application/tools/tool_interface.dart",
-      "lib/domain/models/shape.dart"
+      "lib/application/tools/tool_interface.dart"
     ],
-    "deliverables": "PolygonTool with click-center-drag-radius interaction, Configurable side count (3-20), Live preview during drag, Integration tests for triangle and octagon",
-    "acceptance_criteria": "Click defines center point, Drag distance defines radius, Polygon has correct number of sides, Regular polygon (all sides equal length), Integration tests create 3-sided and 8-sided polygons",
-    "dependencies": ["I5.T1", "I3.T4"],
+    "deliverables": "PolygonTool with click-center-drag-radius interaction\nConfigurable side count (3-20)\nLive preview during drag\nIntegration tests for triangle and octagon",
+    "acceptance_criteria": "Click defines center point\nDrag distance defines radius\nPolygon has correct number of sides\nRegular polygon (all sides equal length)\nIntegration tests create 3-sided and 8-sided polygons",
+    "dependencies": [
+      "I5.T1",
+      "I3.T4"
+    ],
     "parallelizable": true,
     "done": false
   },
@@ -80,12 +84,14 @@
       "integration_test/star_tool_workflow_test.dart"
     ],
     "input_files": [
-      "lib/application/tools/tool_interface.dart",
-      "lib/domain/models/shape.dart"
+      "lib/application/tools/tool_interface.dart"
     ],
-    "deliverables": "StarTool with click-center-drag-radius interaction, Configurable point count and inner/outer ratio, Live preview, Integration tests",
-    "acceptance_criteria": "Click defines center, Drag distance defines outer radius, Inner radius = outer * 0.5 by default, Star has alternating outer/inner points, Integration tests create 5-point and 8-point stars",
-    "dependencies": ["I7.T3", "I3.T4"],
+    "deliverables": "StarTool with click-center-drag-radius interaction\nConfigurable point count and inner/outer ratio\nLive preview\nIntegration tests",
+    "acceptance_criteria": "Click defines center\nDrag distance defines outer radius\nInner radius = outer * 0.5 by default\nStar has alternating outer/inner points\nIntegration tests create 5-point and 8-point stars",
+    "dependencies": [
+      "I7.T3",
+      "I3.T4"
+    ],
     "parallelizable": false,
     "done": false
   },
@@ -97,15 +103,19 @@
     "agent_type_hint": "FrontendAgent",
     "inputs": "Tool implementations from I7.T1-I7.T4",
     "target_files": [
-      "lib/presentation/widgets/toolbar/tool_toolbar.dart",
-      "test/presentation/widgets/toolbar/tool_toolbar_updated_test.dart"
+      "lib/presentation/widgets/toolbar/tool_toolbar.dart"
     ],
     "input_files": [
       "lib/presentation/widgets/toolbar/tool_toolbar.dart"
     ],
-    "deliverables": "Toolbar with all shape tool buttons, Tool switching functional, Widget tests",
-    "acceptance_criteria": "All 7 tools visible in toolbar (Selection, Direct Selection, Pen, Rectangle, Ellipse, Polygon, Star), Clicking each button activates corresponding tool, Active tool highlighted, Widget tests verify all buttons functional",
-    "dependencies": ["I7.T1", "I7.T2", "I7.T3", "I7.T4"],
+    "deliverables": "Toolbar with all shape tool buttons\nTool switching functional\nWidget tests",
+    "acceptance_criteria": "All 7 tools visible in toolbar (Selection, Direct Selection, Pen, Rectangle, Ellipse, Polygon, Star)\nClicking each button activates corresponding tool\nActive tool highlighted\nWidget tests verify all buttons functional",
+    "dependencies": [
+      "I7.T1",
+      "I7.T2",
+      "I7.T3",
+      "I7.T4"
+    ],
     "parallelizable": false,
     "done": false
   }

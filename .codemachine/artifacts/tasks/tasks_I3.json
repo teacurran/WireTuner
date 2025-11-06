@@ -5,7 +5,7 @@
     "iteration_goal": "Implement immutable domain models for vector objects (Document, Path, Shape, Segment, AnchorPoint, Style, Transform) with comprehensive unit tests",
     "description": "Implement core geometry primitives in `lib/domain/models/`: Point (x, y), Rectangle (bounds), Matrix4 wrapper for transforms. Use vector_math package. Make all classes immutable with const constructors where possible. Write extensive unit tests for geometric operations (distance, intersection, transformation).",
     "agent_type_hint": "BackendAgent",
-    "inputs": "Architecture blueprint Section 3.6 (Data Model - Geometry primitives), Ticket T009 (Core Geometry Primitives)",
+    "inputs": "Architecture blueprint Section 3.6 (Data Model - Geometry primitives)\nTicket T009 (Core Geometry Primitives)",
     "target_files": [
       "lib/domain/models/geometry/point.dart",
       "lib/domain/models/geometry/rectangle.dart",
@@ -13,9 +13,11 @@
       "test/domain/models/geometry/geometry_test.dart"
     ],
     "input_files": [],
-    "deliverables": "Immutable Point, Rectangle classes, Transform class wrapping Matrix4, Unit tests achieving 90%+ coverage",
-    "acceptance_criteria": "All classes are immutable (@immutable annotation), Point supports arithmetic operations (add, subtract, distance), Rectangle supports intersection, union, containsPoint, Transform supports translate, rotate, scale, composition, Unit tests verify all operations with edge cases",
-    "dependencies": ["I1.T1"],
+    "deliverables": "Immutable Point, Rectangle classes\nTransform class wrapping Matrix4\nUnit tests achieving 90%+ coverage",
+    "acceptance_criteria": "All classes are immutable (@immutable annotation)\nPoint supports arithmetic operations (add, subtract, distance)\nRectangle supports intersection, union, containsPoint\nTransform supports translate, rotate, scale, composition\nUnit tests verify all operations with edge cases",
+    "dependencies": [
+      "I1.T1"
+    ],
     "parallelizable": true,
     "done": false
   },
@@ -25,7 +27,7 @@
     "iteration_goal": "Implement immutable domain models for vector objects (Document, Path, Shape, Segment, AnchorPoint, Style, Transform) with comprehensive unit tests",
     "description": "Implement AnchorPoint and Segment models in `lib/domain/models/`. AnchorPoint has position, optional handleIn/handleOut (BCPs), and anchorType enum (corner/smooth/symmetric). Segment connects two anchors with type (line/bezier/arc). Both immutable with copyWith() methods. Write unit tests.",
     "agent_type_hint": "BackendAgent",
-    "inputs": "Architecture blueprint Section 3.6 (Data Model - AnchorPoint, Segment), Ticket T010 (Path Data Model)",
+    "inputs": "Architecture blueprint Section 3.6 (Data Model - AnchorPoint, Segment)\nTicket T010 (Path Data Model)",
     "target_files": [
       "lib/domain/models/anchor_point.dart",
       "lib/domain/models/segment.dart",
@@ -35,9 +37,11 @@
     "input_files": [
       "lib/domain/models/geometry/point.dart"
     ],
-    "deliverables": "Immutable AnchorPoint class with BCP handles, Segment class with line/bezier/arc types, copyWith() methods for immutable updates, Unit tests for anchor types and segment construction",
-    "acceptance_criteria": "AnchorPoint correctly represents corner, smooth, symmetric types, Segment stores correct anchor references and control points, copyWith() creates new instances with modified fields, Unit tests achieve 85%+ coverage",
-    "dependencies": ["I3.T1"],
+    "deliverables": "Immutable AnchorPoint class with BCP handles\nSegment class with line/bezier/arc types\ncopyWith() methods for immutable updates\nUnit tests for anchor types and segment construction",
+    "acceptance_criteria": "AnchorPoint correctly represents corner, smooth, symmetric types\nSegment stores correct anchor references and control points\ncopyWith() creates new instances with modified fields\nUnit tests achieve 85%+ coverage",
+    "dependencies": [
+      "I3.T1"
+    ],
     "parallelizable": true,
     "done": false
   },
@@ -47,7 +51,7 @@
     "iteration_goal": "Implement immutable domain models for vector objects (Document, Path, Shape, Segment, AnchorPoint, Style, Transform) with comprehensive unit tests",
     "description": "Implement Path model in `lib/domain/models/path.dart`. Path contains list of Segments, closed boolean flag. Provide methods: bounds(), length(), pointAt(t), addSegment(). Make immutable with copyWith(). Write unit tests including Bezier curve paths.",
     "agent_type_hint": "BackendAgent",
-    "inputs": "Architecture blueprint Section 3.6 (Data Model - Path), Ticket T010 (Path Data Model)",
+    "inputs": "Architecture blueprint Section 3.6 (Data Model - Path)\nTicket T010 (Path Data Model)",
     "target_files": [
       "lib/domain/models/path.dart",
       "test/domain/models/path_test.dart"
@@ -55,9 +59,11 @@
     "input_files": [
       "lib/domain/models/segment.dart"
     ],
-    "deliverables": "Immutable Path class with segment list, bounds() calculates bounding rectangle, length() computes total path length, pointAt(t) returns point along path at parameter t [0-1], Unit tests with straight and curved paths",
-    "acceptance_criteria": "Path correctly stores segments and closed state, bounds() accurate for Bezier curves (use control point bounds initially), length() approximates arc length for curves, Unit tests cover open/closed paths, straight/curved segments",
-    "dependencies": ["I3.T2"],
+    "deliverables": "Immutable Path class with segment list\nbounds() calculates bounding rectangle\nlength() computes total path length\npointAt(t) returns point along path at parameter t [0-1]\nUnit tests with straight and curved paths",
+    "acceptance_criteria": "Path correctly stores segments and closed state\nbounds() accurate for Bezier curves (use control point bounds initially)\nlength() approximates arc length for curves\nUnit tests cover open/closed paths, straight/curved segments",
+    "dependencies": [
+      "I3.T2"
+    ],
     "parallelizable": false,
     "done": false
   },
@@ -67,7 +73,7 @@
     "iteration_goal": "Implement immutable domain models for vector objects (Document, Path, Shape, Segment, AnchorPoint, Style, Transform) with comprehensive unit tests",
     "description": "Implement Style model in `lib/domain/models/style.dart` for fill/stroke properties. Include fill color, stroke color, stroke width, opacity, blend mode. Make immutable. Implement Shape model in `lib/domain/models/shape.dart` with ShapeType enum (rect, ellipse, polygon, star) and parameters map. Shape has toPath() method to generate Path representation. Write unit tests for all shape types.",
     "agent_type_hint": "BackendAgent",
-    "inputs": "Architecture blueprint Section 3.6 (Data Model - Style, Shape), Ticket T011 (Shape Data Model)",
+    "inputs": "Architecture blueprint Section 3.6 (Data Model - Style, Shape)\nTicket T011 (Shape Data Model)",
     "target_files": [
       "lib/domain/models/style.dart",
       "lib/domain/models/shape.dart",
@@ -77,9 +83,11 @@
     "input_files": [
       "lib/domain/models/path.dart"
     ],
-    "deliverables": "Immutable Style class with paint properties, Shape class with parametric definitions, toPath() implementations for rect, ellipse, polygon, star, Unit tests verifying shape-to-path conversion",
-    "acceptance_criteria": "Style stores all paint properties, Shape.toPath() generates correct Path for each ShapeType, Rectangle shape produces 4-segment closed path, Ellipse shape produces Bezier approximation, Polygon shape produces n-sided regular polygon, Star shape produces n-pointed star with inner/outer radii, Unit tests cover all shape types and edge cases",
-    "dependencies": ["I3.T3"],
+    "deliverables": "Immutable Style class with paint properties\nShape class with parametric definitions\ntoPath() implementations for rect, ellipse, polygon, star\nUnit tests verifying shape-to-path conversion",
+    "acceptance_criteria": "Style stores all paint properties\nShape.toPath() generates correct Path for each ShapeType\nRectangle shape produces 4-segment closed path\nEllipse shape produces Bezier approximation\nPolygon shape produces n-sided regular polygon\nStar shape produces n-pointed star with inner/outer radii\nUnit tests cover all shape types and edge cases",
+    "dependencies": [
+      "I3.T3"
+    ],
     "parallelizable": false,
     "done": false
   },
@@ -93,20 +101,17 @@
     "target_files": [
       "lib/domain/models/vector_object.dart",
       "lib/domain/models/layer.dart",
-      "lib/domain/models/path.dart",
-      "lib/domain/models/shape.dart",
-      "test/domain/models/vector_object_test.dart",
-      "test/domain/models/layer_test.dart"
+      "lib/domain/models/path.dart"
     ],
     "input_files": [
-      "lib/domain/models/path.dart",
-      "lib/domain/models/shape.dart",
-      "lib/domain/models/transform.dart",
-      "lib/domain/models/style.dart"
+      "lib/domain/models/path.dart"
     ],
-    "deliverables": "VectorObject abstract base class, Path and Shape extending VectorObject, Layer model with object list, Unit tests for layer operations (add, remove, reorder objects)",
-    "acceptance_criteria": "VectorObject defines common interface for all drawable objects, Path.bounds() accounts for transform matrix, Shape.bounds() computed from generated path, Layer correctly manages object list, Unit tests verify polymorphism (Layer can hold Path or Shape)",
-    "dependencies": ["I3.T3", "I3.T4"],
+    "deliverables": "VectorObject abstract base class\nPath and Shape extending VectorObject\nLayer model with object list\nUnit tests for layer operations (add, remove, reorder objects)",
+    "acceptance_criteria": "VectorObject defines common interface for all drawable objects\nPath.bounds() accounts for transform matrix\nShape.bounds() computed from generated path\nLayer correctly manages object list\nUnit tests verify polymorphism (Layer can hold Path or Shape)",
+    "dependencies": [
+      "I3.T3",
+      "I3.T4"
+    ],
     "parallelizable": false,
     "done": false
   },
@@ -116,7 +121,7 @@
     "iteration_goal": "Implement immutable domain models for vector objects (Document, Path, Shape, Segment, AnchorPoint, Style, Transform) with comprehensive unit tests",
     "description": "Implement Document model in `lib/domain/models/document.dart` as root aggregate. Contains list of Layers, Selection, Viewport. Provide query methods: getObjectById(), getAllObjects(), getObjectsInBounds(). Make immutable with copyWith(). Write comprehensive unit tests including complex documents with nested objects.",
     "agent_type_hint": "BackendAgent",
-    "inputs": "Architecture blueprint Section 3.6 (Data Model - Document), Architecture blueprint Section 4.6 (Internal API - Document State), Ticket T012 (Document Model)",
+    "inputs": "Architecture blueprint Section 3.6 (Data Model - Document)\nArchitecture blueprint Section 4.6 (Internal API - Document State)\nTicket T012 (Document Model)",
     "target_files": [
       "lib/domain/models/document.dart",
       "lib/domain/models/selection.dart",
@@ -124,12 +129,13 @@
       "test/domain/models/document_test.dart"
     ],
     "input_files": [
-      "lib/domain/models/layer.dart",
-      "lib/domain/models/geometry/rectangle.dart"
+      "lib/domain/models/layer.dart"
     ],
-    "deliverables": "Immutable Document class with layer hierarchy, Selection model (set of object IDs, anchor indices), Viewport model (pan, zoom, canvas size), Query methods (getObjectById, getAllObjects, getObjectsInBounds), Unit tests with multi-layer documents",
-    "acceptance_criteria": "Document correctly manages layer list, getObjectById() searches across all layers, getAllObjects() flattens layer hierarchy, getObjectsInBounds() uses bounds() for filtering, Selection tracks object IDs and anchor indices, Viewport supports pan/zoom transformations, Unit tests achieve 90%+ coverage for Document class",
-    "dependencies": ["I3.T5"],
+    "deliverables": "Immutable Document class with layer hierarchy\nSelection model (set of object IDs, anchor indices)\nViewport model (pan, zoom, canvas size)\nQuery methods (getObjectById, getAllObjects, getObjectsInBounds)\nUnit tests with multi-layer documents",
+    "acceptance_criteria": "Document correctly manages layer list\ngetObjectById() searches across all layers\ngetAllObjects() flattens layer hierarchy\ngetObjectsInBounds() uses bounds() for filtering\nSelection tracks object IDs and anchor indices\nViewport supports pan/zoom transformations\nUnit tests achieve 90%+ coverage for Document class",
+    "dependencies": [
+      "I3.T5"
+    ],
     "parallelizable": false,
     "done": false
   },
@@ -139,26 +145,19 @@
     "iteration_goal": "Implement immutable domain models for vector objects (Document, Path, Shape, Segment, AnchorPoint, Style, Transform) with comprehensive unit tests",
     "description": "Generate PlantUML ERD diagram in `docs/diagrams/database_erd.puml` showing SQLite schema (metadata, events, snapshots tables) with relationships and field types. Also generate PlantUML Class Diagram in `docs/diagrams/domain_model_class.puml` showing in-memory domain model (Document, Layer, VectorObject hierarchy, Path, Shape, Segment, AnchorPoint, Style, Transform). Both diagrams should match implemented models.",
     "agent_type_hint": "DocumentationAgent",
-    "inputs": "Architecture blueprint Section 3.6 (Data Model ERD), Implemented domain models from I3.T1-I3.T6, Database schema from I1.T5",
+    "inputs": "Architecture blueprint Section 3.6 (Data Model ERD)\nImplemented domain models from I3.T1-I3.T6\nDatabase schema from I1.T5",
     "target_files": [
       "docs/diagrams/database_erd.puml",
       "docs/diagrams/domain_model_class.puml"
     ],
     "input_files": [
-      "lib/domain/models/document.dart",
-      "lib/domain/models/layer.dart",
-      "lib/domain/models/vector_object.dart",
-      "lib/domain/models/path.dart",
-      "lib/domain/models/shape.dart",
-      "lib/domain/models/segment.dart",
-      "lib/domain/models/anchor_point.dart",
-      "lib/domain/models/style.dart",
-      "lib/domain/models/transform.dart",
-      "lib/infrastructure/persistence/schema.dart"
+      "lib/domain/models/*.dart"
     ],
-    "deliverables": "PlantUML ERD diagram for SQLite schema, PlantUML Class Diagram for domain model, Both diagrams render without syntax errors",
-    "acceptance_criteria": "ERD accurately reflects metadata, events, snapshots tables with primary/foreign keys, Class diagram shows inheritance (VectorObject → Path, Shape), Class diagram shows composition (Document contains Layers, Layer contains VectorObjects), Diagrams validate and render correctly",
-    "dependencies": ["I3.T6"],
+    "deliverables": "PlantUML ERD diagram for SQLite schema\nPlantUML Class Diagram for domain model\nBoth diagrams render without syntax errors",
+    "acceptance_criteria": "ERD accurately reflects metadata, events, snapshots tables with primary/foreign keys\nClass diagram shows inheritance (VectorObject → Path, Shape)\nClass diagram shows composition (Document contains Layers, Layer contains VectorObjects)\nDiagrams validate and render correctly",
+    "dependencies": [
+      "I3.T6"
+    ],
     "parallelizable": true,
     "done": false
   }

@@ -5,14 +5,16 @@
     "iteration_goal": "Establish tool framework and implement Selection and Direct Selection tools for object and anchor manipulation",
     "description": "Define ITool abstract interface in `lib/application/tools/tool_interface.dart`. Specify methods: onActivate(), onDeactivate(), onPointerDown/Move/Up(), onKeyPress(), renderOverlay(Canvas). Define Cursor get cursor property. All tools will implement this interface.",
     "agent_type_hint": "BackendAgent",
-    "inputs": "Architecture blueprint Section 4.6 (Internal API - Tool Interface), Ticket T018 (Tool Framework)",
+    "inputs": "Architecture blueprint Section 4.6 (Internal API - Tool Interface)\nTicket T018 (Tool Framework)",
     "target_files": [
       "lib/application/tools/tool_interface.dart"
     ],
     "input_files": [],
-    "deliverables": "ITool abstract interface, Method signatures for all tool lifecycle and event handling",
-    "acceptance_criteria": "Interface compiles without errors, All required methods defined with clear documentation, Cursor property defined (returns SystemMouseCursor or custom)",
-    "dependencies": ["I1.T1"],
+    "deliverables": "ITool abstract interface\nMethod signatures for all tool lifecycle and event handling",
+    "acceptance_criteria": "Interface compiles without errors\nAll required methods defined with clear documentation\nCursor property defined (returns SystemMouseCursor or custom)",
+    "dependencies": [
+      "I1.T1"
+    ],
     "parallelizable": true,
     "done": false
   },
@@ -22,7 +24,7 @@
     "iteration_goal": "Establish tool framework and implement Selection and Direct Selection tools for object and anchor manipulation",
     "description": "Implement ToolManager in `lib/application/tools/tool_manager.dart` as singleton service. Manage active tool state, provide setActiveTool(ITool), route pointer/keyboard events to active tool. Integrate with CanvasWidget to receive input events. Create ToolManagerProvider for state management.",
     "agent_type_hint": "BackendAgent",
-    "inputs": "Architecture blueprint Section 3.5 (Component Diagram - Tool Manager), Ticket T018 (Tool Framework)",
+    "inputs": "Architecture blueprint Section 3.5 (Component Diagram - Tool Manager)\nTicket T018 (Tool Framework)",
     "target_files": [
       "lib/application/tools/tool_manager.dart",
       "lib/presentation/providers/tool_manager_provider.dart",
@@ -31,9 +33,11 @@
     "input_files": [
       "lib/application/tools/tool_interface.dart"
     ],
-    "deliverables": "ToolManager service with tool switching logic, Event routing to active tool, Provider for UI integration, Unit tests with mock tools",
-    "acceptance_criteria": "setActiveTool() calls onDeactivate() on previous tool, onActivate() on new tool, Pointer events routed to active tool's handlers, Keyboard events routed to active tool, Unit tests verify routing and lifecycle",
-    "dependencies": ["I5.T1"],
+    "deliverables": "ToolManager service with tool switching logic\nEvent routing to active tool\nProvider for UI integration\nUnit tests with mock tools",
+    "acceptance_criteria": "setActiveTool() calls onDeactivate() on previous tool, onActivate() on new tool\nPointer events routed to active tool's handlers\nKeyboard events routed to active tool\nUnit tests verify routing and lifecycle",
+    "dependencies": [
+      "I5.T1"
+    ],
     "parallelizable": false,
     "done": false
   },
@@ -49,12 +53,14 @@
       "test/domain/services/hit_test_service_test.dart"
     ],
     "input_files": [
-      "lib/domain/models/document.dart",
-      "lib/domain/models/path.dart"
+      "lib/domain/models/document.dart"
     ],
-    "deliverables": "HitTestService with hitTestObjects(), hitTestAnchors(), Distance-based hit detection for paths, Bounds-based hit detection for shapes, Unit tests covering edge cases (overlapping objects, small objects)",
-    "acceptance_criteria": "hitTestObjects() returns nearest object within tolerance (5px), hitTestAnchors() returns anchor index within tolerance (8px), Returns null if no object/anchor within tolerance, Unit tests achieve 90%+ coverage",
-    "dependencies": ["I3.T6", "I3.T3"],
+    "deliverables": "HitTestService with hitTestObjects(), hitTestAnchors()\nDistance-based hit detection for paths\nBounds-based hit detection for shapes\nUnit tests covering edge cases (overlapping objects, small objects)",
+    "acceptance_criteria": "hitTestObjects() returns nearest object within tolerance (5px)\nhitTestAnchors() returns anchor index within tolerance (8px)\nReturns null if no object/anchor within tolerance\nUnit tests achieve 90%+ coverage",
+    "dependencies": [
+      "I3.T6",
+      "I3.T3"
+    ],
     "parallelizable": true,
     "done": false
   },
@@ -64,20 +70,23 @@
     "iteration_goal": "Establish tool framework and implement Selection and Direct Selection tools for object and anchor manipulation",
     "description": "Implement SelectionTool in `lib/application/tools/selection_tool.dart`. Click to select objects, Cmd+Click to toggle selection, drag to move selected objects. Generate MoveObjectEvent during drag (sampled at 50ms via EventRecorder). Use HitTestService for object detection. Write widget and integration tests.",
     "agent_type_hint": "BackendAgent",
-    "inputs": "Architecture blueprint Section 4.4 (Sequence Diagram - Tool interactions), Ticket T019 (Selection Tool)",
+    "inputs": "Architecture blueprint Section 4.4 (Sequence Diagram - Tool interactions)\nTicket T019 (Selection Tool)",
     "target_files": [
       "lib/application/tools/selection_tool.dart",
       "test/application/tools/selection_tool_test.dart",
       "integration_test/selection_tool_workflow_test.dart"
     ],
     "input_files": [
-      "lib/application/tools/tool_interface.dart",
-      "lib/domain/services/hit_test_service.dart",
-      "lib/infrastructure/event_sourcing/event_recorder.dart"
+      "lib/application/tools/tool_interface.dart"
     ],
-    "deliverables": "SelectionTool implementing ITool, Click-to-select logic with modifier key support, Drag-to-move with event recording, Integration tests for full selection workflow",
-    "acceptance_criteria": "Click on object selects it (updates Selection in Document), Cmd+Click toggles selection state, Drag generates MoveObjectEvent at 50ms intervals, Cursor changes based on hover state (arrow / move cursor), Integration tests pass",
-    "dependencies": ["I5.T1", "I5.T2", "I5.T3", "I2.T3"],
+    "deliverables": "SelectionTool implementing ITool\nClick-to-select logic with modifier key support\nDrag-to-move with event recording\nIntegration tests for full selection workflow",
+    "acceptance_criteria": "Click on object selects it (updates Selection in Document)\nCmd+Click toggles selection state\nDrag generates MoveObjectEvent at 50ms intervals\nCursor changes based on hover state (arrow / move cursor)\nIntegration tests pass",
+    "dependencies": [
+      "I5.T1",
+      "I5.T2",
+      "I5.T3",
+      "I2.T3"
+    ],
     "parallelizable": false,
     "done": false
   },
@@ -94,13 +103,15 @@
       "integration_test/direct_selection_workflow_test.dart"
     ],
     "input_files": [
-      "lib/application/tools/tool_interface.dart",
-      "lib/domain/services/hit_test_service.dart",
-      "lib/infrastructure/event_sourcing/event_recorder.dart"
+      "lib/application/tools/tool_interface.dart"
     ],
-    "deliverables": "DirectSelectionTool implementing ITool, Anchor selection logic, Anchor dragging with MoveAnchorEvent recording, Integration tests",
-    "acceptance_criteria": "Click on anchor selects it, Drag anchor generates MoveAnchorEvent at 50ms intervals, Anchor points and BCP handles rendered via renderOverlay(), Cursor changes to crosshair when hovering anchor, Integration tests verify anchor manipulation workflow",
-    "dependencies": ["I5.T1", "I5.T3", "I2.T3"],
+    "deliverables": "DirectSelectionTool implementing ITool\nAnchor selection logic\nAnchor dragging with MoveAnchorEvent recording\nIntegration tests",
+    "acceptance_criteria": "Click on anchor selects it\nDrag anchor generates MoveAnchorEvent at 50ms intervals\nAnchor points and BCP handles rendered via renderOverlay()\nCursor changes to crosshair when hovering anchor\nIntegration tests verify anchor manipulation workflow",
+    "dependencies": [
+      "I5.T1",
+      "I5.T3",
+      "I2.T3"
+    ],
     "parallelizable": true,
     "done": false
   },
@@ -119,9 +130,11 @@
     "input_files": [
       "lib/presentation/providers/tool_manager_provider.dart"
     ],
-    "deliverables": "Tool toolbar widget with icon buttons, Active tool highlighting, Integration with ToolManagerProvider, Widget tests",
-    "acceptance_criteria": "Toolbar displays all tool buttons, Clicking button activates corresponding tool, Active tool button highlighted (different color/border), Widget tests verify button interactions",
-    "dependencies": ["I5.T2"],
+    "deliverables": "Tool toolbar widget with icon buttons\nActive tool highlighting\nIntegration with ToolManagerProvider\nWidget tests",
+    "acceptance_criteria": "Toolbar displays all tool buttons\nClicking button activates corresponding tool\nActive tool button highlighted (different color/border)\nWidget tests verify button interactions",
+    "dependencies": [
+      "I5.T2"
+    ],
     "parallelizable": true,
     "done": false
   }

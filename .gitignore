@@ -49,5 +49,10 @@ app.*.map.json
 *.g.dart
 *.freezed.dart
 
-# CodeMachine memory (should not be committed)
-.codemachine/memory
+# CodeMachine (exclude logs, memory, prompts, agents, template, scripts)
+.codemachine/memory/
+.codemachine/logs/
+.codemachine/prompts/
+.codemachine/agents/
+.codemachine/template.json
+.codemachine/scripts/

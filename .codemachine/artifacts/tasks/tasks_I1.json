@@ -5,7 +5,7 @@
     "iteration_goal": "Establish project infrastructure, initialize Flutter project, integrate SQLite, and document event sourcing architecture",
     "description": "Initialize Flutter desktop project with proper directory structure, configure analysis_options.yaml for strict linting, set up pubspec.yaml with initial dependencies (sqflite_common_ffi, provider, logger, freezed, vector_math), and create basic main.dart entry point. Configure macOS and Windows build targets. Create README.md with project overview.",
     "agent_type_hint": "SetupAgent",
-    "inputs": "Project plan Section 3 (Directory Structure), Technology stack requirements (Flutter 3.16+, Dart 3.2+), Linting rules from architecture blueprint (analysis_options.yaml recommendations)",
+    "inputs": "Project plan Section 3 (Directory Structure)\nTechnology stack requirements (Flutter 3.16+, Dart 3.2+)\nLinting rules from architecture blueprint (analysis_options.yaml recommendations)",
     "target_files": [
       "pubspec.yaml",
       "lib/main.dart",
@@ -13,15 +13,14 @@
       "analysis_options.yaml",
       "README.md",
       ".gitignore",
-      "macos/",
-      "windows/"
+      "macos/"
     ],
     "input_files": [],
-    "deliverables": "Working Flutter project that compiles and runs on macOS/Windows, Configured dependencies in pubspec.yaml, Strict linting rules enforced, Basic app widget with placeholder UI, README documenting project setup",
-    "acceptance_criteria": "`flutter pub get` succeeds without errors, `flutter analyze` passes with zero issues, `flutter run -d macos` launches application window, `flutter run -d windows` launches application window (if on Windows), All required dependencies listed in pubspec.yaml, Directory structure matches plan Section 3",
+    "deliverables": "Working Flutter project that compiles and runs on macOS/Windows\nConfigured dependencies in pubspec.yaml\nStrict linting rules enforced\nBasic app widget with placeholder UI\nREADME documenting project setup",
+    "acceptance_criteria": "`flutter pub get` succeeds without errors\n`flutter analyze` passes with zero issues\n`flutter run -d macos` launches application window\n`flutter run -d windows` launches application window (if on Windows)\nAll required dependencies listed in pubspec.yaml\nDirectory structure matches plan Section 3",
     "dependencies": [],
     "parallelizable": false,
-    "done": true
+    "done": false
   },
   {
     "task_id": "I1.T2",
@@ -29,16 +28,18 @@
     "iteration_goal": "Establish project infrastructure, initialize Flutter project, integrate SQLite, and document event sourcing architecture",
     "description": "Generate PlantUML Component Diagram (C4 Level 3) showing the major subsystems: UI Layer, Canvas Renderer, Tool System, Event Sourcing Core, Vector Engine, Persistence Layer, and Import/Export Services. Diagram should visualize dependencies and data flow between components. Save as `docs/diagrams/component_overview.puml`.",
     "agent_type_hint": "DocumentationAgent",
-    "inputs": "Architecture blueprint Section 3.5 (Component Diagrams), Plan Section 2 (Core Architecture - Key Components)",
+    "inputs": "Architecture blueprint Section 3.5 (Component Diagrams)\nPlan Section 2 (Core Architecture - Key Components)",
     "target_files": [
       "docs/diagrams/component_overview.puml"
     ],
     "input_files": [],
-    "deliverables": "PlantUML Component Diagram file (C4 syntax), Diagram renders without syntax errors, All major components from architecture blueprint included",
-    "acceptance_criteria": "PlantUML file validates (can be rendered at plantuml.com or with local tool), Diagram accurately reflects component relationships described in architecture blueprint, All components labeled with technology (e.g., \"Flutter Widgets\", \"SQLite\", \"Dart Service\"), Dependencies between components shown with directional arrows",
-    "dependencies": ["I1.T1"],
+    "deliverables": "PlantUML Component Diagram file (C4 syntax)\nDiagram renders without syntax errors\nAll major components from architecture blueprint included",
+    "acceptance_criteria": "PlantUML file validates (can be rendered at plantuml.com or with local tool)\nDiagram accurately reflects component relationships described in architecture blueprint\nAll components labeled with technology (e.g., \"Flutter Widgets\", \"SQLite\", \"Dart Service\")\nDependencies between components shown with directional arrows",
+    "dependencies": [
+      "I1.T1"
+    ],
     "parallelizable": true,
-    "done": true
+    "done": false
   },
   {
     "task_id": "I1.T3",
@@ -46,16 +47,18 @@
     "iteration_goal": "Establish project infrastructure, initialize Flutter project, integrate SQLite, and document event sourcing architecture",
     "description": "Generate PlantUML Sequence Diagrams for 5 critical event flows: (1) Creating a path with the Pen Tool, (2) Loading a document (event replay), (3) Undo operation (event navigation), (4) Dragging an anchor point (50ms sampling), (5) Exporting to SVG. Save as `docs/diagrams/event_sourcing_sequences.puml`. Each diagram should show interactions between User, UI components, Event Recorder, Event Store, Event Replayer, Document State, and Canvas Renderer.",
     "agent_type_hint": "DocumentationAgent",
-    "inputs": "Architecture blueprint Section 4.4 (Interaction Flows - Sequence Diagrams), Plan Section 2.1 (Communication Patterns)",
+    "inputs": "Architecture blueprint Section 4.4 (Interaction Flows - Sequence Diagrams)\nPlan Section 2.1 (Communication Patterns)",
     "target_files": [
       "docs/diagrams/event_sourcing_sequences.puml"
     ],
     "input_files": [],
-    "deliverables": "PlantUML file with 5 sequence diagrams, Diagrams render without syntax errors, Each diagram accurately represents the workflow described in architecture blueprint",
-    "acceptance_criteria": "PlantUML file validates and renders correctly, All 5 workflows covered: pen tool creation, document load, undo, drag, SVG export, Sequence of method calls/events matches architecture specifications, Actors, components, and messages clearly labeled",
-    "dependencies": ["I1.T1"],
+    "deliverables": "PlantUML file with 5 sequence diagrams\nDiagrams render without syntax errors\nEach diagram accurately represents the workflow described in architecture blueprint",
+    "acceptance_criteria": "PlantUML file validates and renders correctly\nAll 5 workflows covered: pen tool creation, document load, undo, drag, SVG export\nSequence of method calls/events matches architecture specifications\nActors, components, and messages clearly labeled",
+    "dependencies": [
+      "I1.T1"
+    ],
     "parallelizable": true,
-    "done": true
+    "done": false
   },
   {
     "task_id": "I1.T4",
@@ -63,7 +66,7 @@
     "iteration_goal": "Establish project infrastructure, initialize Flutter project, integrate SQLite, and document event sourcing architecture",
     "description": "Integrate SQLite into the Flutter project using `sqflite_common_ffi` package. Create `lib/infrastructure/persistence/database_provider.dart` to manage SQLite connection lifecycle (open, close, transaction management). Implement initialization logic to create database file in application support directory. Write unit tests to verify database connection succeeds on both macOS and Windows.",
     "agent_type_hint": "BackendAgent",
-    "inputs": "Architecture blueprint Section 3.2 (Technology Stack - SQLite), Plan Section 2 (Database: SQLite via sqflite_common_ffi), Ticket T002 (SQLite Integration)",
+    "inputs": "Architecture blueprint Section 3.2 (Technology Stack - SQLite)\nPlan Section 2 (Database: SQLite via sqflite_common_ffi)\nTicket T002 (SQLite Integration)",
     "target_files": [
       "lib/infrastructure/persistence/database_provider.dart",
       "test/infrastructure/persistence/database_provider_test.dart"
@@ -71,11 +74,13 @@
     "input_files": [
       "pubspec.yaml"
     ],
-    "deliverables": "DatabaseProvider class with open(), close(), getDatabase() methods, Database file created in correct application support directory, Unit tests confirming database opens successfully, Error handling for database initialization failures",
-    "acceptance_criteria": "`flutter test test/infrastructure/persistence/database_provider_test.dart` passes, Database file created at correct path (~/Library/Application Support/WireTuner/ on macOS, %APPDATA%\\WireTuner\\ on Windows), No hardcoded paths; uses platform-specific path resolution, Connection can be opened and closed without errors",
-    "dependencies": ["I1.T1"],
+    "deliverables": "DatabaseProvider class with open(), close(), getDatabase() methods\nDatabase file created in correct application support directory\nUnit tests confirming database opens successfully\nError handling for database initialization failures",
+    "acceptance_criteria": "`flutter test test/infrastructure/persistence/database_provider_test.dart` passes\nDatabase file created at correct path (~/Library/Application Support/WireTuner/ on macOS, %APPDATA%\\WireTuner\\ on Windows)\nNo hardcoded paths; uses platform-specific path resolution\nConnection can be opened and closed without errors",
+    "dependencies": [
+      "I1.T1"
+    ],
     "parallelizable": false,
-    "done": true
+    "done": false
   },
   {
     "task_id": "I1.T5",
@@ -83,20 +88,21 @@
     "iteration_goal": "Establish project infrastructure, initialize Flutter project, integrate SQLite, and document event sourcing architecture",
     "description": "Create SQLite schema for event sourcing: define `metadata`, `events`, and `snapshots` tables as specified in architecture blueprint Section 3.6 (Data Model ERD). Implement SQL DDL in `lib/infrastructure/persistence/schema.dart`. Add migration logic to DatabaseProvider to create tables on first run. Write unit tests to verify schema creation.",
     "agent_type_hint": "DatabaseAgent",
-    "inputs": "Architecture blueprint Section 3.6 (Data Model ERD - SQLite Tables), Ticket T002 (SQLite Integration)",
+    "inputs": "Architecture blueprint Section 3.6 (Data Model ERD - SQLite Tables)\nTicket T002 (SQLite Integration)",
     "target_files": [
       "lib/infrastructure/persistence/schema.dart",
-      "lib/infrastructure/persistence/database_provider.dart",
-      "test/infrastructure/persistence/schema_test.dart"
+      "lib/infrastructure/persistence/database_provider.dart"
     ],
     "input_files": [
       "lib/infrastructure/persistence/database_provider.dart"
     ],
-    "deliverables": "SQL DDL for metadata, events, snapshots tables, Migration logic executed on database initialization, Indexes on (document_id, event_sequence) for events table, Unit tests confirming tables created with correct schema",
-    "acceptance_criteria": "`flutter test test/infrastructure/persistence/schema_test.dart` passes, Database schema matches ERD in architecture blueprint, Indexes created for efficient event replay queries, PRAGMA journal_mode=WAL enabled for crash resistance, Schema version tracking for future migrations",
-    "dependencies": ["I1.T4"],
+    "deliverables": "SQL DDL for metadata, events, snapshots tables\nMigration logic executed on database initialization\nIndexes on (document_id, event_sequence) for events table\nUnit tests confirming tables created with correct schema",
+    "acceptance_criteria": "`flutter test test/infrastructure/persistence/schema_test.dart` passes\nDatabase schema matches ERD in architecture blueprint\nIndexes created for efficient event replay queries\nPRAGMA journal_mode=WAL enabled for crash resistance\nSchema version tracking for future migrations",
+    "dependencies": [
+      "I1.T4"
+    ],
     "parallelizable": false,
-    "done": true
+    "done": false
   },
   {
     "task_id": "I1.T6",
@@ -104,14 +110,16 @@
     "iteration_goal": "Establish project infrastructure, initialize Flutter project, integrate SQLite, and document event sourcing architecture",
     "description": "Document event sourcing architecture design in `docs/adr/003-event-sourcing-architecture.md` (Architectural Decision Record format). Cover rationale for 50ms sampling rate, snapshot frequency (1000 events), event payload format (JSON), and immutability patterns. Reference relevant sections from architecture blueprint. This fulfills Ticket T003.",
     "agent_type_hint": "DocumentationAgent",
-    "inputs": "Architecture blueprint Section 4.1 (Design Rationale - Event Sourcing decisions), Ticket T003 (Event Sourcing Architecture Design), Plan Section 2 (Core Architecture - Event Sourcing Foundation)",
+    "inputs": "Architecture blueprint Section 4.1 (Design Rationale - Event Sourcing decisions)\nTicket T003 (Event Sourcing Architecture Design)\nPlan Section 2 (Core Architecture - Event Sourcing Foundation)",
     "target_files": [
       "docs/adr/003-event-sourcing-architecture.md"
     ],
     "input_files": [],
-    "deliverables": "ADR document in markdown format, Covers: context, decision, rationale, consequences, alternatives considered, References architecture blueprint sections",
-    "acceptance_criteria": "ADR follows standard format (title, status, context, decision, consequences), Explains 50ms sampling decision with rationale, Documents snapshot strategy (frequency, compression, garbage collection), Describes event payload format (JSON) and schema evolution approach, Lists alternatives considered (no sampling, time-based snapshots, binary encoding)",
-    "dependencies": ["I1.T1"],
+    "deliverables": "ADR document in markdown format\nCovers: context, decision, rationale, consequences, alternatives considered\nReferences architecture blueprint sections",
+    "acceptance_criteria": "ADR follows standard format (title, status, context, decision, consequences)\nExplains 50ms sampling decision with rationale\nDocuments snapshot strategy (frequency, compression, garbage collection)\nDescribes event payload format (JSON) and schema evolution approach\nLists alternatives considered (no sampling, time-based snapshots, binary encoding)",
+    "dependencies": [
+      "I1.T1"
+    ],
     "parallelizable": true,
     "done": false
   }

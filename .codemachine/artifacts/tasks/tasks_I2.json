@@ -5,20 +5,20 @@
     "iteration_goal": "Build the complete event sourcing infrastructure including event recording, persistence, snapshots, and replay",
     "description": "Define event model hierarchy using Dart sealed classes in `lib/domain/events/`. Create base EventBase class with common fields (eventId, timestamp, eventType). Implement sealed class hierarchy for specific events: CreatePathEvent, AddAnchorEvent, MoveObjectEvent, ModifyStyleEvent, etc. Each event class should be immutable and include toJson/fromJson methods for serialization.",
     "agent_type_hint": "BackendAgent",
-    "inputs": "Architecture blueprint Section 3.6 (Data Model - Event entities), Ticket T004 (Event Model)",
+    "inputs": "Architecture blueprint Section 3.6 (Data Model - Event entities)\nTicket T004 (Event Model)",
     "target_files": [
       "lib/domain/events/event_base.dart",
       "lib/domain/events/path_events.dart",
       "lib/domain/events/object_events.dart",
       "lib/domain/events/style_events.dart",
-      "api/event_schema.dart",
-      "api/event_types.md",
-      "test/domain/events/event_serialization_test.dart"
+      "api/event_schema.dart"
     ],
     "input_files": [],
-    "deliverables": "Immutable event classes with sealed hierarchy, JSON serialization/deserialization methods, Event schema documentation, Unit tests for serialization round-trip",
-    "acceptance_criteria": "All event classes extend EventBase, Sealed class pattern prevents external extension, toJson/fromJson methods work correctly for all event types, Unit tests verify serialization preserves all fields, Event types documented in api/event_types.md",
-    "dependencies": ["I1.T1"],
+    "deliverables": "Immutable event classes with sealed hierarchy\nJSON serialization/deserialization methods\nEvent schema documentation\nUnit tests for serialization round-trip",
+    "acceptance_criteria": "All event classes extend EventBase\nSealed class pattern prevents external extension\ntoJson/fromJson methods work correctly for all event types\nUnit tests verify serialization preserves all fields\nEvent types documented in api/event_types.md",
+    "dependencies": [
+      "I1.T1"
+    ],
     "parallelizable": true,
     "done": false
   },
@@ -28,7 +28,7 @@
     "iteration_goal": "Build the complete event sourcing infrastructure including event recording, persistence, snapshots, and replay",
     "description": "Implement EventSampler in `lib/infrastructure/event_sourcing/event_sampler.dart` to throttle high-frequency input events to 50ms intervals. Use Dart's Timer to buffer events and emit sampled events. Support immediate flush for critical events (tool deactivation, explicit save).",
     "agent_type_hint": "BackendAgent",
-    "inputs": "Architecture blueprint Section 4.1 (Decision 5 - 50ms sampling rate), Ticket T005 (Event Recorder with Sampling)",
+    "inputs": "Architecture blueprint Section 4.1 (Decision 5 - 50ms sampling rate)\nTicket T005 (Event Recorder with Sampling)",
     "target_files": [
       "lib/infrastructure/event_sourcing/event_sampler.dart",
       "test/infrastructure/event_sourcing/event_sampler_test.dart"
@@ -36,9 +36,11 @@
     "input_files": [
       "lib/domain/events/event_base.dart"
     ],
-    "deliverables": "EventSampler class with recordEvent(), flush() methods, Timer-based 50ms throttling logic, Unit tests verifying sampling behavior (rapid events collapse to one per 50ms)",
-    "acceptance_criteria": "Rapid events (< 50ms apart) are buffered, only last event emitted, Events > 50ms apart are emitted immediately, flush() method emits buffered event immediately, Unit tests confirm sampling rate behavior",
-    "dependencies": ["I2.T1"],
+    "deliverables": "EventSampler class with recordEvent(), flush() methods\nTimer-based 50ms throttling logic\nUnit tests verifying sampling behavior (rapid events collapse to one per 50ms)",
+    "acceptance_criteria": "Rapid events (< 50ms apart) are buffered, only last event emitted\nEvents > 50ms apart are emitted immediately\nflush() method emits buffered event immediately\nUnit tests confirm sampling rate behavior",
+    "dependencies": [
+      "I2.T1"
+    ],
     "parallelizable": false,
     "done": false
   },
@@ -48,18 +50,20 @@
     "iteration_goal": "Build the complete event sourcing infrastructure including event recording, persistence, snapshots, and replay",
     "description": "Implement EventRecorder in `lib/infrastructure/event_sourcing/event_recorder.dart` that uses EventSampler to record events and persist them to SQLite via EventStore. Support pause/resume for disabling recording during event replay. Implement event sequence numbering.",
     "agent_type_hint": "BackendAgent",
-    "inputs": "Architecture blueprint Section 4.6 (Internal API - EventRecorder), Ticket T005 (Event Recorder with Sampling)",
+    "inputs": "Architecture blueprint Section 4.6 (Internal API - EventRecorder)\nTicket T005 (Event Recorder with Sampling)",
     "target_files": [
       "lib/infrastructure/event_sourcing/event_recorder.dart",
       "test/infrastructure/event_sourcing/event_recorder_test.dart"
     ],
     "input_files": [
-      "lib/infrastructure/event_sourcing/event_sampler.dart",
-      "lib/infrastructure/persistence/event_store.dart"
+      "lib/infrastructure/event_sourcing/event_sampler.dart"
     ],
-    "deliverables": "EventRecorder class with recordEvent(), pause(), resume(), flush(), Integration with EventSampler for throttling, Integration with EventStore for persistence, Automatic event sequence numbering",
-    "acceptance_criteria": "Events persisted to SQLite with correct sequence numbers, pause() stops recording, resume() re-enables, flush() triggers immediate write of buffered events, Unit tests verify recording and persistence",
-    "dependencies": ["I2.T2", "I2.T4"],
+    "deliverables": "EventRecorder class with recordEvent(), pause(), resume(), flush()\nIntegration with EventSampler for throttling\nIntegration with EventStore for persistence\nAutomatic event sequence numbering",
+    "acceptance_criteria": "Events persisted to SQLite with correct sequence numbers\npause() stops recording, resume() re-enables\nflush() triggers immediate write of buffered events\nUnit tests verify recording and persistence",
+    "dependencies": [
+      "I2.T2",
+      "I2.T4"
+    ],
     "parallelizable": false,
     "done": false
   },
@@ -69,18 +73,21 @@
     "iteration_goal": "Build the complete event sourcing infrastructure including event recording, persistence, snapshots, and replay",
     "description": "Implement EventStore in `lib/infrastructure/persistence/event_store.dart` to handle CRUD operations for the events table. Provide methods: insertEvent(), getEvents(fromSeq, toSeq), getMaxSequence(). Use parameterized queries to prevent SQL injection. Write unit tests with in-memory SQLite database.",
     "agent_type_hint": "DatabaseAgent",
-    "inputs": "Architecture blueprint Section 3.6 (ERD - events table schema), Ticket T006 (Event Log Persistence)",
+    "inputs": "Architecture blueprint Section 3.6 (ERD - events table schema)\nTicket T006 (Event Log Persistence)",
     "target_files": [
       "lib/infrastructure/persistence/event_store.dart",
       "test/infrastructure/persistence/event_store_test.dart"
     ],
     "input_files": [
-      "lib/infrastructure/persistence/database_provider.dart",
-      "lib/infrastructure/persistence/schema.dart"
+      "lib/infrastructure/persistence/database_provider.dart"
     ],
-    "deliverables": "EventStore class with insertEvent(), getEvents(), getMaxSequence(), Parameterized SQL queries for safety, Unit tests with mock/in-memory database",
-    "acceptance_criteria": "insertEvent() adds event to database with auto-incremented sequence, getEvents(fromSeq, toSeq) returns events in order, getMaxSequence() returns highest event_sequence for document, Unit tests pass with 100% code coverage for EventStore",
-    "dependencies": ["I1.T4", "I1.T5", "I2.T1"],
+    "deliverables": "EventStore class with insertEvent(), getEvents(), getMaxSequence()\nParameterized SQL queries for safety\nUnit tests with mock/in-memory database",
+    "acceptance_criteria": "insertEvent() adds event to database with auto-incremented sequence\ngetEvents(fromSeq, toSeq) returns events in order\ngetMaxSequence() returns highest event_sequence for document\nUnit tests pass with 100% code coverage for EventStore",
+    "dependencies": [
+      "I1.T4",
+      "I1.T5",
+      "I2.T1"
+    ],
     "parallelizable": true,
     "done": false
   },
@@ -98,8 +105,8 @@
     "input_files": [
       "lib/domain/models/document.dart"
     ],
-    "deliverables": "SnapshotSerializer class with serialize(), deserialize(), JSON encoding with gzip compression option, Unit tests verifying round-trip serialization",
-    "acceptance_criteria": "serialize() produces Uint8List from Document, deserialize() reconstructs Document accurately, Compression reduces size by ~10:1 (verify with test data), Unit tests confirm round-trip preserves all document data",
+    "deliverables": "SnapshotSerializer class with serialize(), deserialize()\nJSON encoding with gzip compression option\nUnit tests verifying round-trip serialization",
+    "acceptance_criteria": "serialize() produces Uint8List from Document\ndeserialize() reconstructs Document accurately\nCompression reduces size by ~10:1 (verify with test data)\nUnit tests confirm round-trip preserves all document data",
     "dependencies": [],
     "parallelizable": true,
     "done": false
@@ -118,9 +125,12 @@
     "input_files": [
       "lib/infrastructure/persistence/database_provider.dart"
     ],
-    "deliverables": "SnapshotStore class with insertSnapshot(), getLatestSnapshot(), deleteOldSnapshots(), BLOB storage for compressed snapshots, Unit tests",
-    "acceptance_criteria": "insertSnapshot() stores BLOB with event_sequence metadata, getLatestSnapshot() returns most recent snapshot ≤ maxSequence, deleteOldSnapshots() removes snapshots older than last N (configurable), Unit tests pass with in-memory database",
-    "dependencies": ["I1.T4", "I2.T5"],
+    "deliverables": "SnapshotStore class with insertSnapshot(), getLatestSnapshot(), deleteOldSnapshots()\nBLOB storage for compressed snapshots\nUnit tests",
+    "acceptance_criteria": "insertSnapshot() stores BLOB with event_sequence metadata\ngetLatestSnapshot() returns most recent snapshot ≤ maxSequence\ndeleteOldSnapshots() removes snapshots older than last N (configurable)\nUnit tests pass with in-memory database",
+    "dependencies": [
+      "I1.T4",
+      "I2.T5"
+    ],
     "parallelizable": true,
     "done": false
   },
@@ -130,18 +140,20 @@
     "iteration_goal": "Build the complete event sourcing infrastructure including event recording, persistence, snapshots, and replay",
     "description": "Implement SnapshotManager in `lib/infrastructure/event_sourcing/snapshot_manager.dart` to orchestrate snapshot creation. Trigger snapshot every 1000 events (configurable). Use SnapshotSerializer and SnapshotStore. Provide methods: shouldSnapshot(eventCount), createSnapshot(Document).",
     "agent_type_hint": "BackendAgent",
-    "inputs": "Architecture blueprint Section 4.1 (Decision 6 - snapshot frequency), Ticket T007 (Snapshot System)",
+    "inputs": "Architecture blueprint Section 4.1 (Decision 6 - snapshot frequency)\nTicket T007 (Snapshot System)",
     "target_files": [
       "lib/infrastructure/event_sourcing/snapshot_manager.dart",
       "test/infrastructure/event_sourcing/snapshot_manager_test.dart"
     ],
     "input_files": [
-      "lib/infrastructure/event_sourcing/snapshot_serializer.dart",
-      "lib/infrastructure/persistence/snapshot_store.dart"
+      "lib/infrastructure/event_sourcing/snapshot_serializer.dart"
     ],
-    "deliverables": "SnapshotManager class with shouldSnapshot(), createSnapshot(), Configurable snapshot frequency (default: 1000 events), Integration tests verifying snapshots created at correct intervals",
-    "acceptance_criteria": "shouldSnapshot() returns true every 1000 events, createSnapshot() serializes Document and persists to SnapshotStore, Snapshots compressed with gzip, Unit tests confirm frequency logic",
-    "dependencies": ["I2.T5", "I2.T6"],
+    "deliverables": "SnapshotManager class with shouldSnapshot(), createSnapshot()\nConfigurable snapshot frequency (default: 1000 events)\nIntegration tests verifying snapshots created at correct intervals",
+    "acceptance_criteria": "shouldSnapshot() returns true every 1000 events\ncreateSnapshot() serializes Document and persists to SnapshotStore\nSnapshots compressed with gzip\nUnit tests confirm frequency logic",
+    "dependencies": [
+      "I2.T5",
+      "I2.T6"
+    ],
     "parallelizable": false,
     "done": false
   },
@@ -160,9 +172,11 @@
     "input_files": [
       "lib/domain/events/event_base.dart"
     ],
-    "deliverables": "EventDispatcher with dispatch(Event) method, EventHandlerRegistry with registerHandler(), getHandler(), Unit tests with mock handlers",
-    "acceptance_criteria": "dispatch() looks up handler in registry and invokes it, Handlers receive event and current document state, Unhandled event types throw informative error, Unit tests verify routing logic",
-    "dependencies": ["I2.T1"],
+    "deliverables": "EventDispatcher with dispatch(Event) method\nEventHandlerRegistry with registerHandler(), getHandler()\nUnit tests with mock handlers",
+    "acceptance_criteria": "dispatch() looks up handler in registry and invokes it\nHandlers receive event and current document state\nUnhandled event types throw informative error\nUnit tests verify routing logic",
+    "dependencies": [
+      "I2.T1"
+    ],
     "parallelizable": true,
     "done": false
   },
@@ -172,20 +186,22 @@
     "iteration_goal": "Build the complete event sourcing infrastructure including event recording, persistence, snapshots, and replay",
     "description": "Implement EventReplayer in `lib/infrastructure/event_sourcing/event_replayer.dart` to reconstruct document state from events. Provide replay(fromSeq, toSeq) and replayFromSnapshot(maxSeq) methods. Use EventStore, SnapshotStore, and EventDispatcher. Write integration tests loading test document from events.",
     "agent_type_hint": "BackendAgent",
-    "inputs": "Architecture blueprint Section 4.4 (Sequence Diagram - Loading document), Architecture blueprint Section 4.6 (Internal API - EventReplayer), Ticket T008 (Event Replay Engine)",
+    "inputs": "Architecture blueprint Section 4.4 (Sequence Diagram - Loading document)\nArchitecture blueprint Section 4.6 (Internal API - EventReplayer)\nTicket T008 (Event Replay Engine)",
     "target_files": [
       "lib/infrastructure/event_sourcing/event_replayer.dart",
       "test/infrastructure/event_sourcing/event_replayer_test.dart",
       "integration_test/event_replay_integration_test.dart"
     ],
     "input_files": [
-      "lib/infrastructure/persistence/event_store.dart",
-      "lib/infrastructure/persistence/snapshot_store.dart",
-      "lib/infrastructure/event_sourcing/event_dispatcher.dart"
+      "lib/infrastructure/persistence/event_store.dart"
     ],
-    "deliverables": "EventReplayer class with replay(), replayFromSnapshot(), Integration with EventStore, SnapshotStore, EventDispatcher, Integration tests with sample event sequences",
-    "acceptance_criteria": "replayFromSnapshot() loads snapshot and replays subsequent events, replay(fromSeq, toSeq) replays events in specified range, Reconstructed document state matches expected state after replay, Integration tests pass with test databases containing sample events",
-    "dependencies": ["I2.T4", "I2.T6", "I2.T8"],
+    "deliverables": "EventReplayer class with replay(), replayFromSnapshot()\nIntegration with EventStore, SnapshotStore, EventDispatcher\nIntegration tests with sample event sequences",
+    "acceptance_criteria": "replayFromSnapshot() loads snapshot and replays subsequent events\nreplay(fromSeq, toSeq) replays events in specified range\nReconstructed document state matches expected state after replay\nIntegration tests pass with test databases containing sample events",
+    "dependencies": [
+      "I2.T4",
+      "I2.T6",
+      "I2.T8"
+    ],
     "parallelizable": false,
     "done": false
   }
