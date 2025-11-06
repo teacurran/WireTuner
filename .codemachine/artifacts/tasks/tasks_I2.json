@@ -155,7 +155,7 @@
       "I2.T6"
     ],
     "parallelizable": false,
-    "done": false
+    "done": true
   },
   {
     "task_id": "I2.T8",
