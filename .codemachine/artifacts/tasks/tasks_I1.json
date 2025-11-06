@@ -96,7 +96,7 @@
     "acceptance_criteria": "`flutter test test/infrastructure/persistence/schema_test.dart` passes, Database schema matches ERD in architecture blueprint, Indexes created for efficient event replay queries, PRAGMA journal_mode=WAL enabled for crash resistance, Schema version tracking for future migrations",
     "dependencies": ["I1.T4"],
     "parallelizable": false,
-    "done": false
+    "done": true
   },
   {
     "task_id": "I1.T6",

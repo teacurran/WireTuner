@@ -10,24 +10,23 @@ This is the full specification of the task you must complete.
 
 ```json
 {
-  "task_id": "I1.T4",
+  "task_id": "I1.T5",
   "iteration_id": "I1",
   "iteration_goal": "Establish project infrastructure, initialize Flutter project, integrate SQLite, and document event sourcing architecture",
-  "description": "Integrate SQLite into the Flutter project using `sqflite_common_ffi` package. Create `lib/infrastructure/persistence/database_provider.dart` to manage SQLite connection lifecycle (open, close, transaction management). Implement initialization logic to create database file in application support directory. Write unit tests to verify database connection succeeds on both macOS and Windows.",
-  "agent_type_hint": "BackendAgent",
-  "inputs": "Architecture blueprint Section 3.2 (Technology Stack - SQLite), Plan Section 2 (Database: SQLite via sqflite_common_ffi), Ticket T002 (SQLite Integration)",
+  "description": "Create SQLite schema for event sourcing: define `metadata`, `events`, and `snapshots` tables as specified in architecture blueprint Section 3.6 (Data Model ERD). Implement SQL DDL in `lib/infrastructure/persistence/schema.dart`. Add migration logic to DatabaseProvider to create tables on first run. Write unit tests to verify schema creation.",
+  "agent_type_hint": "DatabaseAgent",
+  "inputs": "Architecture blueprint Section 3.6 (Data Model ERD - SQLite Tables), Ticket T002 (SQLite Integration)",
   "target_files": [
+    "lib/infrastructure/persistence/schema.dart",
     "lib/infrastructure/persistence/database_provider.dart",
-    "test/infrastructure/persistence/database_provider_test.dart"
+    "test/infrastructure/persistence/schema_test.dart"
   ],
   "input_files": [
-    "pubspec.yaml"
+    "lib/infrastructure/persistence/database_provider.dart"
   ],
-  "deliverables": "DatabaseProvider class with open(), close(), getDatabase() methods, Database file created in correct application support directory, Unit tests confirming database opens successfully, Error handling for database initialization failures",
-  "acceptance_criteria": "`flutter test test/infrastructure/persistence/database_provider_test.dart` passes, Database file created at correct path (~/Library/Application Support/WireTuner/ on macOS, %APPDATA%\\WireTuner\\ on Windows), No hardcoded paths; uses platform-specific path resolution, Connection can be opened and closed without errors",
-  "dependencies": [
-    "I1.T1"
-  ],
+  "deliverables": "SQL DDL for metadata, events, snapshots tables, Migration logic executed on database initialization, Indexes on (document_id, event_sequence) for events table, Unit tests confirming tables created with correct schema",
+  "acceptance_criteria": "`flutter test test/infrastructure/persistence/schema_test.dart` passes, Database schema matches ERD in architecture blueprint, Indexes created for efficient event replay queries, PRAGMA journal_mode=WAL enabled for crash resistance, Schema version tracking for future migrations",
+  "dependencies": ["I1.T4"],
   "parallelizable": false,
   "done": false
 }
@@ -38,6 +37,83 @@ This is the full specification of the task you must complete.
 ## 2. Architectural & Planning Context
 
 The following are the relevant sections from the architecture and plan documents, which I found by analyzing the task description.
+
+### Context: data-model-erd (from 03_System_Structure_and_Data.md)
+
+```markdown
+<!-- anchor: data-model-erd -->
+#### Diagram (PlantUML - ERD)
+
+~~~plantuml
+@startuml
+
+title Entity-Relationship Diagram - WireTuner Persistent Data
+
+' SQLite Tables
+entity metadata {
+  *document_id : TEXT <<PK>>
+  --
+  title : TEXT
+  format_version : INTEGER
+  created_at : INTEGER (Unix timestamp)
+  modified_at : INTEGER (Unix timestamp)
+  author : TEXT (optional)
+}
+
+entity events {
+  *event_id : INTEGER <<PK, AUTOINCREMENT>>
+  --
+  document_id : TEXT <<FK>>
+  event_sequence : INTEGER (0-based, unique per document)
+  event_type : TEXT (e.g., "CreatePath", "MoveAnchor")
+  event_payload : TEXT (JSON serialized)
+  timestamp : INTEGER (Unix timestamp milliseconds)
+  user_id : TEXT (future: for collaboration)
+}
+
+entity snapshots {
+  *snapshot_id : INTEGER <<PK, AUTOINCREMENT>>
+  --
+  document_id : TEXT <<FK>>
+  event_sequence : INTEGER (snapshot taken after this event)
+  snapshot_data : BLOB (serialized Document)
+  created_at : INTEGER (Unix timestamp)
+  compression : TEXT (e.g., "gzip", "none")
+}
+
+' Relationships
+metadata ||--o{ events : "contains"
+metadata ||--o{ snapshots : "has"
+
+' Notes
+note right of events
+  Append-only log.
+  Indexed on (document_id, event_sequence)
+  for efficient replay.
+  Typical size: ~100-500 bytes per event.
+end note
+
+note right of snapshots
+  Created every 1000 events.
+  BLOB size: ~10KB-1MB depending on complexity.
+  Enables fast document loading without
+  replaying entire event history.
+end note
+
+@enduml
+~~~
+```
+
+### Context: nfr-reliability (from 01_Context_and_Drivers.md)
+
+```markdown
+<!-- anchor: nfr-reliability -->
+#### Reliability
+- **Target**: Zero data loss, corruption-resistant file format
+- **Rationale**: Professional work cannot be lost due to crashes
+- **Impact**: Event sourcing provides natural audit trail, SQLite ACID guarantees
+- **Measurement**: Crash recovery testing, file corruption resistance tests
+```
 
 ### Context: stack-persistence (from 02_Architecture_Overview.md)
 
@@ -52,34 +128,22 @@ The following are the relevant sections from the architecture and plan documents
 | **File Format** | .wiretuner (SQLite) | - | Self-contained file format, readable with standard SQLite tools |
 ```
 
-### Context: decision-sqlite (from 06_Rationale_and_Future.md)
+### Context: constraint-technology (from 01_Context_and_Drivers.md)
 
 ```markdown
-<!-- anchor: decision-sqlite -->
-#### Decision 3: SQLite for Event Storage & File Format
+<!-- anchor: constraint-technology -->
+#### Technology Constraints
+- **Flutter Framework**: Required for cross-platform desktop development
+  - **Justification**: Enables single codebase for macOS/Windows, mature CustomPainter API
+  - **Trade-off**: Larger binary size vs. native development, but acceptable for desktop
 
-**Choice**: Use SQLite as the native .wiretuner file format
+- **SQLite Database**: Required for event log and snapshot storage
+  - **Justification**: Embedded, zero-configuration, ACID-compliant, portable file format
+  - **Trade-off**: Not suitable for concurrent access, but single-user focus makes this acceptable
 
-**Rationale:**
-1. **Embedded**: No separate database server, zero configuration
-2. **ACID Guarantees**: Ensures event log integrity even during crashes
-3. **Portable**: .wiretuner files are standard SQLite databases, readable with any SQLite tool
-4. **Performance**: More than adequate for 50ms sampling rate (20 events/second max)
-5. **Battle-Tested**: SQLite is the most deployed database engine globally
-
-**Trade-offs:**
-- **Not Text-Based**: Unlike JSON/XML, binary format (but SQLite's ubiquity mitigates this)
-- **Single-User**: SQLite not designed for concurrent access (acceptable for desktop app)
-- **File Size**: Potentially larger than custom binary format (mitigated by snapshot compression)
-
-**Alternatives Considered:**
-- **JSON File + Append-Only Log**: Simpler but no ACID guarantees, harder to query
-- **Custom Binary Format**: More compact but requires custom serialization, less tooling
-- **PostgreSQL**: Overkill, requires server, not portable
-
-**Verdict**: SQLite is the ideal choice for a local-first desktop application.
-
----
+- **Dart Language**: Mandated by Flutter framework
+  - **Justification**: Strong typing, null safety, good performance for UI applications
+  - **Trade-off**: Smaller ecosystem than JavaScript/Python, but adequate for desktop apps
 ```
 
 ### Context: reliability-data-integrity (from 05_Operational_Architecture.md)
@@ -102,53 +166,6 @@ The following are the relevant sections from the architecture and plan documents
 - **PDF Validation**: Check PDF structure integrity (valid xref table, trailer)
 ```
 
-### Context: Ticket T002 - SQLite Integration
-
-**Full ticket details from `.codemachine/inputs/tickets/T002-sqlite-integration.md`:**
-
-This ticket provides a complete reference implementation including:
-
-**Key Requirements:**
-1. Use `sqflite_common_ffi` for desktop SQLite support
-2. Database file extension: `.wiretuner`
-3. Schema version tracking in database
-4. Connection pooling/management
-5. Thread-safe database operations
-
-**Critical Implementation Notes:**
-- Database files should be created in platform-specific application support directories
-- Must use `sqfliteFfiInit()` and set `databaseFactory = databaseFactoryFfi` for desktop support
-- Schema versioning is critical for forward compatibility
-- Include `onCreate` and `onUpgrade` callbacks for schema management
-
-**Platform-Specific Paths:**
-- macOS: `~/Library/Application Support/WireTuner/`
-- Windows: `%APPDATA%\WireTuner\`
-
-**Reference Code Pattern (from ticket):**
-```dart
-class DatabaseService {
-  static const int currentSchemaVersion = 1;
-  Database? _database;
-
-  Future<void> initialize() async {
-    // Initialize FFI for desktop platforms
-    sqfliteFfiInit();
-    databaseFactory = databaseFactoryFfi;
-  }
-
-  Future<Database> openDocument(String filePath) async {
-    _database = await openDatabase(
-      filePath,
-      version: currentSchemaVersion,
-      onCreate: _onCreate,
-      onUpgrade: _onUpgrade,
-    );
-    return _database!;
-  }
-}
-```
-
 ---
 
 ## 3. Codebase Analysis & Strategic Guidance
@@ -157,99 +174,87 @@ The following analysis is based on my direct review of the current codebase. Use
 
 ### Relevant Existing Code
 
+*   **File:** `lib/infrastructure/persistence/database_provider.dart`
+    *   **Summary:** This file implements the complete database connection lifecycle management. It includes initialization of SQLite FFI, opening/closing database connections, path resolution for platform-specific directories (macOS: `~/Library/Application Support/WireTuner/`, Windows: `%APPDATA%\WireTuner\`), and placeholder callbacks for schema creation (`_onCreate`) and migrations (`_onUpgrade`).
+    *   **Current State:** The `_onCreate` method at line 188 currently has a comment stating "Schema creation will be implemented in task I1.T5" - **this is YOUR task**.
+    *   **Recommendation:** You MUST modify the `_onCreate` method in `database_provider.dart` to invoke your schema creation logic. You SHOULD import your new `schema.dart` file and call a function like `createSchema(db)` from within `_onCreate`.
+    *   **Critical Detail:** The `DatabaseProvider` already handles versioning via `currentSchemaVersion = 1` (line 31) and passes this to SQLite's `openDatabase` function with `onCreate` and `onUpgrade` callbacks. Your schema creation will automatically be triggered on first database creation.
+
 *   **File:** `pubspec.yaml`
-    *   **Summary:** This file already contains the `sqflite_common_ffi: ^2.3.0` dependency. The dependency is ready to use.
-    *   **Recommendation:** You DO NOT need to add the sqflite dependency - it's already present. Focus on implementing the DatabaseProvider class.
-
-*   **File:** `lib/main.dart`
-    *   **Summary:** This is the application entry point. Currently initializes logging and runs the App widget.
-    *   **Recommendation:** You will need to modify this file to initialize the DatabaseProvider before running the app. Follow the pattern shown in Ticket T002 - call `WidgetsFlutterBinding.ensureInitialized()` and initialize the database service.
-    *   **Important:** The main.dart currently uses a Logger instance. You SHOULD also use the logger package for any database initialization logging.
-
-*   **File:** `lib/app.dart`
-    *   **Summary:** Root application widget that sets up MaterialApp with Material Design 3 theme. Currently shows a placeholder home page.
-    *   **Recommendation:** You do NOT need to modify this file for task I1.T4. The DatabaseProvider should be initialized in main.dart before the App widget is created.
-
-*   **Directory:** `lib/infrastructure/persistence/`
-    *   **Summary:** This directory exists but is currently empty. This is where you will create `database_provider.dart`.
-    *   **Recommendation:** Create the DatabaseProvider class in this directory following the layered architecture pattern.
-
-*   **File:** `analysis_options.yaml`
-    *   **Summary:** Strict linting configuration is enabled with comprehensive rules.
-    *   **Recommendation:** Your code MUST comply with these rules. Pay special attention to:
-        - `public_member_api_docs` - All public members need documentation comments
-        - `prefer_const_constructors` - Use const constructors where possible
-        - `prefer_single_quotes` - Use single quotes for strings
-        - `require_trailing_commas` - Add trailing commas to parameter lists
-        - `avoid_print` - Use the logger package instead of print statements
+    *   **Summary:** This is the Flutter project configuration file. All required dependencies are already installed: `sqflite_common_ffi: ^2.3.0`, `path_provider: ^2.1.0`, `path: ^1.9.0`, and `logger: ^2.0.0`.
+    *   **Recommendation:** You do NOT need to add any new dependencies. All SQLite functionality is available through the already-installed `sqflite_common_ffi` package.
 
 ### Implementation Tips & Notes
 
-*   **Tip #1 - Platform-Specific Paths:** You MUST use platform-specific path resolution. Do NOT hardcode paths like `~/Library/Application Support/`. The ticket mentions `path_provider` package but it's NOT yet in pubspec.yaml. You have two options:
-    1. Add `path_provider: ^2.1.0` to pubspec.yaml dependencies (RECOMMENDED)
-    2. Use `Platform.environment` and manual path construction (NOT recommended, less robust)
+*   **Tip: WAL Mode for Crash Resistance:** The acceptance criteria explicitly requires `PRAGMA journal_mode=WAL`. WAL (Write-Ahead Logging) provides better crash resistance and concurrent read performance. You MUST execute this pragma during schema creation. Add it as: `await db.execute('PRAGMA journal_mode=WAL;');`
 
-*   **Tip #2 - Naming Convention:** The task specifies creating `database_provider.dart`, but Ticket T002 uses the name `database_service.dart`. Based on the task specification and directory structure, you SHOULD use `database_provider.dart` as specified in the target_files. The class name should be `DatabaseProvider` (not DatabaseService).
+*   **Tip: Index Creation is Critical:** The architecture blueprint emphasizes that the `events` table must have a composite index on `(document_id, event_sequence)` for efficient event replay. The typical query pattern is: "SELECT all events for document X in sequence order". Create this index in your schema: `CREATE INDEX idx_events_document_sequence ON events(document_id, event_sequence);`
 
-*   **Tip #3 - Error Handling:** The architecture blueprint emphasizes ACID guarantees and data integrity. Your DatabaseProvider MUST:
-    - Handle file I/O errors gracefully (permissions, disk full, etc.)
-    - Validate that database files are actually SQLite databases
-    - Provide clear error messages for debugging
-    - Use try-catch blocks with proper exception handling
+*   **Tip: Foreign Key Constraints:** While the ERD shows foreign key relationships between `metadata.document_id` and `events.document_id`/`snapshots.document_id`, SQLite foreign key enforcement is OFF by default. You SHOULD enable it with `PRAGMA foreign_keys=ON;` to maintain referential integrity during development. However, be aware this is a per-connection setting and may need to be enabled each time the database opens.
 
-*   **Tip #4 - Testing Strategy:** Your unit tests MUST:
-    - Create test databases in a temporary directory (NOT the real app directory)
-    - Clean up test files in `tearDown()` method
-    - Test both success and failure cases (e.g., opening non-existent file, corrupted database)
-    - Use the pattern shown in Ticket T002's test code as a reference
-    - Ensure tests can run on both macOS and Windows (use platform-agnostic paths)
+*   **Tip: Event Sequence Uniqueness:** The `event_sequence` column is described as "0-based, unique per document". You SHOULD enforce this uniqueness with a composite UNIQUE constraint: `UNIQUE(document_id, event_sequence)`. This prevents duplicate sequence numbers for the same document.
 
-*   **Tip #5 - Initialization Pattern:** Follow the exact initialization pattern from Ticket T002:
-    ```dart
-    sqfliteFfiInit();
-    databaseFactory = databaseFactoryFfi;
-    ```
-    This MUST be called before any database operations. It should be in an `initialize()` method that's called from main.dart.
+*   **Note: Schema Organization:** I recommend creating a `SchemaManager` class in your new `schema.dart` file with static methods like `createSchema(Database db)`, `createMetadataTable(Database db)`, `createEventsTable(Database db)`, and `createSnapshotsTable(Database db)`. This keeps the code modular and testable.
 
-*   **Note #1 - Schema Not Required Yet:** Task I1.T4 is about creating the DatabaseProvider (connection management). The actual schema creation is in task I1.T5. For this task, you only need to:
-    - Open/close database connections
-    - Create empty database files
-    - You do NOT need to create tables yet (that comes in I1.T5)
+*   **Note: Logging Strategy:** The existing `DatabaseProvider` uses the `Logger` package extensively (see line 40: `final Logger _logger = Logger();`). You SHOULD follow this pattern in your schema creation code. Log when tables are created, when indexes are built, and when pragmas are set. This will aid debugging and provide visibility during development.
 
-*   **Note #2 - File Extension:** Database files MUST use the `.wiretuner` extension as specified in the architecture. When creating new documents, ensure the file path ends with `.wiretuner`.
+*   **Note: Test Structure:** The existing test file `test/infrastructure/persistence/database_provider_test.dart` provides a good pattern for your schema tests. You SHOULD use in-memory databases for testing (pass `:memory:` as the database path or use `inMemoryDatabasePath` constant if available in sqflite). This makes tests fast and isolated.
 
-*   **Warning #1 - Thread Safety:** The architecture mentions "thread-safe database operations". However, since SQLite itself handles locking and Flutter is single-threaded by default, you don't need complex synchronization. The main concern is ensuring you don't access a closed database. Include proper null checks and state management.
+*   **Warning: Asynchronous Execution Required:** All database operations in the sqflite package are asynchronous. You MUST use `await` for every `db.execute()` call. The `_onCreate` callback signature is already `Future<void>`, so you can use async/await freely.
 
-*   **Warning #2 - Desktop-Only Package:** `sqflite_common_ffi` is desktop-only. The code will NOT work on mobile platforms. This is acceptable per the project requirements (macOS/Windows desktop only), but be aware if you test on mobile emulators.
+*   **Warning: SQL Injection Not a Concern Here:** Since you're writing DDL (Data Definition Language) statements with no user input, SQL injection is not a risk for this task. However, be aware that future tasks involving DML (Data Manipulation Language) with event payloads MUST use parameterized queries.
 
 ### Acceptance Criteria Checklist
 
-To verify your implementation is complete, ensure:
+To ensure you meet all requirements, verify:
 
-- [ ] `DatabaseProvider` class created in `lib/infrastructure/persistence/database_provider.dart`
-- [ ] Class includes `initialize()` method that calls `sqfliteFfiInit()` and sets `databaseFactory`
-- [ ] Class includes `open(String filePath)` method that opens a database connection
-- [ ] Class includes `close()` method that closes the database connection
-- [ ] Class includes `getDatabase()` method that returns the current Database instance
-- [ ] Database files are created in platform-specific app support directory (use `path_provider`)
-- [ ] Error handling for common failure cases (permissions, corrupted files, etc.)
-- [ ] All public methods have documentation comments (required by linter)
-- [ ] Unit tests created in `test/infrastructure/persistence/database_provider_test.dart`
-- [ ] Tests verify database can be opened and closed
-- [ ] Tests verify database file is created at correct path
-- [ ] Tests clean up temporary files in tearDown()
-- [ ] `flutter test test/infrastructure/persistence/database_provider_test.dart` passes
-- [ ] `flutter analyze` shows no errors or warnings
-- [ ] Updated `lib/main.dart` to initialize DatabaseProvider before running app
+1. ✅ **Three tables created:** `metadata`, `events`, `snapshots` with exact column names and types from ERD
+2. ✅ **Primary keys defined:** `metadata.document_id` (TEXT), `events.event_id` (INTEGER AUTOINCREMENT), `snapshots.snapshot_id` (INTEGER AUTOINCREMENT)
+3. ✅ **Foreign key references:** `events.document_id → metadata.document_id`, `snapshots.document_id → metadata.document_id`
+4. ✅ **Index on events table:** `CREATE INDEX idx_events_document_sequence ON events(document_id, event_sequence);`
+5. ✅ **WAL mode enabled:** `PRAGMA journal_mode=WAL;`
+6. ✅ **Foreign keys enabled (optional but recommended):** `PRAGMA foreign_keys=ON;`
+7. ✅ **Schema version tracking:** Already handled by `DatabaseProvider.currentSchemaVersion = 1`
+8. ✅ **Unit tests pass:** Tests MUST verify all tables exist, have correct columns, correct data types, and indexes are created
+9. ✅ **Integration with DatabaseProvider:** The `_onCreate` method MUST call your schema creation code
 
-### Code Quality Requirements
+### Example Code Structure (DO NOT COPY VERBATIM - USE AS GUIDANCE)
 
-Your implementation must:
-1. Follow the Dart style guide and project linting rules
-2. Include comprehensive documentation comments for all public APIs
-3. Use single quotes for strings
-4. Add trailing commas to all parameter lists
-5. Use `const` constructors where possible
-6. Use the `logger` package for any logging (NOT print statements)
-7. Handle all exceptions with try-catch blocks
-8. Provide user-friendly error messages
+```dart
+// lib/infrastructure/persistence/schema.dart
+class SchemaManager {
+  static Future<void> createSchema(Database db) async {
+    // Enable pragmas
+    // Create tables
+    // Create indexes
+    // Log completion
+  }
+}
+
+// In database_provider.dart, modify _onCreate:
+Future<void> _onCreate(Database db, int version) async {
+  _logger.i('Database created with version $version');
+  await SchemaManager.createSchema(db);
+  _logger.i('Schema creation completed successfully');
+}
+```
+
+---
+
+## Final Recommendations
+
+1. **Start by creating `lib/infrastructure/persistence/schema.dart`** with the `SchemaManager` class containing all DDL statements.
+
+2. **Modify `database_provider.dart`'s `_onCreate` method** to call `SchemaManager.createSchema(db)`.
+
+3. **Write comprehensive unit tests in `test/infrastructure/persistence/schema_test.dart`** that:
+   - Create an in-memory database
+   - Call the schema creation
+   - Query `sqlite_master` table to verify tables and indexes exist
+   - Verify column types and constraints using `PRAGMA table_info(table_name);`
+
+4. **Run `flutter test test/infrastructure/persistence/schema_test.dart`** to verify everything works.
+
+5. **Run `flutter analyze`** to ensure no linting errors.
+
+Good luck! This is a critical foundation task for the entire event sourcing architecture.

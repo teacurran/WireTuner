@@ -5,6 +5,8 @@ import 'package:path/path.dart' as path;
 import 'package:path_provider/path_provider.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
+import 'schema.dart';
+
 /// Provides database connection lifecycle management for the WireTuner application.
 ///
 /// The [DatabaseProvider] class manages SQLite database connections using the
@@ -182,12 +184,12 @@ class DatabaseProvider {
 
   /// Callback invoked when the database is created for the first time.
   ///
-  /// This is where schema creation would happen. For this iteration (I1.T4),
-  /// we only create an empty database. Schema creation will be implemented
-  /// in task I1.T5.
+  /// This method delegates to [SchemaManager] to create the complete
+  /// event sourcing schema including metadata, events, and snapshots tables.
   Future<void> _onCreate(Database db, int version) async {
     _logger.i('Database created with version $version');
-    // Schema creation will be implemented in task I1.T5
+    await SchemaManager.createSchema(db);
+    _logger.i('Schema creation completed successfully');
   }
 
   /// Callback invoked when the database needs to be upgraded.
