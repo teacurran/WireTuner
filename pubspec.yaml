@@ -28,12 +28,17 @@ dependencies:
   # UI Components
   cupertino_icons: ^1.0.8
 
+  # Serialization & Code Generation Annotations
+  freezed_annotation: ^2.4.0
+  json_annotation: ^4.8.0
+
 dev_dependencies:
   flutter_test:
     sdk: flutter
 
   # Code Generation
   freezed: ^2.4.0
+  json_serializable: ^6.7.0
   build_runner: ^2.4.0
 
   # Linting
