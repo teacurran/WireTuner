@@ -2,39 +2,49 @@
   {
     "task_id": "I5.T1",
     "iteration_id": "I5",
-    "iteration_goal": "Establish tool framework and implement Selection and Direct Selection tools for object and anchor manipulation",
-    "description": "Define ITool abstract interface in `lib/application/tools/tool_interface.dart`. Specify methods: onActivate(), onDeactivate(), onPointerDown/Move/Up(), onKeyPress(), renderOverlay(Canvas). Define Cursor get cursor property. All tools will implement this interface.",
+    "iteration_goal": "Finalize persistence workflows (save/load/versioning), build export (SVG/PDF) and import (AI/SVG) services, and capture the supporting activity diagram plus regression tests to close Milestone 0.1.",
+    "description": "Implement Save Document pipeline (T033) tying UI commands to EventStore/SnapshotManager, ensuring atomic writes, backups, and telemetry.",
     "agent_type_hint": "BackendAgent",
-    "inputs": "Architecture blueprint Section 4.6 (Internal API - Tool Interface)\nTicket T018 (Tool Framework)",
+    "inputs": "Save/Load spec, event store, snapshot serializer.",
     "target_files": [
-      "lib/application/tools/tool_interface.dart"
+      "lib/src/services/file_ops/save_service.dart",
+      "lib/src/services/file_ops/file_picker_adapter.dart",
+      "integration_test/save_flow_test.dart"
     ],
-    "input_files": [],
-    "deliverables": "ITool abstract interface\nMethod signatures for all tool lifecycle and event handling",
-    "acceptance_criteria": "Interface compiles without errors\nAll required methods defined with clear documentation\nCursor property defined (returns SystemMouseCursor or custom)",
+    "input_files": [
+      "lib/src/services/file_ops/save_service.dart",
+      "lib/src/event_sourcing/persistence/",
+      "test/integration/save_flow_test.dart"
+    ],
+    "deliverables": "Save service with dependency injection, UI command wiring, integration test covering save + reopen scenario.",
+    "acceptance_criteria": "- Save writes metadata/events/snapshots within single WAL-backed transaction; temp file rename ensures atomicity.\n        - Telemetry logs file size, event count, snapshot ratio.\n        - Integration test verifies reopened document equals pre-save snapshot hash.",
     "dependencies": [
-      "I1.T1"
+      "I4.T3",
+      "I1.T7"
     ],
-    "parallelizable": true,
+    "parallelizable": false,
     "done": false
   },
   {
     "task_id": "I5.T2",
     "iteration_id": "I5",
-    "iteration_goal": "Establish tool framework and implement Selection and Direct Selection tools for object and anchor manipulation",
-    "description": "Implement ToolManager in `lib/application/tools/tool_manager.dart` as singleton service. Manage active tool state, provide setActiveTool(ITool), route pointer/keyboard events to active tool. Integrate with CanvasWidget to receive input events. Create ToolManagerProvider for state management.",
+    "iteration_goal": "Finalize persistence workflows (save/load/versioning), build export (SVG/PDF) and import (AI/SVG) services, and capture the supporting activity diagram plus regression tests to close Milestone 0.1.",
+    "description": "Implement Load Document + version negotiation (T034/T035) and author File Ops Activity Diagram (Mermaid) covering save/load/export/import flows.",
     "agent_type_hint": "BackendAgent",
-    "inputs": "Architecture blueprint Section 3.5 (Component Diagram - Tool Manager)\nTicket T018 (Tool Framework)",
+    "inputs": "Save service, event navigator, persistence contract.",
     "target_files": [
-      "lib/application/tools/tool_manager.dart",
-      "lib/presentation/providers/tool_manager_provider.dart",
-      "test/application/tools/tool_manager_test.dart"
+      "lib/src/services/file_ops/load_service.dart",
+      "lib/src/services/file_ops/version_migrator.dart",
+      "docs/diagrams/file_ops_activity.mmd",
+      "integration_test/load_upgrade_test.dart"
     ],
     "input_files": [
-      "lib/application/tools/tool_interface.dart"
+      "lib/src/services/file_ops/load_service.dart",
+      "docs/diagrams/file_ops_activity.mmd",
+      "test/integration/load_flow_test.dart"
     ],
-    "deliverables": "ToolManager service with tool switching logic\nEvent routing to active tool\nProvider for UI integration\nUnit tests with mock tools",
-    "acceptance_criteria": "setActiveTool() calls onDeactivate() on previous tool, onActivate() on new tool\nPointer events routed to active tool's handlers\nKeyboard events routed to active tool\nUnit tests verify routing and lifecycle",
+    "deliverables": "Load service that selects latest snapshot, replays deltas, runs migrations for older format versions, plus Mermaid activity diagram.",
+    "acceptance_criteria": "- Load handles corrupt events gracefully (skips + warns) and surfaces UI alert.\n        - Version migrator upgrades ≤ previous format version tests (fixtures) and writes upgrade notes to telemetry.\n        - Diagram illustrates branching for save, load, export, import with error nodes; passes Mermaid CLI validation.",
     "dependencies": [
       "I5.T1"
     ],
@@ -44,22 +54,25 @@
   {
     "task_id": "I5.T3",
     "iteration_id": "I5",
-    "iteration_goal": "Establish tool framework and implement Selection and Direct Selection tools for object and anchor manipulation",
-    "description": "Implement HitTestService in `lib/domain/services/hit_test_service.dart` for detecting which object/anchor is under a point. Provide methods: hitTestObjects(Document, Point) returning nearest object, hitTestAnchors(Path, Point) returning anchor index. Use distance calculations and path containment logic. Write comprehensive unit tests.",
+    "iteration_goal": "Finalize persistence workflows (save/load/versioning), build export (SVG/PDF) and import (AI/SVG) services, and capture the supporting activity diagram plus regression tests to close Milestone 0.1.",
+    "description": "Build SVG export service (T036) translating Document to SVG 1.1, including metadata, transforms, styles, and test harness comparing golden SVG output.",
     "agent_type_hint": "BackendAgent",
-    "inputs": "Architecture blueprint Section 3.5 (Component Diagram - Hit Test Service)",
+    "inputs": "Rendering pipeline, document model, persistence contract.",
     "target_files": [
-      "lib/domain/services/hit_test_service.dart",
-      "test/domain/services/hit_test_service_test.dart"
+      "lib/src/services/export/svg_exporter.dart",
+      "lib/src/services/export/svg_writer.dart",
+      "test/unit/svg_exporter_test.dart"
     ],
     "input_files": [
-      "lib/domain/models/document.dart"
+      "lib/src/services/export/svg_exporter.dart",
+      "test/unit/svg_exporter_test.dart",
+      "docs/specs/export_import.md"
     ],
-    "deliverables": "HitTestService with hitTestObjects(), hitTestAnchors()\nDistance-based hit detection for paths\nBounds-based hit detection for shapes\nUnit tests covering edge cases (overlapping objects, small objects)",
-    "acceptance_criteria": "hitTestObjects() returns nearest object within tolerance (5px)\nhitTestAnchors() returns anchor index within tolerance (8px)\nReturns null if no object/anchor within tolerance\nUnit tests achieve 90%+ coverage",
+    "deliverables": "Export service + writer utilities, tests verifying path/shape serialization, style mapping, and transform preservation.",
+    "acceptance_criteria": "- Supports groups, layers, selection markers removed; output passes `svglint`.\n        - Handles >5k objects within 5 s for benchmark doc.\n        - Documented limitations (filters, gradients) noted in export spec.",
     "dependencies": [
-      "I3.T6",
-      "I3.T3"
+      "I2.T6",
+      "I4.T5"
     ],
     "parallelizable": true,
     "done": false
@@ -67,25 +80,22 @@
   {
     "task_id": "I5.T4",
     "iteration_id": "I5",
-    "iteration_goal": "Establish tool framework and implement Selection and Direct Selection tools for object and anchor manipulation",
-    "description": "Implement SelectionTool in `lib/application/tools/selection_tool.dart`. Click to select objects, Cmd+Click to toggle selection, drag to move selected objects. Generate MoveObjectEvent during drag (sampled at 50ms via EventRecorder). Use HitTestService for object detection. Write widget and integration tests.",
+    "iteration_goal": "Finalize persistence workflows (save/load/versioning), build export (SVG/PDF) and import (AI/SVG) services, and capture the supporting activity diagram plus regression tests to close Milestone 0.1.",
+    "description": "Implement PDF export (T037) leveraging `pdf` package, ensuring vector fidelity, page sizing, and metadata insertion.",
     "agent_type_hint": "BackendAgent",
-    "inputs": "Architecture blueprint Section 4.4 (Sequence Diagram - Tool interactions)\nTicket T019 (Selection Tool)",
+    "inputs": "SVG exporter, document model.",
     "target_files": [
-      "lib/application/tools/selection_tool.dart",
-      "test/application/tools/selection_tool_test.dart",
-      "integration_test/selection_tool_workflow_test.dart"
+      "lib/src/services/export/pdf_exporter.dart",
+      "test/unit/pdf_exporter_test.dart"
     ],
     "input_files": [
-      "lib/application/tools/tool_interface.dart"
+      "lib/src/services/export/pdf_exporter.dart",
+      "test/unit/pdf_exporter_test.dart"
     ],
-    "deliverables": "SelectionTool implementing ITool\nClick-to-select logic with modifier key support\nDrag-to-move with event recording\nIntegration tests for full selection workflow",
-    "acceptance_criteria": "Click on object selects it (updates Selection in Document)\nCmd+Click toggles selection state\nDrag generates MoveObjectEvent at 50ms intervals\nCursor changes based on hover state (arrow / move cursor)\nIntegration tests pass",
+    "deliverables": "PDF exporter with artboard/page selection, CMYK color conversion helper, tests verifying Bezier accuracy via path length comparison.",
+    "acceptance_criteria": "- Exported PDF opens in Preview/Adobe without rasterization; vector selectors confirm path presence.\n        - Color profiles embedded; metadata includes document title/version.\n        - Exports complete with <10 s for benchmark doc.",
     "dependencies": [
-      "I5.T1",
-      "I5.T2",
-      "I5.T3",
-      "I2.T3"
+      "I5.T3"
     ],
     "parallelizable": false,
     "done": false
@@ -93,49 +103,29 @@
   {
     "task_id": "I5.T5",
     "iteration_id": "I5",
-    "iteration_goal": "Establish tool framework and implement Selection and Direct Selection tools for object and anchor manipulation",
-    "description": "Implement DirectSelectionTool in `lib/application/tools/direct_selection_tool.dart`. Click to select individual anchor points on paths. Display anchor points and BCP handles when path selected. Drag anchors to move them (generates MoveAnchorEvent). Use HitTestService.hitTestAnchors(). Write widget and integration tests.",
+    "iteration_goal": "Finalize persistence workflows (save/load/versioning), build export (SVG/PDF) and import (AI/SVG) services, and capture the supporting activity diagram plus regression tests to close Milestone 0.1.",
+    "description": "Implement AI import pipeline (T038) focusing on PDF-based AI files plus SVG import (T039), sharing a common parser abstraction and validation harness.",
     "agent_type_hint": "BackendAgent",
-    "inputs": "Ticket T020 (Direct Selection Tool)",
+    "inputs": "Event schema, document model, persistence contract.",
     "target_files": [
-      "lib/application/tools/direct_selection_tool.dart",
-      "test/application/tools/direct_selection_tool_test.dart",
-      "integration_test/direct_selection_workflow_test.dart"
+      "lib/src/services/import/ai_importer.dart",
+      "lib/src/services/import/svg_importer.dart",
+      "lib/src/services/import/import_validator.dart",
+      "integration_test/import_roundtrip_test.dart",
+      "docs/specs/import_compatibility.md"
     ],
     "input_files": [
-      "lib/application/tools/tool_interface.dart"
+      "lib/src/services/import/",
+      "test/integration/import_flow_test.dart",
+      "docs/specs/import_compatibility.md"
     ],
-    "deliverables": "DirectSelectionTool implementing ITool\nAnchor selection logic\nAnchor dragging with MoveAnchorEvent recording\nIntegration tests",
-    "acceptance_criteria": "Click on anchor selects it\nDrag anchor generates MoveAnchorEvent at 50ms intervals\nAnchor points and BCP handles rendered via renderOverlay()\nCursor changes to crosshair when hovering anchor\nIntegration tests verify anchor manipulation workflow",
+    "deliverables": "Import services for AI (PDF parser) and SVG (XML parser) that convert inputs into event streams, plus documentation outlining supported features/limitations.",
+    "acceptance_criteria": "- Imports basic shapes, paths, groups, transforms; unsupported features logged but do not crash.\n        - Round-trip golden test: import AI/SVG → render → export SVG matches baseline within tolerance.\n        - Security constraints (max file size, disabled external entities) enforced.",
     "dependencies": [
-      "I5.T1",
-      "I5.T3",
-      "I2.T3"
+      "I5.T2",
+      "I5.T3"
     ],
-    "parallelizable": true,
-    "done": false
-  },
-  {
-    "task_id": "I5.T6",
-    "iteration_id": "I5",
-    "iteration_goal": "Establish tool framework and implement Selection and Direct Selection tools for object and anchor manipulation",
-    "description": "Create tool toolbar UI in `lib/presentation/widgets/toolbar/tool_toolbar.dart`. Display buttons for each tool (Selection, Direct Selection, Pen, Rectangle, Ellipse, Polygon, Star). Clicking button calls ToolManager.setActiveTool(). Highlight active tool. Write widget tests.",
-    "agent_type_hint": "FrontendAgent",
-    "inputs": "Ticket T018 (Tool Framework)",
-    "target_files": [
-      "lib/presentation/widgets/toolbar/tool_toolbar.dart",
-      "lib/presentation/widgets/toolbar/tool_button.dart",
-      "test/presentation/widgets/toolbar/tool_toolbar_test.dart"
-    ],
-    "input_files": [
-      "lib/presentation/providers/tool_manager_provider.dart"
-    ],
-    "deliverables": "Tool toolbar widget with icon buttons\nActive tool highlighting\nIntegration with ToolManagerProvider\nWidget tests",
-    "acceptance_criteria": "Toolbar displays all tool buttons\nClicking button activates corresponding tool\nActive tool button highlighted (different color/border)\nWidget tests verify button interactions",
-    "dependencies": [
-      "I5.T2"
-    ],
-    "parallelizable": true,
+    "parallelizable": false,
     "done": false
   }
 ]

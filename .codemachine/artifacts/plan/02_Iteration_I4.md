@@ -1,185 +1,87 @@
-# Iteration 4: Rendering Engine
+<!-- anchor: iteration-4-plan -->
+### Iteration 4: Shape Tools & Direct Manipulation
 
-**Version:** 1.0
-**Date:** 2025-11-05
-
----
-
-<!-- anchor: iteration-4-overview -->
-### Iteration 4: Rendering Engine
-
-<!-- anchor: iteration-4-metadata -->
 *   **Iteration ID:** `I4`
-*   **Goal:** Build high-performance canvas rendering system using Flutter CustomPainter with viewport transforms and 60 FPS target
-*   **Prerequisites:** I3 (domain models), I2 (event system for state updates)
-
-<!-- anchor: iteration-4-tasks -->
+*   **Goal:** Deliver parametric shape tools, finalize direct manipulation workflows (anchors, BCPs, objects, multi-select), and define the save/load API contract to align tooling output with persistence expectations.
+*   **Prerequisites:** `I1`, `I2`, `I3`
 *   **Tasks:**
 
 <!-- anchor: task-i4-t1 -->
 *   **Task 4.1:**
     *   **Task ID:** `I4.T1`
-    *   **Description:** Implement CanvasWidget in `lib/presentation/widgets/canvas/canvas_widget.dart` as main container for vector rendering. Use GestureDetector for input handling (pointer down/move/up, scroll for zoom). Integrate with DocumentProvider to reactively rebuild on state changes. Create basic layout with canvas centered in main window.
+    *   **Description:** Implement Rectangle and Ellipse tools (T025/T026) with adjustable radii/aspect locks, leveraging shared shape controller infrastructure.
     *   **Agent Type Hint:** `FrontendAgent`
-    *   **Inputs:**
-        *   Architecture blueprint Section 3.4 (Container Diagram - Canvas Renderer)
-        *   Ticket T013 (Canvas System with CustomPainter)
-    *   **Input Files:**
-        *   `lib/presentation/providers/document_provider.dart` (create if not exists)
-    *   **Target Files:**
-        *   `lib/presentation/widgets/canvas/canvas_widget.dart`
-        *   `lib/presentation/providers/document_provider.dart`
-        *   `test/presentation/widgets/canvas/canvas_widget_test.dart`
-    *   **Deliverables:**
-        *   CanvasWidget with GestureDetector for input
-        *   Integration with DocumentProvider (Consumer widget)
-        *   Widget tests verifying build
+    *   **Inputs:** Tool framework, geometry models, rendering overlay.
+    *   **Input Files:** ["lib/src/tools/shapes/rectangle_tool.dart", "lib/src/tools/shapes/ellipse_tool.dart", "test/widget/shape_tool_rect_ellipse_test.dart"]
+    *   **Target Files:** ["lib/src/tools/shapes/rectangle_tool.dart", "lib/src/tools/shapes/ellipse_tool.dart", "lib/src/tools/shapes/shape_base.dart", "test/widget/shape_tool_rect_ellipse_test.dart"]
+    *   **Deliverables:** Shape base class, rectangle/ellipse controllers with snapping, preview overlays, widget tests verifying emitted events.
     *   **Acceptance Criteria:**
-        *   CanvasWidget builds without errors
-        *   GestureDetector captures pointer events
-        *   Widget rebuilds when DocumentProvider notifies
-        *   Widget tests pass
-    *   **Dependencies:** `I1.T1` (project setup), `I3.T6` (Document model)
+        - Drag interaction emits CreateShape + UpdateShape events with normalized dimensions.
+        - Holding Shift enforces square/circle; Option toggles from center.
+        - Tests assert shape parameters stored in Document and render correctly.
+    *   **Dependencies:** `I3.T1`, `I2.T6`
     *   **Parallelizable:** Yes
 
 <!-- anchor: task-i4-t2 -->
 *   **Task 4.2:**
     *   **Task ID:** `I4.T2`
-    *   **Description:** Implement Viewport transformation logic in `lib/domain/models/viewport.dart` (if not already complete from I3.T6). Add methods: toScreen(Point), toWorld(Point), toScreenTransform() returning Matrix4. Implement pan and zoom logic. Write unit tests for coordinate transformations at various zoom levels.
-    *   **Agent Type Hint:** `BackendAgent`
-    *   **Inputs:**
-        *   Architecture blueprint Section 5.3 (Scalability - Viewport Culling)
-        *   Ticket T014 (Viewport Transform Pan/Zoom)
-    *   **Input Files:**
-        *   `lib/domain/models/viewport.dart` (from I3.T6, enhance if needed)
-    *   **Target Files:**
-        *   `lib/domain/models/viewport.dart`
-        *   `test/domain/models/viewport_test.dart`
-    *   **Deliverables:**
-        *   Viewport with toScreen/toWorld coordinate conversions
-        *   Pan (translate) and zoom (scale) transformations
-        *   Unit tests verifying transforms at zoom 0.1, 1.0, 10.0
+    *   **Description:** Deliver Polygon and Star tools (T027/T028) with UI for sides/points, inner radius, and rotational alignment; persist parameters for later editing.
+    *   **Agent Type Hint:** `FrontendAgent`
+    *   **Inputs:** Shape base, geometry utilities.
+    *   **Input Files:** ["lib/src/tools/shapes/polygon_tool.dart", "lib/src/tools/shapes/star_tool.dart", "lib/src/domain/models/shape.dart", "test/widget/shape_tool_polygon_star_test.dart"]
+    *   **Target Files:** ["lib/src/tools/shapes/polygon_tool.dart", "lib/src/tools/shapes/star_tool.dart", "lib/src/tools/shapes/shape_options_panel.dart", "test/widget/shape_tool_polygon_star_test.dart"]
+    *   **Deliverables:** Controllers for polygon/star, property panel widget, tests verifying event payloads and re-editing via direct selection.
     *   **Acceptance Criteria:**
-        *   toScreen/toWorld correctly convert coordinates
-        *   Pan updates viewport offset
-        *   Zoom scales around cursor point
-        *   Unit tests achieve 90%+ coverage
-    *   **Dependencies:** `I3.T6` (Viewport model)
-    *   **Parallelizable:** Yes (can overlap with I4.T1)
+        - Parameter UI updates tool state and emits UpdateShapeParam events.
+        - Star inner radius guards against invalid values; polygon sides >= 3 enforced.
+        - Replay reproduces identical geometry (verified via golden test hash).
+    *   **Dependencies:** `I4.T1`
+    *   **Parallelizable:** No
 
 <!-- anchor: task-i4-t3 -->
 *   **Task 4.3:**
     *   **Task ID:** `I4.T3`
-    *   **Description:** Implement CanvasPainter in `lib/presentation/widgets/canvas/canvas_painter.dart` extending CustomPainter. Override paint() method to render Document objects. Apply viewport transform, render each VectorObject's path with style (fill/stroke). Optimize with shouldRepaint() logic. Write widget tests and performance benchmarks (target 60 FPS with 1000 objects).
-    *   **Agent Type Hint:** `FrontendAgent`
-    *   **Inputs:**
-        *   Architecture blueprint Section 3.2 (Rendering - CustomPainter)
-        *   Architecture blueprint Section 5.3 (Performance - Rendering Optimizations)
-        *   Ticket T015 (Path Rendering with Bezier)
-    *   **Input Files:**
-        *   `lib/domain/models/document.dart` (from I3.T6)
-        *   `lib/domain/models/viewport.dart` (from I4.T2)
-    *   **Target Files:**
-        *   `lib/presentation/widgets/canvas/canvas_painter.dart`
-        *   `test/presentation/widgets/canvas/canvas_painter_test.dart`
-        *   `test/performance/rendering_benchmark_test.dart`
-    *   **Deliverables:**
-        *   CustomPainter rendering all VectorObjects
-        *   Bezier curve rendering via Canvas.drawPath()
-        *   Viewport transform applied to all objects
-        *   Performance benchmark achieving 60 FPS with 1000 simple paths
+    *   **Description:** Define Save/Load API contract (OpenAPI v3 YAML + Markdown narrative) covering document IO commands, metadata, version negotiation, and error codes.
+    *   **Agent Type Hint:** `DocumentationAgent`
+    *   **Inputs:** Sections 2 & 2.1, event schema, snapshot serializer.
+    *   **Input Files:** ["api/save_load.yaml", "docs/specs/persistence_contract.md"]
+    *   **Target Files:** ["api/save_load.yaml", "docs/specs/persistence_contract.md"]
+    *   **Deliverables:** OpenAPI spec (even though local) documenting pseudo-endpoints/methods for save/load/export, Markdown contract describing CLI/GUI triggers.
     *   **Acceptance Criteria:**
-        *   paint() renders all objects from Document
-        *   Bezier curves rendered smoothly (using Flutter's Path API)
-        *   shouldRepaint() returns false when document unchanged
-        *   Performance benchmark: 16ms frame time with 1000 objects
-        *   Widget tests verify rendering output (golden tests optional)
-    *   **Dependencies:** `I3.T6` (Document), `I4.T2` (Viewport)
-    *   **Parallelizable:** No (needs I4.T2 for transforms)
+        - Spec validates via `openapi-cli lint` (documented command) and includes schemas referencing event snapshot structures.
+        - Contract outlines versioning rules, recovery steps, and relation to `.wiretuner` extension.
+        - Referenced by I5 persistence tasks as normative source.
+    *   **Dependencies:** `I2.T4`, `I2.T3`
+    *   **Parallelizable:** Yes
 
 <!-- anchor: task-i4-t4 -->
 *   **Task 4.4:**
     *   **Task ID:** `I4.T4`
-    *   **Description:** Enhance CanvasPainter to render Shape objects by calling shape.toPath() and rendering generated path. Test rendering for all shape types (rectangle, ellipse, polygon, star) with various styles (filled, stroked, both).
+    *   **Description:** Implement anchor point dragging + BCP handle dragging improvements (T029/T030) with smoothing, snapping, and on-canvas numeric feedback.
     *   **Agent Type Hint:** `FrontendAgent`
-    *   **Inputs:**
-        *   Ticket T016 (Shape Rendering)
-        *   Shape models from I3.T4
-    *   **Input Files:**
-        *   `lib/presentation/widgets/canvas/canvas_painter.dart` (from I4.T3)
-        *   `lib/domain/models/shape.dart` (from I3.T4)
-    *   **Target Files:**
-        *   `lib/presentation/widgets/canvas/canvas_painter.dart` (update)
-        *   `test/presentation/widgets/canvas/shape_rendering_test.dart`
-    *   **Deliverables:**
-        *   Shape rendering via toPath() conversion
-        *   Visual tests for all shape types
+    *   **Inputs:** Direct selection tool, telemetry metrics, geometry services.
+    *   **Input Files:** ["lib/src/tools/direct_selection/", "lib/src/canvas/overlays/", "test/widget/anchor_drag_test.dart"]
+    *   **Target Files:** ["lib/src/tools/direct_selection/anchor_drag_controller.dart", "lib/src/tools/direct_selection/handle_drag_controller.dart", "lib/src/tools/direct_selection/snapping_service.dart", "test/widget/anchor_drag_test.dart"]
+    *   **Deliverables:** Enhanced drag controllers with snap-to-grid/path options, UI feedback for angle/length, tests verifying event emission cadence and snapping accuracy.
     *   **Acceptance Criteria:**
-        *   All ShapeType variants render correctly
-        *   Shapes respect style (fill, stroke, opacity)
-        *   Widget tests cover all shape types
-    *   **Dependencies:** `I4.T3` (CanvasPainter), `I3.T4` (Shape)
-    *   **Parallelizable:** No (needs I4.T3)
+        - Snapping toggled via modifier, defaults to 15° increments.
+        - Handle drag emits AdjustHandle events with symmetrical toggles; sampler backlog warnings logged if thresholds exceeded.
+        - Tests cover simultaneous multi-anchor adjustments and ensure no mutations outside event pipeline.
+    *   **Dependencies:** `I3.T4`
+    *   **Parallelizable:** No
 
 <!-- anchor: task-i4-t5 -->
 *   **Task 4.5:**
     *   **Task ID:** `I4.T5`
-    *   **Description:** Implement selection visualization in CanvasPainter. Render bounding boxes for selected objects, anchor points for direct selection, and BCP handles. Create OverlayPainter in `lib/presentation/widgets/canvas/overlay_painter.dart` for tool-specific overlays (guides, cursors). Write widget tests.
+    *   **Description:** Implement object dragging and multi-selection support (T031/T032) including bounding-box transforms, constraint modifiers, and multi-select data model updates.
     *   **Agent Type Hint:** `FrontendAgent`
-    *   **Inputs:**
-        *   Architecture blueprint Section 3.4 (Container Diagram - Tool Overlay)
-        *   Ticket T017 (Selection Visualization)
-    *   **Input Files:**
-        *   `lib/presentation/widgets/canvas/canvas_painter.dart` (from I4.T4)
-        *   `lib/domain/models/selection.dart` (from I3.T6)
-    *   **Target Files:**
-        *   `lib/presentation/widgets/canvas/canvas_painter.dart` (update for selection rendering)
-        *   `lib/presentation/widgets/canvas/overlay_painter.dart`
-        *   `test/presentation/widgets/canvas/selection_visualization_test.dart`
-    *   **Deliverables:**
-        *   Bounding box rendering for selected objects
-        *   Anchor point rendering (circles at anchor positions)
-        *   BCP handle rendering (lines from anchor to control points)
-        *   OverlayPainter for temporary tool feedback
+    *   **Inputs:** Selection tool, document selection APIs, viewport transforms.
+    *   **Input Files:** ["lib/src/tools/selection/", "lib/src/domain/document/selection.dart", "test/widget/multi_selection_test.dart"]
+    *   **Target Files:** ["lib/src/tools/selection/object_drag_controller.dart", "lib/src/domain/document/selection.dart", "test/widget/multi_selection_test.dart"]
+    *   **Deliverables:** Object drag controller with grid snapping, SHIFT-proportional scaling, multi-selection data model enhancements, widget tests verifying selection sets.
     *   **Acceptance Criteria:**
-        *   Selected objects show blue bounding box (configurable color)
-        *   Anchor points render as small circles when path selected
-        *   BCP handles render as lines with endpoint circles
-        *   OverlayPainter renders independently from main canvas
-        *   Widget tests verify selection rendering
-    *   **Dependencies:** `I4.T4` (Shape rendering), `I3.T6` (Selection model)
-    *   **Parallelizable:** No (needs I4.T4)
-
-<!-- anchor: task-i4-t6 -->
-*   **Task 4.6:**
-    *   **Task ID:** `I4.T6`
-    *   **Description:** Integrate pan/zoom gestures into CanvasWidget. Handle scroll events for zoom (pinch on trackpad, mouse wheel). Handle pan gesture (two-finger drag, or space+drag). Update Viewport model on gesture and trigger repaint. Write widget tests for gesture handling.
-    *   **Agent Type Hint:** `FrontendAgent`
-    *   **Inputs:**
-        *   Ticket T014 (Viewport Transform Pan/Zoom)
-    *   **Input Files:**
-        *   `lib/presentation/widgets/canvas/canvas_widget.dart` (from I4.T1)
-        *   `lib/domain/models/viewport.dart` (from I4.T2)
-    *   **Target Files:**
-        *   `lib/presentation/widgets/canvas/canvas_widget.dart` (update with gesture handlers)
-        *   `test/presentation/widgets/canvas/pan_zoom_test.dart`
-    *   **Deliverables:**
-        *   Scroll event handling for zoom
-        *   Pan gesture handling (update viewport offset)
-        *   Viewport state updates trigger repaint
-        *   Widget tests simulating gestures
-    *   **Acceptance Criteria:**
-        *   Scroll wheel zooms in/out around cursor position
-        *   Pan gesture translates viewport
-        *   Zoom constrained to reasonable range (0.1x - 100x)
-        *   Widget tests verify viewport updates
-    *   **Dependencies:** `I4.T1` (CanvasWidget), `I4.T2` (Viewport)
-    *   **Parallelizable:** No (needs I4.T2)
-
----
-
-**Iteration 4 Summary:**
-*   **Total Tasks:** 6
-*   **Estimated Duration:** 5-6 days
-*   **Critical Path:** I4.T1/I4.T2 → I4.T3 → I4.T4 → I4.T5, I4.T6 (parallel with I4.T5)
-*   **Deliverables:** Working canvas renderer with 60 FPS performance, pan/zoom, selection visualization
+        - Multi-select interactions maintain deterministic event sequences on replay.
+        - Object drag manipulates transforms, not vertex data; events aggregated per frame.
+        - Tests confirm selection serialization and viewport integration (scroll-to-selection option).
+    *   **Dependencies:** `I3.T3`, `I3.T4`
+    *   **Parallelizable:** No

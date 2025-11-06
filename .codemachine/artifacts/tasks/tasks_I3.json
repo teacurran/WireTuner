@@ -2,89 +2,97 @@
   {
     "task_id": "I3.T1",
     "iteration_id": "I3",
-    "iteration_goal": "Implement immutable domain models for vector objects (Document, Path, Shape, Segment, AnchorPoint, Style, Transform) with comprehensive unit tests",
-    "description": "Implement core geometry primitives in `lib/domain/models/`: Point (x, y), Rectangle (bounds), Matrix4 wrapper for transforms. Use vector_math package. Make all classes immutable with const constructors where possible. Write extensive unit tests for geometric operations (distance, intersection, transformation).",
-    "agent_type_hint": "BackendAgent",
-    "inputs": "Architecture blueprint Section 3.6 (Data Model - Geometry primitives)\nTicket T009 (Core Geometry Primitives)",
+    "iteration_goal": "Build the extensible tool framework, deliver selection/direct selection experiences, and implement the full pen workflow (anchors, straight segments, Bezier curves, BCP adjustments) with supporting diagrams and telemetry.",
+    "description": "Create the Tool Framework (T018) including `ToolManager`, base `ITool` interface, cursor service, overlay hooks, and integrate with Provider/app shell.",
+    "agent_type_hint": "FrontendAgent",
+    "inputs": "Sections 2 & 2.1, rendering outputs, selection overlay.",
     "target_files": [
-      "lib/domain/models/geometry/point.dart",
-      "lib/domain/models/geometry/rectangle.dart",
-      "lib/domain/models/transform.dart",
-      "test/domain/models/geometry/geometry_test.dart"
+      "lib/src/tools/framework/tool_manager.dart",
+      "lib/src/tools/framework/tool_interface.dart",
+      "lib/src/tools/framework/cursor_service.dart",
+      "test/unit/tool_manager_test.dart"
     ],
-    "input_files": [],
-    "deliverables": "Immutable Point, Rectangle classes\nTransform class wrapping Matrix4\nUnit tests achieving 90%+ coverage",
-    "acceptance_criteria": "All classes are immutable (@immutable annotation)\nPoint supports arithmetic operations (add, subtract, distance)\nRectangle supports intersection, union, containsPoint\nTransform supports translate, rotate, scale, composition\nUnit tests verify all operations with edge cases",
+    "input_files": [
+      "lib/src/tools/framework/",
+      "lib/src/app/shell/",
+      "test/unit/tool_manager_test.dart"
+    ],
+    "deliverables": "Tool lifecycle APIs (activate/deactivate), keyboard routing, cursor management, unit tests for state transitions.",
+    "acceptance_criteria": "- Tools register/unregister cleanly; only one active tool at a time.\n        - Cursor updates propagate within <1 frame.\n        - Test suite covers tool activation, hotkeys, and ensures overlays render via callbacks.",
     "dependencies": [
-      "I1.T1"
+      "I2.T6"
     ],
-    "parallelizable": true,
-    "done": true
+    "parallelizable": false,
+    "done": false
   },
   {
     "task_id": "I3.T2",
     "iteration_id": "I3",
-    "iteration_goal": "Implement immutable domain models for vector objects (Document, Path, Shape, Segment, AnchorPoint, Style, Transform) with comprehensive unit tests",
-    "description": "Implement AnchorPoint and Segment models in `lib/domain/models/`. AnchorPoint has position, optional handleIn/handleOut (BCPs), and anchorType enum (corner/smooth/symmetric). Segment connects two anchors with type (line/bezier/arc). Both immutable with copyWith() methods. Write unit tests.",
-    "agent_type_hint": "BackendAgent",
-    "inputs": "Architecture blueprint Section 3.6 (Data Model - AnchorPoint, Segment)\nTicket T010 (Path Data Model)",
+    "iteration_goal": "Build the extensible tool framework, deliver selection/direct selection experiences, and implement the full pen workflow (anchors, straight segments, Bezier curves, BCP adjustments) with supporting diagrams and telemetry.",
+    "description": "Document the Tool Interaction Sequence (PlantUML) focusing on pen + selection flows and pointer sampling, aligning with event recorder behavior.",
+    "agent_type_hint": "DiagrammingAgent",
+    "inputs": "Tool framework, event flow doc.",
     "target_files": [
-      "lib/domain/models/anchor_point.dart",
-      "lib/domain/models/segment.dart",
-      "test/domain/models/anchor_point_test.dart",
-      "test/domain/models/segment_test.dart"
+      "docs/diagrams/tool_interaction_sequence.puml",
+      "docs/specs/tool_interactions.md"
     ],
     "input_files": [
-      "lib/domain/models/geometry/point.dart"
+      "docs/diagrams/tool_interaction_sequence.puml",
+      "docs/specs/event_lifecycle.md"
     ],
-    "deliverables": "Immutable AnchorPoint class with BCP handles\nSegment class with line/bezier/arc types\ncopyWith() methods for immutable updates\nUnit tests for anchor types and segment construction",
-    "acceptance_criteria": "AnchorPoint correctly represents corner, smooth, symmetric types\nSegment stores correct anchor references and control points\ncopyWith() creates new instances with modified fields\nUnit tests achieve 85%+ coverage",
+    "deliverables": "Sequence diagram + narrative describing pointer down/move/up events, event batching, and undo grouping.",
+    "acceptance_criteria": "- Diagram renders; includes states for `ToolManager`, `PenTool`, `EventRecorder`, `SnapshotManager`.\n        - Markdown outlines undo grouping rules (start/end markers) and acceptance for sampling accuracy.",
     "dependencies": [
       "I3.T1"
     ],
     "parallelizable": true,
-    "done": true
+    "done": false
   },
   {
     "task_id": "I3.T3",
     "iteration_id": "I3",
-    "iteration_goal": "Implement immutable domain models for vector objects (Document, Path, Shape, Segment, AnchorPoint, Style, Transform) with comprehensive unit tests",
-    "description": "Implement Path model in `lib/domain/models/path.dart`. Path contains list of Segments, closed boolean flag. Provide methods: bounds(), length(), pointAt(t), addSegment(). Make immutable with copyWith(). Write unit tests including Bezier curve paths.",
-    "agent_type_hint": "BackendAgent",
-    "inputs": "Architecture blueprint Section 3.6 (Data Model - Path)\nTicket T010 (Path Data Model)",
+    "iteration_goal": "Build the extensible tool framework, deliver selection/direct selection experiences, and implement the full pen workflow (anchors, straight segments, Bezier curves, BCP adjustments) with supporting diagrams and telemetry.",
+    "description": "Implement Selection Tool (T019) including marquee selection, object transforms, and integration with selection overlay/telemetry.",
+    "agent_type_hint": "FrontendAgent",
+    "inputs": "Tool framework, selection overlay, document query APIs.",
     "target_files": [
-      "lib/domain/models/path.dart",
-      "test/domain/models/path_test.dart"
+      "lib/src/tools/selection/selection_tool.dart",
+      "lib/src/tools/selection/marquee_controller.dart",
+      "test/widget/selection_tool_test.dart"
     ],
     "input_files": [
-      "lib/domain/models/segment.dart"
+      "lib/src/tools/selection/",
+      "lib/src/domain/document/",
+      "test/widget/selection_tool_test.dart"
     ],
-    "deliverables": "Immutable Path class with segment list\nbounds() calculates bounding rectangle\nlength() computes total path length\npointAt(t) returns point along path at parameter t [0-1]\nUnit tests with straight and curved paths",
-    "acceptance_criteria": "Path correctly stores segments and closed state\nbounds() accurate for Bezier curves (use control point bounds initially)\nlength() approximates arc length for curves\nUnit tests cover open/closed paths, straight/curved segments",
+    "deliverables": "Selection tool with Shift/Cmd modifiers, marquee rectangle, translations emitting MoveObject events, widget tests verifying selection states.",
+    "acceptance_criteria": "- Tool selects via click, multi-select via modifiers, and marquee respects viewport transforms.\n        - Event recorder receives MoveObject events with aggregated deltas.\n        - Tests assert selection state updates and overlays highlight correctly.",
     "dependencies": [
-      "I3.T2"
+      "I3.T1"
     ],
     "parallelizable": false,
-    "done": true
+    "done": false
   },
   {
     "task_id": "I3.T4",
     "iteration_id": "I3",
-    "iteration_goal": "Implement immutable domain models for vector objects (Document, Path, Shape, Segment, AnchorPoint, Style, Transform) with comprehensive unit tests",
-    "description": "Implement Style model in `lib/domain/models/style.dart` for fill/stroke properties. Include fill color, stroke color, stroke width, opacity, blend mode. Make immutable. Implement Shape model in `lib/domain/models/shape.dart` with ShapeType enum (rect, ellipse, polygon, star) and parameters map. Shape has toPath() method to generate Path representation. Write unit tests for all shape types.",
-    "agent_type_hint": "BackendAgent",
-    "inputs": "Architecture blueprint Section 3.6 (Data Model - Style, Shape)\nTicket T011 (Shape Data Model)",
+    "iteration_goal": "Build the extensible tool framework, deliver selection/direct selection experiences, and implement the full pen workflow (anchors, straight segments, Bezier curves, BCP adjustments) with supporting diagrams and telemetry.",
+    "description": "Deliver Direct Selection Tool (T020) for anchor/BCP interaction, hooking into hit-testing and event sampling, plus telemetry instrumentation for drag latency.",
+    "agent_type_hint": "FrontendAgent",
+    "inputs": "Selection overlay, event recorder, tool diagram.",
     "target_files": [
-      "lib/domain/models/style.dart",
-      "lib/domain/models/shape.dart",
-      "test/domain/models/style_test.dart",
-      "test/domain/models/shape_test.dart"
+      "lib/src/tools/direct_selection/direct_selection_tool.dart",
+      "lib/src/tools/direct_selection/drag_controller.dart",
+      "test/widget/direct_selection_tool_test.dart",
+      "lib/src/services/telemetry/tool_metrics.dart"
     ],
     "input_files": [
-      "lib/domain/models/path.dart"
+      "lib/src/tools/direct_selection/",
+      "lib/src/domain/geometry/",
+      "test/widget/direct_selection_tool_test.dart"
     ],
-    "deliverables": "Immutable Style class with paint properties\nShape class with parametric definitions\ntoPath() implementations for rect, ellipse, polygon, star\nUnit tests verifying shape-to-path conversion",
-    "acceptance_criteria": "Style stores all paint properties\nShape.toPath() generates correct Path for each ShapeType\nRectangle shape produces 4-segment closed path\nEllipse shape produces Bezier approximation\nPolygon shape produces n-sided regular polygon\nStar shape produces n-pointed star with inner/outer radii\nUnit tests cover all shape types and edge cases",
+    "deliverables": "Direct selection interactions (anchor selection, BCP display, drag), telemetry counters (events/sec, latency), tests for anchor hit logic.",
+    "acceptance_criteria": "- Dragging anchors emits MoveAnchor events at 50 ms cadence with final flush on pointer up.\n        - Telemetry event logged when drag > threshold (configurable) or sampler backlog occurs.\n        - Tests verify BCP symmetry toggles and anchor type conversions.",
     "dependencies": [
       "I3.T3"
     ],
@@ -94,22 +102,23 @@
   {
     "task_id": "I3.T5",
     "iteration_id": "I3",
-    "iteration_goal": "Implement immutable domain models for vector objects (Document, Path, Shape, Segment, AnchorPoint, Style, Transform) with comprehensive unit tests",
-    "description": "Implement VectorObject abstract base class and Layer model in `lib/domain/models/`. VectorObject has id, transform, style, and abstract methods bounds(), hitTest(). Layer has id, name, visible, locked, and list of VectorObjects. Make both immutable. Update Path and Shape to extend VectorObject. Write unit tests.",
-    "agent_type_hint": "BackendAgent",
-    "inputs": "Architecture blueprint Section 3.6 (Data Model - VectorObject, Layer)",
+    "iteration_goal": "Build the extensible tool framework, deliver selection/direct selection experiences, and implement the full pen workflow (anchors, straight segments, Bezier curves, BCP adjustments) with supporting diagrams and telemetry.",
+    "description": "Implement Pen Tool anchor placement and straight segments (T021/T022) with visual preview, undo grouping, and event emission.",
+    "agent_type_hint": "FrontendAgent",
+    "inputs": "Tool framework, tool interaction doc, path models.",
     "target_files": [
-      "lib/domain/models/vector_object.dart",
-      "lib/domain/models/layer.dart",
-      "lib/domain/models/path.dart"
+      "lib/src/tools/pen/pen_tool.dart",
+      "lib/src/tools/pen/pen_preview_overlay.dart",
+      "test/widget/pen_tool_straight_test.dart"
     ],
     "input_files": [
-      "lib/domain/models/path.dart"
+      "lib/src/tools/pen/",
+      "lib/src/domain/models/",
+      "test/widget/pen_tool_straight_test.dart"
     ],
-    "deliverables": "VectorObject abstract base class\nPath and Shape extending VectorObject\nLayer model with object list\nUnit tests for layer operations (add, remove, reorder objects)",
-    "acceptance_criteria": "VectorObject defines common interface for all drawable objects\nPath.bounds() accounts for transform matrix\nShape.bounds() computed from generated path\nLayer correctly manages object list\nUnit tests verify polymorphism (Layer can hold Path or Shape)",
+    "deliverables": "Pen tool state machine (idle, creating path, editing), preview overlay for forthcoming segment, tests verifying anchor creation order and event payloads.",
+    "acceptance_criteria": "- Single-click adds anchor; Enter/double-click completes open path; Shift+click constrains angles.\n        - Recorder receives CreatePath + AddAnchor events with sequential IDs.\n        - Undo removes entire path creation session via grouping tokens.",
     "dependencies": [
-      "I3.T3",
       "I3.T4"
     ],
     "parallelizable": false,
@@ -118,47 +127,26 @@
   {
     "task_id": "I3.T6",
     "iteration_id": "I3",
-    "iteration_goal": "Implement immutable domain models for vector objects (Document, Path, Shape, Segment, AnchorPoint, Style, Transform) with comprehensive unit tests",
-    "description": "Implement Document model in `lib/domain/models/document.dart` as root aggregate. Contains list of Layers, Selection, Viewport. Provide query methods: getObjectById(), getAllObjects(), getObjectsInBounds(). Make immutable with copyWith(). Write comprehensive unit tests including complex documents with nested objects.",
-    "agent_type_hint": "BackendAgent",
-    "inputs": "Architecture blueprint Section 3.6 (Data Model - Document)\nArchitecture blueprint Section 4.6 (Internal API - Document State)\nTicket T012 (Document Model)",
+    "iteration_goal": "Build the extensible tool framework, deliver selection/direct selection experiences, and implement the full pen workflow (anchors, straight segments, Bezier curves, BCP adjustments) with supporting diagrams and telemetry.",
+    "description": "Extend Pen Tool for Bezier curves and BCP adjustments (T023/T024), including drag-to-curve gestures, BCP symmetry toggles, and BCP adjustment UI.",
+    "agent_type_hint": "FrontendAgent",
+    "inputs": "Pen tool base, direct selection behaviors, geometry utilities.",
     "target_files": [
-      "lib/domain/models/document.dart",
-      "lib/domain/models/selection.dart",
-      "lib/domain/models/viewport.dart",
-      "test/domain/models/document_test.dart"
+      "lib/src/tools/pen/pen_bezier_controller.dart",
+      "lib/src/tools/pen/pen_handle_overlay.dart",
+      "test/widget/pen_tool_bezier_test.dart"
     ],
     "input_files": [
-      "lib/domain/models/layer.dart"
+      "lib/src/tools/pen/",
+      "lib/src/domain/geometry/",
+      "test/widget/pen_tool_bezier_test.dart"
     ],
-    "deliverables": "Immutable Document class with layer hierarchy\nSelection model (set of object IDs, anchor indices)\nViewport model (pan, zoom, canvas size)\nQuery methods (getObjectById, getAllObjects, getObjectsInBounds)\nUnit tests with multi-layer documents",
-    "acceptance_criteria": "Document correctly manages layer list\ngetObjectById() searches across all layers\ngetAllObjects() flattens layer hierarchy\ngetObjectsInBounds() uses bounds() for filtering\nSelection tracks object IDs and anchor indices\nViewport supports pan/zoom transformations\nUnit tests achieve 90%+ coverage for Document class",
+    "deliverables": "Drag-to-create Bezier segments, automatic BCP mirroring, handle editing prior to path completion, tests covering symmetric/corner anchor transitions.",
+    "acceptance_criteria": "- Holding mouse drag during anchor placement emits AddAnchor with handle vectors scaled to drag distance.\n        - ALT/Option toggles corner/smooth anchor types mid-gesture.\n        - BCP adjustments emit AdjustHandle events and replay deterministically.",
     "dependencies": [
       "I3.T5"
     ],
     "parallelizable": false,
-    "done": false
-  },
-  {
-    "task_id": "I3.T7",
-    "iteration_id": "I3",
-    "iteration_goal": "Implement immutable domain models for vector objects (Document, Path, Shape, Segment, AnchorPoint, Style, Transform) with comprehensive unit tests",
-    "description": "Generate PlantUML ERD diagram in `docs/diagrams/database_erd.puml` showing SQLite schema (metadata, events, snapshots tables) with relationships and field types. Also generate PlantUML Class Diagram in `docs/diagrams/domain_model_class.puml` showing in-memory domain model (Document, Layer, VectorObject hierarchy, Path, Shape, Segment, AnchorPoint, Style, Transform). Both diagrams should match implemented models.",
-    "agent_type_hint": "DocumentationAgent",
-    "inputs": "Architecture blueprint Section 3.6 (Data Model ERD)\nImplemented domain models from I3.T1-I3.T6\nDatabase schema from I1.T5",
-    "target_files": [
-      "docs/diagrams/database_erd.puml",
-      "docs/diagrams/domain_model_class.puml"
-    ],
-    "input_files": [
-      "lib/domain/models/*.dart"
-    ],
-    "deliverables": "PlantUML ERD diagram for SQLite schema\nPlantUML Class Diagram for domain model\nBoth diagrams render without syntax errors",
-    "acceptance_criteria": "ERD accurately reflects metadata, events, snapshots tables with primary/foreign keys\nClass diagram shows inheritance (VectorObject → Path, Shape)\nClass diagram shows composition (Document contains Layers, Layer contains VectorObjects)\nDiagrams validate and render correctly",
-    "dependencies": [
-      "I3.T6"
-    ],
-    "parallelizable": true,
     "done": false
   }
 ]

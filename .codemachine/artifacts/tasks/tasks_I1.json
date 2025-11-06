@@ -2,125 +2,175 @@
   {
     "task_id": "I1.T1",
     "iteration_id": "I1",
-    "iteration_goal": "Establish project infrastructure, initialize Flutter project, integrate SQLite, and document event sourcing architecture",
-    "description": "Initialize Flutter desktop project with proper directory structure, configure analysis_options.yaml for strict linting, set up pubspec.yaml with initial dependencies (sqflite_common_ffi, provider, logger, freezed, vector_math), and create basic main.dart entry point. Configure macOS and Windows build targets. Create README.md with project overview.",
+    "iteration_goal": "Establish the Flutter desktop workspace, wire up SQLite persistence, and deliver the initial event-sourcing backbone (modeling, recording, persistence, replay) plus baseline architecture artifacts.",
+    "description": "Initialize the Flutter desktop project, configure analysis/lint rules, set up CI skeleton, and document build/run guidelines referencing T001.",
     "agent_type_hint": "SetupAgent",
-    "inputs": "Project plan Section 3 (Directory Structure)\nTechnology stack requirements (Flutter 3.16+, Dart 3.2+)\nLinting rules from architecture blueprint (analysis_options.yaml recommendations)",
+    "inputs": "Section 1 overview, existing architecture blueprint (`thoughts/shared/...`), Flutter tooling guides.",
     "target_files": [
       "pubspec.yaml",
-      "lib/main.dart",
-      "lib/app.dart",
       "analysis_options.yaml",
       "README.md",
-      ".gitignore",
-      "macos/"
+      ".github/workflows/ci.yml",
+      "lib/main.dart"
     ],
-    "input_files": [],
-    "deliverables": "Working Flutter project that compiles and runs on macOS/Windows\nConfigured dependencies in pubspec.yaml\nStrict linting rules enforced\nBasic app widget with placeholder UI\nREADME documenting project setup",
-    "acceptance_criteria": "`flutter pub get` succeeds without errors\n`flutter analyze` passes with zero issues\n`flutter run -d macos` launches application window\n`flutter run -d windows` launches application window (if on Windows)\nAll required dependencies listed in pubspec.yaml\nDirectory structure matches plan Section 3",
+    "input_files": [
+      "README.md",
+      "pubspec.yaml",
+      "analysis_options.yaml",
+      ".github/workflows"
+    ],
+    "deliverables": "Flutter desktop scaffold with macOS/Windows targets enabled, CI workflow stub, contributor guide snippet for setup.",
+    "acceptance_criteria": "- `flutter doctor` passes locally; README documents prerequisites and commands.\n        - CI workflow runs `flutter analyze` + `flutter test` on push.\n        - Analyzer enforces null-safety, immutability hints, and forbids `print` debugging in lib/.",
     "dependencies": [],
-    "parallelizable": false,
-    "done": true
+    "parallelizable": true,
+    "done": false
   },
   {
     "task_id": "I1.T2",
     "iteration_id": "I1",
-    "iteration_goal": "Establish project infrastructure, initialize Flutter project, integrate SQLite, and document event sourcing architecture",
-    "description": "Generate PlantUML Component Diagram (C4 Level 3) showing the major subsystems: UI Layer, Canvas Renderer, Tool System, Event Sourcing Core, Vector Engine, Persistence Layer, and Import/Export Services. Diagram should visualize dependencies and data flow between components. Save as `docs/diagrams/component_overview.puml`.",
-    "agent_type_hint": "DocumentationAgent",
-    "inputs": "Architecture blueprint Section 3.5 (Component Diagrams)\nPlan Section 2 (Core Architecture - Key Components)",
+    "iteration_goal": "Establish the Flutter desktop workspace, wire up SQLite persistence, and deliver the initial event-sourcing backbone (modeling, recording, persistence, replay) plus baseline architecture artifacts.",
+    "description": "Integrate SQLite via `sqflite_common_ffi`, create persistence service scaffold, and capture the Component Diagram (PlantUML) covering UI shell, event core, vector engine, and persistence (T002, Section 2 key components).",
+    "agent_type_hint": "BackendAgent",
+    "inputs": "Sections 2 & 2.1, Dissipate reference repo for patterns.",
     "target_files": [
+      "lib/src/event_sourcing/persistence/sqlite_repository.dart",
       "docs/diagrams/component_overview.puml"
     ],
-    "input_files": [],
-    "deliverables": "PlantUML Component Diagram file (C4 syntax)\nDiagram renders without syntax errors\nAll major components from architecture blueprint included",
-    "acceptance_criteria": "PlantUML file validates (can be rendered at plantuml.com or with local tool)\nDiagram accurately reflects component relationships described in architecture blueprint\nAll components labeled with technology (e.g., \"Flutter Widgets\", \"SQLite\", \"Dart Service\")\nDependencies between components shown with directional arrows",
+    "input_files": [
+      "pubspec.yaml",
+      "lib/src/event_sourcing/persistence/",
+      "docs/diagrams/"
+    ],
+    "deliverables": "SQLite repository wrapper with open/close migrations, dependency injection hooks, and PlantUML component diagram checked into docs.",
+    "acceptance_criteria": "- Repository exposes CRUD helpers for metadata, events, snapshots, returning Futures.\n        - Diagram renders without syntax errors (tested via `./tools/scripts/render_diagram.sh`).\n        - Unit tests mock FFI driver to validate database path selection per platform.",
     "dependencies": [
       "I1.T1"
     ],
     "parallelizable": true,
-    "done": true
+    "done": false
   },
   {
     "task_id": "I1.T3",
     "iteration_id": "I1",
-    "iteration_goal": "Establish project infrastructure, initialize Flutter project, integrate SQLite, and document event sourcing architecture",
-    "description": "Generate PlantUML Sequence Diagrams for 5 critical event flows: (1) Creating a path with the Pen Tool, (2) Loading a document (event replay), (3) Undo operation (event navigation), (4) Dragging an anchor point (50ms sampling), (5) Exporting to SVG. Save as `docs/diagrams/event_sourcing_sequences.puml`. Each diagram should show interactions between User, UI components, Event Recorder, Event Store, Event Replayer, Document State, and Canvas Renderer.",
+    "iteration_goal": "Establish the Flutter desktop workspace, wire up SQLite persistence, and deliver the initial event-sourcing backbone (modeling, recording, persistence, replay) plus baseline architecture artifacts.",
+    "description": "Formalize the event sourcing architecture (T003) by detailing event lifecycle documentation and producing the Event Flow Sequence diagram showing recorder, sampler, dispatcher, snapshot manager, and undo navigator interactions.",
     "agent_type_hint": "DocumentationAgent",
-    "inputs": "Architecture blueprint Section 4.4 (Interaction Flows - Sequence Diagrams)\nPlan Section 2.1 (Communication Patterns)",
+    "inputs": "Sections 2 & 2.1, `docs/diagrams/component_overview.puml`.",
     "target_files": [
-      "docs/diagrams/event_sourcing_sequences.puml"
+      "docs/diagrams/event_flow_sequence.puml",
+      "docs/specs/event_lifecycle.md"
     ],
-    "input_files": [],
-    "deliverables": "PlantUML file with 5 sequence diagrams\nDiagrams render without syntax errors\nEach diagram accurately represents the workflow described in architecture blueprint",
-    "acceptance_criteria": "PlantUML file validates and renders correctly\nAll 5 workflows covered: pen tool creation, document load, undo, drag, SVG export\nSequence of method calls/events matches architecture specifications\nActors, components, and messages clearly labeled",
+    "input_files": [
+      "docs/diagrams/component_overview.puml",
+      "docs/diagrams/"
+    ],
+    "deliverables": "PlantUML sequence diagram, Markdown explainer describing sampling cadence, snapshot cadence, and failure handling.",
+    "acceptance_criteria": "- Diagram compiles; Markdown cross-links to relevant tickets (T003–T008) and includes latency budgets.\n        - Document enumerates responsibilities per component and outlines error handling (disk full, corruption) per requirement notes.\n        - Reviewed by backend lead (self-review) and referenced by subsequent tasks.",
     "dependencies": [
-      "I1.T1"
+      "I1.T1",
+      "I1.T2"
     ],
     "parallelizable": true,
-    "done": true
+    "done": false
   },
   {
     "task_id": "I1.T4",
     "iteration_id": "I1",
-    "iteration_goal": "Establish project infrastructure, initialize Flutter project, integrate SQLite, and document event sourcing architecture",
-    "description": "Integrate SQLite into the Flutter project using `sqflite_common_ffi` package. Create `lib/infrastructure/persistence/database_provider.dart` to manage SQLite connection lifecycle (open, close, transaction management). Implement initialization logic to create database file in application support directory. Write unit tests to verify database connection succeeds on both macOS and Windows.",
+    "iteration_goal": "Establish the Flutter desktop workspace, wire up SQLite persistence, and deliver the initial event-sourcing backbone (modeling, recording, persistence, replay) plus baseline architecture artifacts.",
+    "description": "Define the event model (T004) as immutable classes/enums via Freezed, covering pen, shape, selection, and file ops actions with JSON serialization helpers.",
     "agent_type_hint": "BackendAgent",
-    "inputs": "Architecture blueprint Section 3.2 (Technology Stack - SQLite)\nPlan Section 2 (Database: SQLite via sqflite_common_ffi)\nTicket T002 (SQLite Integration)",
+    "inputs": "Event lifecycle doc, Sections 2 & 2.1.",
     "target_files": [
-      "lib/infrastructure/persistence/database_provider.dart",
-      "test/infrastructure/persistence/database_provider_test.dart"
+      "lib/src/event_sourcing/model/document_event.dart",
+      "lib/src/event_sourcing/model/event_type.dart"
     ],
     "input_files": [
+      "lib/src/event_sourcing/model/",
       "pubspec.yaml"
     ],
-    "deliverables": "DatabaseProvider class with open(), close(), getDatabase() methods\nDatabase file created in correct application support directory\nUnit tests confirming database opens successfully\nError handling for database initialization failures",
-    "acceptance_criteria": "`flutter test test/infrastructure/persistence/database_provider_test.dart` passes\nDatabase file created at correct path (~/Library/Application Support/WireTuner/ on macOS, %APPDATA%\\WireTuner\\ on Windows)\nNo hardcoded paths; uses platform-specific path resolution\nConnection can be opened and closed without errors",
+    "deliverables": "Freezed models + generated `.g.dart` files, registry of event type constants, basic validation utilities.",
+    "acceptance_criteria": "- Covers events for create path, add anchor, move object, shape creation, viewport, save/load markers.\n        - Round-trip JSON serialization tests succeed; invalid payloads throw meaningful errors.\n        - Documentation comments map each event to ticket IDs for traceability.",
     "dependencies": [
-      "I1.T1"
+      "I1.T3"
     ],
     "parallelizable": false,
-    "done": true
+    "done": false
   },
   {
     "task_id": "I1.T5",
     "iteration_id": "I1",
-    "iteration_goal": "Establish project infrastructure, initialize Flutter project, integrate SQLite, and document event sourcing architecture",
-    "description": "Create SQLite schema for event sourcing: define `metadata`, `events`, and `snapshots` tables as specified in architecture blueprint Section 3.6 (Data Model ERD). Implement SQL DDL in `lib/infrastructure/persistence/schema.dart`. Add migration logic to DatabaseProvider to create tables on first run. Write unit tests to verify schema creation.",
-    "agent_type_hint": "DatabaseAgent",
-    "inputs": "Architecture blueprint Section 3.6 (Data Model ERD - SQLite Tables)\nTicket T002 (SQLite Integration)",
+    "iteration_goal": "Establish the Flutter desktop workspace, wire up SQLite persistence, and deliver the initial event-sourcing backbone (modeling, recording, persistence, replay) plus baseline architecture artifacts.",
+    "description": "Implement the event recorder with 50 ms sampler and buffering (T005), tying into Provider notifications and logger hooks.",
+    "agent_type_hint": "BackendAgent",
+    "inputs": "Event model, event flow doc.",
     "target_files": [
-      "lib/infrastructure/persistence/schema.dart",
-      "lib/infrastructure/persistence/database_provider.dart"
+      "lib/src/event_sourcing/recorder/event_recorder.dart",
+      "lib/src/event_sourcing/recorder/event_sampler.dart",
+      "test/unit/event_recorder_test.dart"
     ],
     "input_files": [
-      "lib/infrastructure/persistence/database_provider.dart"
+      "lib/src/event_sourcing/recorder/",
+      "lib/src/event_sourcing/model/"
     ],
-    "deliverables": "SQL DDL for metadata, events, snapshots tables\nMigration logic executed on database initialization\nIndexes on (document_id, event_sequence) for events table\nUnit tests confirming tables created with correct schema",
-    "acceptance_criteria": "`flutter test test/infrastructure/persistence/schema_test.dart` passes\nDatabase schema matches ERD in architecture blueprint\nIndexes created for efficient event replay queries\nPRAGMA journal_mode=WAL enabled for crash resistance\nSchema version tracking for future migrations",
+    "deliverables": "Recorder service with pause/resume/flush APIs, 50 ms throttling, and unit tests simulating drag events.",
+    "acceptance_criteria": "- Sampler reduces >90% of redundant move events in tests.\n        - Recorder writes batches to repository mock and emits ChangeNotifier updates.\n        - Logger emits WARN if queue backpressure exceeds configurable threshold.",
     "dependencies": [
       "I1.T4"
     ],
     "parallelizable": false,
-    "done": true
+    "done": false
   },
   {
     "task_id": "I1.T6",
     "iteration_id": "I1",
-    "iteration_goal": "Establish project infrastructure, initialize Flutter project, integrate SQLite, and document event sourcing architecture",
-    "description": "Document event sourcing architecture design in `docs/adr/003-event-sourcing-architecture.md` (Architectural Decision Record format). Cover rationale for 50ms sampling rate, snapshot frequency (1000 events), event payload format (JSON), and immutability patterns. Reference relevant sections from architecture blueprint. This fulfills Ticket T003.",
-    "agent_type_hint": "DocumentationAgent",
-    "inputs": "Architecture blueprint Section 4.1 (Design Rationale - Event Sourcing decisions)\nTicket T003 (Event Sourcing Architecture Design)\nPlan Section 2 (Core Architecture - Event Sourcing Foundation)",
+    "iteration_goal": "Establish the Flutter desktop workspace, wire up SQLite persistence, and deliver the initial event-sourcing backbone (modeling, recording, persistence, replay) plus baseline architecture artifacts.",
+    "description": "Build event log persistence and snapshot manager scaffolding (T006, T007) with transactional writes and configurable snapshot cadence.",
+    "agent_type_hint": "BackendAgent",
+    "inputs": "SQLite repo (`I1.T2`), event model (`I1.T4`).",
     "target_files": [
-      "docs/adr/003-event-sourcing-architecture.md"
+      "lib/src/event_sourcing/persistence/event_store.dart",
+      "lib/src/event_sourcing/snapshots/snapshot_manager.dart",
+      "test/unit/snapshot_manager_test.dart"
     ],
-    "input_files": [],
-    "deliverables": "ADR document in markdown format\nCovers: context, decision, rationale, consequences, alternatives considered\nReferences architecture blueprint sections",
-    "acceptance_criteria": "ADR follows standard format (title, status, context, decision, consequences)\nExplains 50ms sampling decision with rationale\nDocuments snapshot strategy (frequency, compression, garbage collection)\nDescribes event payload format (JSON) and schema evolution approach\nLists alternatives considered (no sampling, time-based snapshots, binary encoding)",
+    "input_files": [
+      "lib/src/event_sourcing/persistence/",
+      "lib/src/event_sourcing/snapshots/",
+      "test/unit/"
+    ],
+    "deliverables": "EventStore abstraction with append/query APIs, SnapshotManager storing compressed blobs every 1,000 events, unit tests with in-memory SQLite.",
+    "acceptance_criteria": "- ACID-safe writes validated via transaction tests; WAL mode enabled on desktop.\n        - Snapshot creation under 25 ms for 1k anchors sample dataset.\n        - Manager exposes hooks for telemetry (events per snapshot, compression ratio).",
     "dependencies": [
-      "I1.T1"
+      "I1.T2",
+      "I1.T4"
     ],
-    "parallelizable": true,
-    "done": true
+    "parallelizable": false,
+    "done": false
+  },
+  {
+    "task_id": "I1.T7",
+    "iteration_id": "I1",
+    "iteration_goal": "Establish the Flutter desktop workspace, wire up SQLite persistence, and deliver the initial event-sourcing backbone (modeling, recording, persistence, replay) plus baseline architecture artifacts.",
+    "description": "Implement the event replay engine and undo/redo navigator (T008) capable of loading from latest snapshot, replaying deltas, and navigating to arbitrary sequence numbers.",
+    "agent_type_hint": "BackendAgent",
+    "inputs": "EventStore & SnapshotManager, event flow sequence diagram.",
+    "target_files": [
+      "lib/src/event_sourcing/replayer/event_replayer.dart",
+      "lib/src/event_sourcing/replayer/event_navigator.dart",
+      "test/unit/event_replayer_test.dart",
+      "test/unit/event_navigator_test.dart"
+    ],
+    "input_files": [
+      "lib/src/event_sourcing/replayer/",
+      "lib/src/event_sourcing/model/",
+      "test/unit/"
+    ],
+    "deliverables": "Replay service with async generators, navigator managing undo/redo stacks via sequence index, regression tests covering corrupted event handling.",
+    "acceptance_criteria": "- Replay 5k-event fixture under 200 ms on CI runner.\n        - Navigator gracefully skips gaps/corrupt events with logged warnings.\n        - API documented for consumers (tools, save/load) with sample usage snippet.",
+    "dependencies": [
+      "I1.T5",
+      "I1.T6"
+    ],
+    "parallelizable": false,
+    "done": false
   }
 ]

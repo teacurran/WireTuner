@@ -5,17 +5,11 @@
     "iteration_goal": "Implement save/load for .wiretuner documents, SVG/PDF export, and Adobe Illustrator import",
     "description": "Implement save document functionality in `lib/application/services/document_service.dart`. Create saveDocument(filePath) method that persists current event log and metadata to SQLite file at specified path. Trigger snapshot creation before save. Implement Save and Save As dialogs using file_picker package. Write integration tests for save workflow.",
     "agent_type_hint": "BackendAgent",
-    "inputs": "Architecture blueprint Section 4.4 (Sequence Diagram - File operations)\nTicket T033 (Save Document)",
-    "target_files": [
-      "lib/application/services/document_service.dart",
-      "lib/infrastructure/persistence/metadata_store.dart",
-      "integration_test/save_document_test.dart"
-    ],
-    "input_files": [
-      "lib/infrastructure/persistence/event_store.dart"
-    ],
-    "deliverables": "saveDocument() method persisting to .wiretuner file\nFile picker dialogs (Save, Save As)\nMetadata written (title, created_at, modified_at, format_version)\nIntegration tests",
-    "acceptance_criteria": "saveDocument() creates SQLite file with events, snapshots, metadata\nSave As prompts for file path\nSave uses current file path or prompts if new document\nformat_version field set (e.g., \"1.0\")\nIntegration test creates document, saves, verifies file exists",
+    "inputs": "*   Architecture blueprint Section 4.4 (Sequence Diagram - File operations)\n        *   Ticket T033 (Save Document)",
+    "target_files": [],
+    "input_files": [],
+    "deliverables": "*   saveDocument() method persisting to .wiretuner file\n        *   File picker dialogs (Save, Save As)\n        *   Metadata written (title, created_at, modified_at, format_version)\n        *   Integration tests",
+    "acceptance_criteria": "*   saveDocument() creates SQLite file with events, snapshots, metadata\n        *   Save As prompts for file path\n        *   Save uses current file path or prompts if new document\n        *   format_version field set (e.g., \"1.0\")\n        *   Integration test creates document, saves, verifies file exists",
     "dependencies": [
       "I2.T4",
       "I2.T7",
@@ -30,15 +24,11 @@
     "iteration_goal": "Implement save/load for .wiretuner documents, SVG/PDF export, and Adobe Illustrator import",
     "description": "Implement load document functionality in DocumentService. Create loadDocument(filePath) method that opens SQLite file, reads events and snapshots, uses EventReplayer to reconstruct Document state. Handle format version compatibility checks. Implement Open dialog. Write integration tests for load workflow (round-trip: save then load, verify document unchanged).",
     "agent_type_hint": "BackendAgent",
-    "inputs": "Architecture blueprint Section 4.4 (Sequence Diagram - Loading document)\nTicket T034 (Load Document)",
-    "target_files": [
-      "lib/application/services/document_service.dart"
-    ],
-    "input_files": [
-      "lib/application/services/document_service.dart"
-    ],
-    "deliverables": "loadDocument() method reconstructing Document from file\nFormat version compatibility checks\nOpen dialog integration\nIntegration tests (including round-trip)",
-    "acceptance_criteria": "loadDocument() opens .wiretuner file and replays events\nFormat version checked before loading\nError handling for corrupted files (show user-friendly message)\nIntegration test: save document, load it, verify all objects identical\nRound-trip test achieves byte-for-byte equivalence (or acceptable differences documented)",
+    "inputs": "*   Architecture blueprint Section 4.4 (Sequence Diagram - Loading document)\n        *   Ticket T034 (Load Document)",
+    "target_files": [],
+    "input_files": [],
+    "deliverables": "*   loadDocument() method reconstructing Document from file\n        *   Format version compatibility checks\n        *   Open dialog integration\n        *   Integration tests (including round-trip)",
+    "acceptance_criteria": "*   loadDocument() opens .wiretuner file and replays events\n        *   Format version checked before loading\n        *   Error handling for corrupted files (show user-friendly message)\n        *   Integration test: save document, load it, verify all objects identical\n        *   Round-trip test achieves byte-for-byte equivalence (or acceptable differences documented)",
     "dependencies": [
       "I9.T1",
       "I2.T9"
@@ -52,16 +42,11 @@
     "iteration_goal": "Implement save/load for .wiretuner documents, SVG/PDF export, and Adobe Illustrator import",
     "description": "Implement file format versioning system. Define version migration logic in `lib/infrastructure/persistence/migrations/`. Support loading older format versions by applying migration transforms to event payloads or schema. Document migration strategy in `docs/adr/004-file-format-versioning.md`. Write unit tests for migration logic.",
     "agent_type_hint": "DatabaseAgent",
-    "inputs": "Ticket T035 (File Format Versioning)\nArchitecture blueprint Section 5.2 (Future - Format evolution)",
-    "target_files": [
-      "lib/infrastructure/persistence/migrations/migration_manager.dart",
-      "lib/infrastructure/persistence/migrations/version_1_to_2.dart"
-    ],
-    "input_files": [
-      "lib/infrastructure/persistence/metadata_store.dart"
-    ],
-    "deliverables": "MigrationManager with applyMigrations(fromVersion, toVersion)\nExample migration (even if no-op for v1)\nADR documenting versioning strategy\nUnit tests",
-    "acceptance_criteria": "MigrationManager detects format version from metadata\nMigrations applied sequentially (v1 → v2 → v3, etc.)\nADR documents versioning approach (semantic versioning, backward compatibility policy)\nUnit tests verify migration logic",
+    "inputs": "*   Ticket T035 (File Format Versioning)\n        *   Architecture blueprint Section 5.2 (Future - Format evolution)",
+    "target_files": [],
+    "input_files": [],
+    "deliverables": "*   MigrationManager with applyMigrations(fromVersion, toVersion)\n        *   Example migration (even if no-op for v1)\n        *   ADR documenting versioning strategy\n        *   Unit tests",
+    "acceptance_criteria": "*   MigrationManager detects format version from metadata\n        *   Migrations applied sequentially (v1 → v2 → v3, etc.)\n        *   ADR documents versioning approach (semantic versioning, backward compatibility policy)\n        *   Unit tests verify migration logic",
     "dependencies": [
       "I9.T1"
     ],
@@ -74,16 +59,11 @@
     "iteration_goal": "Implement save/load for .wiretuner documents, SVG/PDF export, and Adobe Illustrator import",
     "description": "Implement SVG exporter in `lib/infrastructure/import_export/svg_exporter.dart`. Convert Document to SVG 1.1 XML. Use xml package for generation. Map VectorObjects to SVG <path> elements with d attribute (Bezier curve syntax). Apply styles (fill, stroke) as attributes. Support coordinate system transformation (WireTuner coordinates → SVG coordinates). Write integration tests exporting sample document and validating SVG structure.",
     "agent_type_hint": "BackendAgent",
-    "inputs": "Architecture blueprint Section 4.4 (Sequence Diagram - Exporting SVG)\nArchitecture blueprint Section 3.2 (Technology Stack - xml package)\nTicket T036 (SVG Export)",
-    "target_files": [
-      "lib/infrastructure/import_export/svg_exporter.dart",
-      "integration_test/svg_export_test.dart"
-    ],
-    "input_files": [
-      "lib/domain/models/document.dart"
-    ],
-    "deliverables": "SVGExporter class with exportToFile(Document, filePath)\nPath-to-SVG conversion (Bezier curves → d=\"M...C...\" syntax)\nStyle-to-attribute mapping (fill, stroke, opacity)\nIntegration tests with SVG validation",
-    "acceptance_criteria": "Exported SVG is valid XML (validates against SVG 1.1 DTD)\nPaths render correctly when opened in browser or Illustrator\nBezier curves converted to cubic Bezier commands (C command)\nTransforms applied correctly (transform=\"matrix(...)\" attribute)\nIntegration test exports document and verifies SVG structure",
+    "inputs": "*   Architecture blueprint Section 4.4 (Sequence Diagram - Exporting SVG)\n        *   Architecture blueprint Section 3.2 (Technology Stack - xml package)\n        *   Ticket T036 (SVG Export)",
+    "target_files": [],
+    "input_files": [],
+    "deliverables": "*   SVGExporter class with exportToFile(Document, filePath)\n        *   Path-to-SVG conversion (Bezier curves → d=\"M...C...\" syntax)\n        *   Style-to-attribute mapping (fill, stroke, opacity)\n        *   Integration tests with SVG validation",
+    "acceptance_criteria": "*   Exported SVG is valid XML (validates against SVG 1.1 DTD)\n        *   Paths render correctly when opened in browser or Illustrator\n        *   Bezier curves converted to cubic Bezier commands (C command)\n        *   Transforms applied correctly (transform=\"matrix(...)\" attribute)\n        *   Integration test exports document and verifies SVG structure",
     "dependencies": [
       "I3.T6"
     ],
@@ -96,16 +76,11 @@
     "iteration_goal": "Implement save/load for .wiretuner documents, SVG/PDF export, and Adobe Illustrator import",
     "description": "Implement PDF exporter in `lib/infrastructure/import_export/pdf_exporter.dart`. Use pdf package to generate PDF 1.7 documents. Convert VectorObjects to PDF path drawing commands. Support embedded fonts (if text implemented). Map coordinate systems. Write integration tests exporting sample document and verifying PDF opens correctly.",
     "agent_type_hint": "BackendAgent",
-    "inputs": "Architecture blueprint Section 3.2 (Technology Stack - pdf package)\nTicket T037 (PDF Export)",
-    "target_files": [
-      "lib/infrastructure/import_export/pdf_exporter.dart",
-      "integration_test/pdf_export_test.dart"
-    ],
-    "input_files": [
-      "lib/domain/models/document.dart"
-    ],
-    "deliverables": "PDFExporter class with exportToFile(Document, filePath)\nPath-to-PDF conversion (moveTo, curveTo, closePath commands)\nStyle application (fill, stroke colors, widths)\nIntegration tests",
-    "acceptance_criteria": "Exported PDF is valid (opens in Acrobat, Preview)\nPaths render accurately\nColors and stroke widths correct\nCoordinate system matches (origin, scaling)\nIntegration test exports and opens PDF without errors",
+    "inputs": "*   Architecture blueprint Section 3.2 (Technology Stack - pdf package)\n        *   Ticket T037 (PDF Export)",
+    "target_files": [],
+    "input_files": [],
+    "deliverables": "*   PDFExporter class with exportToFile(Document, filePath)\n        *   Path-to-PDF conversion (moveTo, curveTo, closePath commands)\n        *   Style application (fill, stroke colors, widths)\n        *   Integration tests",
+    "acceptance_criteria": "*   Exported PDF is valid (opens in Acrobat, Preview)\n        *   Paths render accurately\n        *   Colors and stroke widths correct\n        *   Coordinate system matches (origin, scaling)\n        *   Integration test exports and opens PDF without errors",
     "dependencies": [
       "I3.T6"
     ],
@@ -118,17 +93,11 @@
     "iteration_goal": "Implement save/load for .wiretuner documents, SVG/PDF export, and Adobe Illustrator import",
     "description": "Implement Adobe Illustrator (.ai) importer in `lib/infrastructure/import_export/ai_importer.dart`. Parse .ai file (PDF-based format) using pdf package. Extract vector paths from PDF content streams. Generate CreatePathEvent and CreateShapeEvent from imported objects. Handle basic path and shape types; defer advanced features (gradients, effects). Write integration tests with sample .ai files.",
     "agent_type_hint": "BackendAgent",
-    "inputs": "Architecture blueprint Section 3.2 (Import/Export - AI Import)\nTicket T038 (AI Import)",
-    "target_files": [
-      "lib/infrastructure/import_export/ai_importer.dart",
-      "integration_test/ai_import_test.dart",
-      "test/fixtures/sample.ai"
-    ],
-    "input_files": [
-      "pubspec.yaml"
-    ],
-    "deliverables": "AIImporter class with importFromFile(filePath) returning List<Event>\nPDF content stream parsing\nPath extraction from PDF operators (moveto, curveto, etc.)\nEvent generation for imported objects\nIntegration tests with sample .ai file",
-    "acceptance_criteria": "Importer parses basic .ai file (simple paths, shapes)\nGenerates CreatePathEvent for imported paths\nImported objects render in WireTuner canvas\nUnsupported features logged as warnings (not errors)\nIntegration test imports sample.ai and verifies object count",
+    "inputs": "*   Architecture blueprint Section 3.2 (Import/Export - AI Import)\n        *   Ticket T038 (AI Import)",
+    "target_files": [],
+    "input_files": [],
+    "deliverables": "*   AIImporter class with importFromFile(filePath) returning List<Event>\n        *   PDF content stream parsing\n        *   Path extraction from PDF operators (moveto, curveto, etc.)\n        *   Event generation for imported objects\n        *   Integration tests with sample .ai file",
+    "acceptance_criteria": "*   Importer parses basic .ai file (simple paths, shapes)\n        *   Generates CreatePathEvent for imported paths\n        *   Imported objects render in WireTuner canvas\n        *   Unsupported features logged as warnings (not errors)\n        *   Integration test imports sample.ai and verifies object count",
     "dependencies": [
       "I2.T1",
       "I3.T3"
@@ -142,17 +111,11 @@
     "iteration_goal": "Implement save/load for .wiretuner documents, SVG/PDF export, and Adobe Illustrator import",
     "description": "Implement SVG importer in `lib/infrastructure/import_export/svg_importer.dart`. Parse SVG XML using xml package. Extract <path> elements and convert d attribute to WireTuner Path model. Handle basic shapes (<rect>, <ellipse>, <polygon>) by converting to paths. Generate events for imported objects. Write integration tests with sample SVG files.",
     "agent_type_hint": "BackendAgent",
-    "inputs": "Ticket T039 (SVG Import)",
-    "target_files": [
-      "lib/infrastructure/import_export/svg_importer.dart",
-      "integration_test/svg_import_test.dart",
-      "test/fixtures/sample.svg"
-    ],
-    "input_files": [
-      "lib/infrastructure/import_export/svg_exporter.dart"
-    ],
-    "deliverables": "SVGImporter class with importFromFile(filePath) returning List<Event>\nSVG path d attribute parsing (M, L, C, Z commands)\nBasic shape conversion (<rect> → Path)\nEvent generation\nIntegration tests",
-    "acceptance_criteria": "Importer parses SVG <path> elements\nConverts Bezier commands (C) to Path segments\nBasic shapes (<rect>, <ellipse>) converted to paths\nImported objects render correctly\nIntegration test imports sample.svg and verifies structure",
+    "inputs": "*   Ticket T039 (SVG Import)",
+    "target_files": [],
+    "input_files": [],
+    "deliverables": "*   SVGImporter class with importFromFile(filePath) returning List<Event>\n        *   SVG path d attribute parsing (M, L, C, Z commands)\n        *   Basic shape conversion (<rect> → Path)\n        *   Event generation\n        *   Integration tests",
+    "acceptance_criteria": "*   Importer parses SVG <path> elements\n        *   Converts Bezier commands (C) to Path segments\n        *   Basic shapes (<rect>, <ellipse>) converted to paths\n        *   Imported objects render correctly\n        *   Integration test imports sample.svg and verifies structure",
     "dependencies": [
       "I2.T1",
       "I3.T3"
@@ -166,13 +129,11 @@
     "iteration_goal": "Implement save/load for .wiretuner documents, SVG/PDF export, and Adobe Illustrator import",
     "description": "Create comprehensive testing strategy document in `docs/testing/testing_strategy.md`. Document unit test expectations (80%+ coverage for domain/infrastructure), widget test guidelines (all major widgets tested), integration test scenarios (critical workflows end-to-end). Include guidelines for performance testing, visual regression testing (golden files), and manual testing. Reference CI/CD integration (tests run on every PR).",
     "agent_type_hint": "DocumentationAgent",
-    "inputs": "Architecture blueprint Section 5.1 (Verification Strategy)\nAll test files created throughout iterations",
-    "target_files": [
-      "docs/testing/testing_strategy.md"
-    ],
+    "inputs": "*   Architecture blueprint Section 5.1 (Verification Strategy)\n        *   All test files created throughout iterations",
+    "target_files": [],
     "input_files": [],
-    "deliverables": "Testing strategy markdown document\nCoverage targets documented\nTest types explained (unit, widget, integration, performance)\nExamples of each test type",
-    "acceptance_criteria": "Document covers unit, widget, integration, performance testing\nCoverage target: 80%+ for lib/domain and lib/infrastructure\nWidget test guidelines with examples\nIntegration test scenarios listed (save/load, pen tool workflow, undo/redo)\nPerformance benchmarks documented (60 FPS target, document load < 2s)",
+    "deliverables": "*   Testing strategy markdown document\n        *   Coverage targets documented\n        *   Test types explained (unit, widget, integration, performance)\n        *   Examples of each test type",
+    "acceptance_criteria": "*   Document covers unit, widget, integration, performance testing\n        *   Coverage target: 80%+ for lib/domain and lib/infrastructure\n        *   Widget test guidelines with examples\n        *   Integration test scenarios listed (save/load, pen tool workflow, undo/redo)\n        *   Performance benchmarks documented (60 FPS target, document load < 2s)",
     "dependencies": [],
     "parallelizable": true,
     "done": false

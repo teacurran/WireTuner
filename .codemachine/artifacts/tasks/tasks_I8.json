@@ -5,15 +5,11 @@
     "iteration_goal": "Implement dragging capabilities for anchor points, BCP handles, and objects; add multi-selection support",
     "description": "Enhance DirectSelectionTool (from I5.T5) to support full anchor point dragging workflow. Implement drag state machine: IDLE → DRAGGING_ANCHOR → IDLE. Generate MoveAnchorEvent sampled at 50ms during drag. Update anchor position in real-time (via event application). Handle edge cases (anchor at path boundary, closed vs open paths). Write comprehensive integration tests.",
     "agent_type_hint": "BackendAgent",
-    "inputs": "Architecture blueprint Section 4.4 (Sequence Diagram - Dragging anchor)\nTicket T029 (Anchor Point Dragging)",
-    "target_files": [
-      "lib/application/tools/direct_selection_tool.dart"
-    ],
-    "input_files": [
-      "lib/application/tools/direct_selection_tool.dart"
-    ],
-    "deliverables": "Anchor dragging with 50ms sampling\nReal-time visual feedback during drag\nMoveAnchorEvent recording\nIntegration tests for drag workflow",
-    "acceptance_criteria": "Drag anchor updates position smoothly at ~20 FPS (50ms sampling)\nMoveAnchorEvent generated every 50ms during drag\nFinal position recorded on pointer up\nAnchor stays attached to path\nIntegration test drags anchor 100px and verifies position",
+    "inputs": "*   Architecture blueprint Section 4.4 (Sequence Diagram - Dragging anchor)\n        *   Ticket T029 (Anchor Point Dragging)",
+    "target_files": [],
+    "input_files": [],
+    "deliverables": "*   Anchor dragging with 50ms sampling\n        *   Real-time visual feedback during drag\n        *   MoveAnchorEvent recording\n        *   Integration tests for drag workflow",
+    "acceptance_criteria": "*   Drag anchor updates position smoothly at ~20 FPS (50ms sampling)\n        *   MoveAnchorEvent generated every 50ms during drag\n        *   Final position recorded on pointer up\n        *   Anchor stays attached to path\n        *   Integration test drags anchor 100px and verifies position",
     "dependencies": [
       "I5.T5",
       "I2.T2"
@@ -27,15 +23,11 @@
     "iteration_goal": "Implement dragging capabilities for anchor points, BCP handles, and objects; add multi-selection support",
     "description": "Implement BCP handle dragging in DirectSelectionTool. When anchor selected, render BCP handles as draggable points. Dragging handle generates ModifyAnchorEvent (updates handleIn or handleOut). Support anchor type constraints: smooth anchors maintain symmetric handles, corner anchors allow independent handles. Write integration tests for handle manipulation.",
     "agent_type_hint": "BackendAgent",
-    "inputs": "Ticket T030 (BCP Handle Dragging)\nAnchorPoint model from I3.T2",
-    "target_files": [
-      "lib/application/tools/direct_selection_tool.dart"
-    ],
-    "input_files": [
-      "lib/application/tools/direct_selection_tool.dart"
-    ],
-    "deliverables": "BCP handle dragging with ModifyAnchorEvent\nAnchor type constraints enforced (smooth = symmetric, corner = independent)\nReal-time curve preview during drag\nIntegration tests",
-    "acceptance_criteria": "Dragging handleOut updates curve shape\nSmooth anchor: handleIn updates symmetrically\nCorner anchor: handles move independently\nModifyAnchorEvent recorded at 50ms intervals\nIntegration test adjusts handle and verifies curve",
+    "inputs": "*   Ticket T030 (BCP Handle Dragging)\n        *   AnchorPoint model from I3.T2",
+    "target_files": [],
+    "input_files": [],
+    "deliverables": "*   BCP handle dragging with ModifyAnchorEvent\n        *   Anchor type constraints enforced (smooth = symmetric, corner = independent)\n        *   Real-time curve preview during drag\n        *   Integration tests",
+    "acceptance_criteria": "*   Dragging handleOut updates curve shape\n        *   Smooth anchor: handleIn updates symmetrically\n        *   Corner anchor: handles move independently\n        *   ModifyAnchorEvent recorded at 50ms intervals\n        *   Integration test adjusts handle and verifies curve",
     "dependencies": [
       "I8.T1",
       "I3.T2"
@@ -49,15 +41,11 @@
     "iteration_goal": "Implement dragging capabilities for anchor points, BCP handles, and objects; add multi-selection support",
     "description": "Enhance SelectionTool (from I5.T4) to support full object dragging workflow. Implement DRAGGING_OBJECT state. Generate MoveObjectEvent sampled at 50ms during drag. Update object transform (translation) in real-time. Support dragging multiple selected objects simultaneously. Write integration tests for single and multi-object drag.",
     "agent_type_hint": "BackendAgent",
-    "inputs": "Ticket T031 (Object Dragging)",
-    "target_files": [
-      "lib/application/tools/selection_tool.dart"
-    ],
-    "input_files": [
-      "lib/application/tools/selection_tool.dart"
-    ],
-    "deliverables": "Object dragging with 50ms sampling\nTransform.translate() applied during drag\nMulti-object drag support\nIntegration tests",
-    "acceptance_criteria": "Drag object updates position smoothly\nMoveObjectEvent generated every 50ms\nMultiple selected objects move together maintaining relative positions\nIntegration test drags rectangle 50px right and verifies transform",
+    "inputs": "*   Ticket T031 (Object Dragging)",
+    "target_files": [],
+    "input_files": [],
+    "deliverables": "*   Object dragging with 50ms sampling\n        *   Transform.translate() applied during drag\n        *   Multi-object drag support\n        *   Integration tests",
+    "acceptance_criteria": "*   Drag object updates position smoothly\n        *   MoveObjectEvent generated every 50ms\n        *   Multiple selected objects move together maintaining relative positions\n        *   Integration test drags rectangle 50px right and verifies transform",
     "dependencies": [
       "I5.T4",
       "I3.T1"
@@ -71,15 +59,11 @@
     "iteration_goal": "Implement dragging capabilities for anchor points, BCP handles, and objects; add multi-selection support",
     "description": "Implement multi-selection support in SelectionTool. Shift+Click adds object to selection without clearing existing selection. Cmd+Click (macOS) or Ctrl+Click (Windows) toggles object in selection. Update Selection model to support multiple object IDs. Render bounding box encompassing all selected objects. Write integration tests for multi-selection scenarios.",
     "agent_type_hint": "BackendAgent",
-    "inputs": "Ticket T032 (Multi-Selection Support)",
-    "target_files": [
-      "lib/application/tools/selection_tool.dart"
-    ],
-    "input_files": [
-      "lib/application/tools/selection_tool.dart"
-    ],
-    "deliverables": "Shift+Click adds to selection\nCmd/Ctrl+Click toggles selection\nBounding box for multiple selected objects\nIntegration tests",
-    "acceptance_criteria": "Shift+Click adds object without clearing selection\nCmd/Ctrl+Click toggles object selection state\nSelection model stores multiple object IDs\nBounding box encompasses all selected objects\nIntegration test selects 3 objects and drags them together",
+    "inputs": "*   Ticket T032 (Multi-Selection Support)",
+    "target_files": [],
+    "input_files": [],
+    "deliverables": "*   Shift+Click adds to selection\n        *   Cmd/Ctrl+Click toggles selection\n        *   Bounding box for multiple selected objects\n        *   Integration tests",
+    "acceptance_criteria": "*   Shift+Click adds object without clearing selection\n        *   Cmd/Ctrl+Click toggles object selection state\n        *   Selection model stores multiple object IDs\n        *   Bounding box encompasses all selected objects\n        *   Integration test selects 3 objects and drags them together",
     "dependencies": [
       "I8.T3",
       "I3.T6"
@@ -93,17 +77,11 @@
     "iteration_goal": "Implement dragging capabilities for anchor points, BCP handles, and objects; add multi-selection support",
     "description": "Implement undo/redo functionality accessible via Cmd+Z (undo) and Cmd+Shift+Z (redo) on macOS, Ctrl+Z and Ctrl+Shift+Z on Windows. Create EventNavigator service in `lib/infrastructure/event_sourcing/event_navigator.dart` that uses EventReplayer to reconstruct state at target event sequence. Integrate with keyboard shortcuts. Write integration tests for undo/redo workflow (create object, move it, undo move, redo move).",
     "agent_type_hint": "BackendAgent",
-    "inputs": "Architecture blueprint Section 4.4 (Sequence Diagram - Undo operation)\nArchitecture blueprint Section 5.2 (Future - Undo/Redo UI design)",
-    "target_files": [
-      "lib/infrastructure/event_sourcing/event_navigator.dart",
-      "lib/application/services/keyboard_shortcut_service.dart",
-      "integration_test/undo_redo_test.dart"
-    ],
-    "input_files": [
-      "lib/infrastructure/event_sourcing/event_replayer.dart"
-    ],
-    "deliverables": "EventNavigator service with undo(), redo(), canUndo(), canRedo()\nKeyboard shortcut handling (Cmd/Ctrl+Z, Cmd/Ctrl+Shift+Z)\nIntegration with DocumentProvider\nIntegration tests for undo/redo",
-    "acceptance_criteria": "Cmd/Ctrl+Z undoes last action (navigates to previous event sequence)\nCmd/Ctrl+Shift+Z redoes undone action (navigates forward)\ncanUndo() returns false when at beginning of history\ncanRedo() returns false when at latest event\nIntegration test: create rectangle, move it, undo, redo, verify positions",
+    "inputs": "*   Architecture blueprint Section 4.4 (Sequence Diagram - Undo operation)\n        *   Architecture blueprint Section 5.2 (Future - Undo/Redo UI design)",
+    "target_files": [],
+    "input_files": [],
+    "deliverables": "*   EventNavigator service with undo(), redo(), canUndo(), canRedo()\n        *   Keyboard shortcut handling (Cmd/Ctrl+Z, Cmd/Ctrl+Shift+Z)\n        *   Integration with DocumentProvider\n        *   Integration tests for undo/redo",
+    "acceptance_criteria": "*   Cmd/Ctrl+Z undoes last action (navigates to previous event sequence)\n        *   Cmd/Ctrl+Shift+Z redoes undone action (navigates forward)\n        *   canUndo() returns false when at beginning of history\n        *   canRedo() returns false when at latest event\n        *   Integration test: create rectangle, move it, undo, redo, verify positions",
     "dependencies": [
       "I2.T9"
     ],

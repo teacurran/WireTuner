@@ -2,207 +2,157 @@
   {
     "task_id": "I2.T1",
     "iteration_id": "I2",
-    "iteration_goal": "Build the complete event sourcing infrastructure including event recording, persistence, snapshots, and replay",
-    "description": "Define event model hierarchy using Dart sealed classes in `lib/domain/events/`. Create base EventBase class with common fields (eventId, timestamp, eventType). Implement sealed class hierarchy for specific events: CreatePathEvent, AddAnchorEvent, MoveObjectEvent, ModifyStyleEvent, etc. Each event class should be immutable and include toJson/fromJson methods for serialization.",
-    "agent_type_hint": "BackendAgent",
-    "inputs": "Architecture blueprint Section 3.6 (Data Model - Event entities)\nTicket T004 (Event Model)",
+    "iteration_goal": "Complete immutable geometry/data models, formalize persistence schemas, and deliver a performant CustomPainter pipeline with viewport transforms and basic selection visualization.",
+    "description": "Implement core geometry primitives (T009) and path/shape data models (T010/T011) while authoring the combined Data & Domain ERD (Mermaid) that maps SQLite tables to in-memory aggregates.",
+    "agent_type_hint": "DatabaseAgent",
+    "inputs": "Sections 2 & 2.1, `I1` event model outputs.",
     "target_files": [
-      "lib/domain/events/event_base.dart",
-      "lib/domain/events/path_events.dart",
-      "lib/domain/events/object_events.dart",
-      "lib/domain/events/style_events.dart",
-      "api/event_schema.dart"
+      "lib/src/domain/models/path.dart",
+      "lib/src/domain/models/shape.dart",
+      "lib/src/domain/models/segment.dart",
+      "docs/diagrams/data_domain_erd.mmd"
     ],
-    "input_files": [],
-    "deliverables": "Immutable event classes with sealed hierarchy\nJSON serialization/deserialization methods\nEvent schema documentation\nUnit tests for serialization round-trip",
-    "acceptance_criteria": "All event classes extend EventBase\nSealed class pattern prevents external extension\ntoJson/fromJson methods work correctly for all event types\nUnit tests verify serialization preserves all fields\nEvent types documented in api/event_types.md",
+    "input_files": [
+      "lib/src/domain/models/",
+      "docs/diagrams/data_domain_erd.mmd"
+    ],
+    "deliverables": "Immutable classes with Freezed, factory helpers, unit tests for serialization, ERD diagram synced with schema definitions.",
+    "acceptance_criteria": "- Supports lines, cubic Beziers, polygons, stars, with validation for smooth/corner anchors.\n        - ERD passes Mermaid lint; references table/field names exactly as in SQLite repo.\n        - Unit tests cover copyWith semantics and ensure equality relies on deep comparison.",
     "dependencies": [
-      "I1.T1"
+      "I1.T4",
+      "I1.T6"
     ],
-    "parallelizable": true,
-    "done": true
+    "parallelizable": false,
+    "done": false
   },
   {
     "task_id": "I2.T2",
     "iteration_id": "I2",
-    "iteration_goal": "Build the complete event sourcing infrastructure including event recording, persistence, snapshots, and replay",
-    "description": "Implement EventSampler in `lib/infrastructure/event_sourcing/event_sampler.dart` to throttle high-frequency input events to 50ms intervals. Use Dart's Timer to buffer events and emit sampled events. Support immediate flush for critical events (tool deactivation, explicit save).",
-    "agent_type_hint": "BackendAgent",
-    "inputs": "Architecture blueprint Section 4.1 (Decision 5 - 50ms sampling rate)\nTicket T005 (Event Recorder with Sampling)",
+    "iteration_goal": "Complete immutable geometry/data models, formalize persistence schemas, and deliver a performant CustomPainter pipeline with viewport transforms and basic selection visualization.",
+    "description": "Design and implement Canvas System with CustomPainter (T013) plus Rendering Pipeline Diagram communicating flow between document provider, viewport, painter, and overlays.",
+    "agent_type_hint": "FrontendAgent",
+    "inputs": "Sections 2 & 2.1, ERD.",
     "target_files": [
-      "lib/infrastructure/event_sourcing/event_sampler.dart",
-      "test/infrastructure/event_sourcing/event_sampler_test.dart"
+      "lib/src/canvas/painter/document_painter.dart",
+      "lib/src/canvas/viewport/viewport_controller.dart",
+      "docs/diagrams/rendering_pipeline.puml",
+      "test/widget/document_painter_test.dart"
     ],
     "input_files": [
-      "lib/domain/events/event_base.dart"
+      "lib/src/canvas/painter/",
+      "lib/src/canvas/viewport/",
+      "docs/diagrams/rendering_pipeline.puml"
     ],
-    "deliverables": "EventSampler class with recordEvent(), flush() methods\nTimer-based 50ms throttling logic\nUnit tests verifying sampling behavior (rapid events collapse to one per 50ms)",
-    "acceptance_criteria": "Rapid events (< 50ms apart) are buffered, only last event emitted\nEvents > 50ms apart are emitted immediately\nflush() method emits buffered event immediately\nUnit tests confirm sampling rate behavior",
+    "deliverables": "CustomPainter subsystem with repaint notifier hooks, viewport controller handling pan/zoom with inertial scrolling, PlantUML diagram describing rendering stages.",
+    "acceptance_criteria": "- Painter renders path outlines with placeholder styles; `flutter test` widget suite validates repaint boundary usage.\n        - Viewport controller exposes matrix conversions and clamps zoom (0.05–8.0).\n        - Diagram explains dirty-region strategy and indicates telemetry insertion points.",
     "dependencies": [
       "I2.T1"
     ],
     "parallelizable": false,
-    "done": true
+    "done": false
   },
   {
     "task_id": "I2.T3",
     "iteration_id": "I2",
-    "iteration_goal": "Build the complete event sourcing infrastructure including event recording, persistence, snapshots, and replay",
-    "description": "Implement EventRecorder in `lib/infrastructure/event_sourcing/event_recorder.dart` that uses EventSampler to record events and persist them to SQLite via EventStore. Support pause/resume for disabling recording during event replay. Implement event sequence numbering.",
+    "iteration_goal": "Complete immutable geometry/data models, formalize persistence schemas, and deliver a performant CustomPainter pipeline with viewport transforms and basic selection visualization.",
+    "description": "Define Path Data Model behaviors (T009/T010) and capture Event Payload JSON Schema covering all event types plus validation helpers.",
     "agent_type_hint": "BackendAgent",
-    "inputs": "Architecture blueprint Section 4.6 (Internal API - EventRecorder)\nTicket T005 (Event Recorder with Sampling)",
+    "inputs": "Event model, ERD, component diagram.",
     "target_files": [
-      "lib/infrastructure/event_sourcing/event_recorder.dart",
-      "test/infrastructure/event_sourcing/event_recorder_test.dart"
+      "docs/specs/event_payload.schema.json",
+      "docs/specs/event_payload.md",
+      "test/unit/event_schema_validation_test.dart"
     ],
     "input_files": [
-      "lib/infrastructure/event_sourcing/event_sampler.dart"
+      "lib/src/event_sourcing/model/",
+      "docs/specs/event_payload.schema.json",
+      "docs/specs/"
     ],
-    "deliverables": "EventRecorder class with recordEvent(), pause(), resume(), flush()\nIntegration with EventSampler for throttling\nIntegration with EventStore for persistence\nAutomatic event sequence numbering",
-    "acceptance_criteria": "Events persisted to SQLite with correct sequence numbers\npause() stops recording, resume() re-enables\nflush() triggers immediate write of buffered events\nUnit tests verify recording and persistence",
+    "deliverables": "Draft JSON Schema (Draft 2020-12), Markdown table for each event, validation tests ensuring schema matches Freezed classes.",
+    "acceptance_criteria": "- Schema validated via `npm exec ajv` (document command) or Dart schema validator; all event fixtures pass.\n        - Markdown spec explains sampling metadata fields and upgrade strategy.\n        - Tests fail when event model adds new required field without schema update.",
+    "dependencies": [
+      "I1.T4",
+      "I2.T1"
+    ],
+    "parallelizable": true,
+    "done": false
+  },
+  {
+    "task_id": "I2.T4",
+    "iteration_id": "I2",
+    "iteration_goal": "Complete immutable geometry/data models, formalize persistence schemas, and deliver a performant CustomPainter pipeline with viewport transforms and basic selection visualization.",
+    "description": "Implement Document aggregate (T012) with layer management, selection snapshot, serialization hooks, and integrate snapshot serialization/deserialization with replay engine.",
+    "agent_type_hint": "BackendAgent",
+    "inputs": "ERD, snapshot manager, geometry models.",
+    "target_files": [
+      "lib/src/domain/document/document.dart",
+      "lib/src/domain/document/selection.dart",
+      "lib/src/event_sourcing/snapshots/snapshot_serializer.dart",
+      "test/unit/document_snapshot_test.dart"
+    ],
+    "input_files": [
+      "lib/src/domain/document/",
+      "lib/src/event_sourcing/snapshots/",
+      "test/unit/"
+    ],
+    "deliverables": "Document root class with Freezed, selection helpers, snapshot serializer hooking into SnapshotManager, tests ensuring deterministic serialization.",
+    "acceptance_criteria": "- Snapshot round-trip retains ordering, IDs, selection state.\n        - Document exposes query helpers for viewport/hit-test consumers.\n        - Serializer handles version field for future migrations.",
+    "dependencies": [
+      "I2.T1",
+      "I1.T7"
+    ],
+    "parallelizable": false,
+    "done": false
+  },
+  {
+    "task_id": "I2.T5",
+    "iteration_id": "I2",
+    "iteration_goal": "Complete immutable geometry/data models, formalize persistence schemas, and deliver a performant CustomPainter pipeline with viewport transforms and basic selection visualization.",
+    "description": "Build viewport transform utilities (T014) and integrate them into canvas interactions; include unit/widget tests for pan/zoom inertia and bounds.",
+    "agent_type_hint": "FrontendAgent",
+    "inputs": "Viewport controller from `I2.T2`, document model.",
+    "target_files": [
+      "lib/src/canvas/viewport/viewport_state.dart",
+      "lib/src/canvas/viewport/viewport_binding.dart",
+      "test/widget/viewport_gesture_test.dart"
+    ],
+    "input_files": [
+      "lib/src/canvas/viewport/",
+      "lib/src/services/telemetry/",
+      "test/widget/viewport_controller_test.dart"
+    ],
+    "deliverables": "Gesture detectors hooking into viewport controller, telemetry metrics (FPS, pan latency) counters, tests verifying transformation matrices.",
+    "acceptance_criteria": "- Drag/scroll gestures update viewport smoothly at 60 FPS on simulator.\n        - Telemetry logs include FPS + pan delta when debug flag enabled.\n        - Unit tests confirm conversions between world/screen coordinates.",
     "dependencies": [
       "I2.T2",
       "I2.T4"
     ],
     "parallelizable": false,
-    "done": true
-  },
-  {
-    "task_id": "I2.T4",
-    "iteration_id": "I2",
-    "iteration_goal": "Build the complete event sourcing infrastructure including event recording, persistence, snapshots, and replay",
-    "description": "Implement EventStore in `lib/infrastructure/persistence/event_store.dart` to handle CRUD operations for the events table. Provide methods: insertEvent(), getEvents(fromSeq, toSeq), getMaxSequence(). Use parameterized queries to prevent SQL injection. Write unit tests with in-memory SQLite database.",
-    "agent_type_hint": "DatabaseAgent",
-    "inputs": "Architecture blueprint Section 3.6 (ERD - events table schema)\nTicket T006 (Event Log Persistence)",
-    "target_files": [
-      "lib/infrastructure/persistence/event_store.dart",
-      "test/infrastructure/persistence/event_store_test.dart"
-    ],
-    "input_files": [
-      "lib/infrastructure/persistence/database_provider.dart"
-    ],
-    "deliverables": "EventStore class with insertEvent(), getEvents(), getMaxSequence()\nParameterized SQL queries for safety\nUnit tests with mock/in-memory database",
-    "acceptance_criteria": "insertEvent() adds event to database with auto-incremented sequence\ngetEvents(fromSeq, toSeq) returns events in order\ngetMaxSequence() returns highest event_sequence for document\nUnit tests pass with 100% code coverage for EventStore",
-    "dependencies": [
-      "I1.T4",
-      "I1.T5",
-      "I2.T1"
-    ],
-    "parallelizable": true,
-    "done": true
-  },
-  {
-    "task_id": "I2.T5",
-    "iteration_id": "I2",
-    "iteration_goal": "Build the complete event sourcing infrastructure including event recording, persistence, snapshots, and replay",
-    "description": "Implement SnapshotSerializer in `lib/infrastructure/event_sourcing/snapshot_serializer.dart` to convert Document objects to/from binary format. Use Dart's json encoding with optional gzip compression. Implement serialize(Document) and deserialize(Uint8List) methods.",
-    "agent_type_hint": "BackendAgent",
-    "inputs": "Architecture blueprint Section 3.5 (Component Diagram - SnapshotSerializer)",
-    "target_files": [
-      "lib/infrastructure/event_sourcing/snapshot_serializer.dart",
-      "test/infrastructure/event_sourcing/snapshot_serializer_test.dart"
-    ],
-    "input_files": [
-      "lib/domain/models/document.dart"
-    ],
-    "deliverables": "SnapshotSerializer class with serialize(), deserialize()\nJSON encoding with gzip compression option\nUnit tests verifying round-trip serialization",
-    "acceptance_criteria": "serialize() produces Uint8List from Document\ndeserialize() reconstructs Document accurately\nCompression reduces size by ~10:1 (verify with test data)\nUnit tests confirm round-trip preserves all document data",
-    "dependencies": [],
-    "parallelizable": true,
-    "done": true
+    "done": false
   },
   {
     "task_id": "I2.T6",
     "iteration_id": "I2",
-    "iteration_goal": "Build the complete event sourcing infrastructure including event recording, persistence, snapshots, and replay",
-    "description": "Implement SnapshotStore in `lib/infrastructure/persistence/snapshot_store.dart` for CRUD operations on snapshots table. Provide methods: insertSnapshot(), getLatestSnapshot(docId, maxSequence), deleteOldSnapshots(). Write unit tests.",
-    "agent_type_hint": "DatabaseAgent",
-    "inputs": "Architecture blueprint Section 3.6 (ERD - snapshots table)",
+    "iteration_goal": "Complete immutable geometry/data models, formalize persistence schemas, and deliver a performant CustomPainter pipeline with viewport transforms and basic selection visualization.",
+    "description": "Implement path and shape rendering (T015/T016) plus selection visualization (T017) leveraging overlays and hit-testing utilities.",
+    "agent_type_hint": "FrontendAgent",
+    "inputs": "Document/geometry models, viewport transforms.",
     "target_files": [
-      "lib/infrastructure/persistence/snapshot_store.dart",
-      "test/infrastructure/persistence/snapshot_store_test.dart"
+      "lib/src/canvas/overlays/selection_overlay.dart",
+      "lib/src/canvas/painter/path_renderer.dart",
+      "test/widget/selection_overlay_test.dart"
     ],
     "input_files": [
-      "lib/infrastructure/persistence/database_provider.dart"
+      "lib/src/canvas/overlays/",
+      "lib/src/domain/geometry/",
+      "test/widget/"
     ],
-    "deliverables": "SnapshotStore class with insertSnapshot(), getLatestSnapshot(), deleteOldSnapshots()\nBLOB storage for compressed snapshots\nUnit tests",
-    "acceptance_criteria": "insertSnapshot() stores BLOB with event_sequence metadata\ngetLatestSnapshot() returns most recent snapshot ≤ maxSequence\ndeleteOldSnapshots() removes snapshots older than last N (configurable)\nUnit tests pass with in-memory database",
+    "deliverables": "Renderers for path segments, filled/stroked shapes, selection bounding boxes and anchor handles, widget tests verifying highlight states.",
+    "acceptance_criteria": "- Selection overlay displays anchors/BCPs with correct colors/states.\n        - Rendering pipeline handles >1,000 objects within 16 ms average frame (profiled sample doc).\n        - Hit-testing returns correct object/anchor IDs for upcoming tool work.",
     "dependencies": [
-      "I1.T4",
       "I2.T5"
     ],
-    "parallelizable": true,
-    "done": true
-  },
-  {
-    "task_id": "I2.T7",
-    "iteration_id": "I2",
-    "iteration_goal": "Build the complete event sourcing infrastructure including event recording, persistence, snapshots, and replay",
-    "description": "Implement SnapshotManager in `lib/infrastructure/event_sourcing/snapshot_manager.dart` to orchestrate snapshot creation. Trigger snapshot every 1000 events (configurable). Use SnapshotSerializer and SnapshotStore. Provide methods: shouldSnapshot(eventCount), createSnapshot(Document).",
-    "agent_type_hint": "BackendAgent",
-    "inputs": "Architecture blueprint Section 4.1 (Decision 6 - snapshot frequency)\nTicket T007 (Snapshot System)",
-    "target_files": [
-      "lib/infrastructure/event_sourcing/snapshot_manager.dart",
-      "test/infrastructure/event_sourcing/snapshot_manager_test.dart"
-    ],
-    "input_files": [
-      "lib/infrastructure/event_sourcing/snapshot_serializer.dart"
-    ],
-    "deliverables": "SnapshotManager class with shouldSnapshot(), createSnapshot()\nConfigurable snapshot frequency (default: 1000 events)\nIntegration tests verifying snapshots created at correct intervals",
-    "acceptance_criteria": "shouldSnapshot() returns true every 1000 events\ncreateSnapshot() serializes Document and persists to SnapshotStore\nSnapshots compressed with gzip\nUnit tests confirm frequency logic",
-    "dependencies": [
-      "I2.T5",
-      "I2.T6"
-    ],
     "parallelizable": false,
-    "done": true
-  },
-  {
-    "task_id": "I2.T8",
-    "iteration_id": "I2",
-    "iteration_goal": "Build the complete event sourcing infrastructure including event recording, persistence, snapshots, and replay",
-    "description": "Implement EventDispatcher and EventHandlerRegistry in `lib/infrastructure/event_sourcing/`. EventDispatcher routes events to registered handlers. EventHandlerRegistry maintains map of EventType → Handler function. Handlers will apply events to Document state (placeholder for now, full implementation in I3).",
-    "agent_type_hint": "BackendAgent",
-    "inputs": "Architecture blueprint Section 3.5 (Component Diagram - Event Dispatcher)",
-    "target_files": [
-      "lib/infrastructure/event_sourcing/event_dispatcher.dart",
-      "lib/infrastructure/event_sourcing/event_handler_registry.dart",
-      "test/infrastructure/event_sourcing/event_dispatcher_test.dart"
-    ],
-    "input_files": [
-      "lib/domain/events/event_base.dart"
-    ],
-    "deliverables": "EventDispatcher with dispatch(Event) method\nEventHandlerRegistry with registerHandler(), getHandler()\nUnit tests with mock handlers",
-    "acceptance_criteria": "dispatch() looks up handler in registry and invokes it\nHandlers receive event and current document state\nUnhandled event types throw informative error\nUnit tests verify routing logic",
-    "dependencies": [
-      "I2.T1"
-    ],
-    "parallelizable": true,
-    "done": true
-  },
-  {
-    "task_id": "I2.T9",
-    "iteration_id": "I2",
-    "iteration_goal": "Build the complete event sourcing infrastructure including event recording, persistence, snapshots, and replay",
-    "description": "Implement EventReplayer in `lib/infrastructure/event_sourcing/event_replayer.dart` to reconstruct document state from events. Provide replay(fromSeq, toSeq) and replayFromSnapshot(maxSeq) methods. Use EventStore, SnapshotStore, and EventDispatcher. Write integration tests loading test document from events.",
-    "agent_type_hint": "BackendAgent",
-    "inputs": "Architecture blueprint Section 4.4 (Sequence Diagram - Loading document)\nArchitecture blueprint Section 4.6 (Internal API - EventReplayer)\nTicket T008 (Event Replay Engine)",
-    "target_files": [
-      "lib/infrastructure/event_sourcing/event_replayer.dart",
-      "test/infrastructure/event_sourcing/event_replayer_test.dart",
-      "integration_test/event_replay_integration_test.dart"
-    ],
-    "input_files": [
-      "lib/infrastructure/persistence/event_store.dart"
-    ],
-    "deliverables": "EventReplayer class with replay(), replayFromSnapshot()\nIntegration with EventStore, SnapshotStore, EventDispatcher\nIntegration tests with sample event sequences",
-    "acceptance_criteria": "replayFromSnapshot() loads snapshot and replays subsequent events\nreplay(fromSeq, toSeq) replays events in specified range\nReconstructed document state matches expected state after replay\nIntegration tests pass with test databases containing sample events",
-    "dependencies": [
-      "I2.T4",
-      "I2.T6",
-      "I2.T8"
-    ],
-    "parallelizable": false,
-    "done": true
+    "done": false
   }
 ]

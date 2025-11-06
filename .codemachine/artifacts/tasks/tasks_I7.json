@@ -5,16 +5,11 @@
     "iteration_goal": "Implement shape creation tools (Rectangle, Ellipse, Polygon, Star) with drag-to-create interaction",
     "description": "Implement RectangleTool in `lib/application/tools/rectangle_tool.dart`. Click-and-drag to define bounding box, create Shape with ShapeType.RECTANGLE on pointer up. Generate CreateShapeEvent with parameters {width, height, position}. Support Shift+drag for square constraint. Write integration tests.",
     "agent_type_hint": "BackendAgent",
-    "inputs": "Ticket T025 (Rectangle Tool)\nShape model from I3.T4",
-    "target_files": [
-      "lib/application/tools/rectangle_tool.dart",
-      "lib/domain/events/object_events.dart"
-    ],
-    "input_files": [
-      "lib/application/tools/tool_interface.dart"
-    ],
-    "deliverables": "RectangleTool with drag-to-create\nShift modifier for square constraint\nCreateShapeEvent recording\nIntegration tests",
-    "acceptance_criteria": "Drag creates rectangle with correct dimensions\nShift+drag creates square (width = height)\nCreateShapeEvent persisted on pointer up\nRectangle renders in canvas\nIntegration test creates rectangle successfully",
+    "inputs": "*   Ticket T025 (Rectangle Tool)\n        *   Shape model from I3.T4",
+    "target_files": [],
+    "input_files": [],
+    "deliverables": "*   RectangleTool with drag-to-create\n        *   Shift modifier for square constraint\n        *   CreateShapeEvent recording\n        *   Integration tests",
+    "acceptance_criteria": "*   Drag creates rectangle with correct dimensions\n        *   Shift+drag creates square (width = height)\n        *   CreateShapeEvent persisted on pointer up\n        *   Rectangle renders in canvas\n        *   Integration test creates rectangle successfully",
     "dependencies": [
       "I5.T1",
       "I3.T4",
@@ -29,17 +24,11 @@
     "iteration_goal": "Implement shape creation tools (Rectangle, Ellipse, Polygon, Star) with drag-to-create interaction",
     "description": "Implement EllipseTool in `lib/application/tools/ellipse_tool.dart`. Similar to RectangleTool but creates ShapeType.ELLIPSE. Drag defines bounding box, ellipse inscribed. Shift+drag for circle constraint. Generate CreateShapeEvent. Write integration tests.",
     "agent_type_hint": "BackendAgent",
-    "inputs": "Ticket T026 (Ellipse Tool)",
-    "target_files": [
-      "lib/application/tools/ellipse_tool.dart",
-      "test/application/tools/ellipse_tool_test.dart",
-      "integration_test/ellipse_tool_workflow_test.dart"
-    ],
-    "input_files": [
-      "lib/application/tools/tool_interface.dart"
-    ],
-    "deliverables": "EllipseTool with drag-to-create\nShift modifier for circle\nIntegration tests",
-    "acceptance_criteria": "Drag creates ellipse inscribed in bounding box\nShift+drag creates circle\nCreateShapeEvent persisted\nEllipse renders with Bezier approximation\nIntegration test creates ellipse successfully",
+    "inputs": "*   Ticket T026 (Ellipse Tool)",
+    "target_files": [],
+    "input_files": [],
+    "deliverables": "*   EllipseTool with drag-to-create\n        *   Shift modifier for circle\n        *   Integration tests",
+    "acceptance_criteria": "*   Drag creates ellipse inscribed in bounding box\n        *   Shift+drag creates circle\n        *   CreateShapeEvent persisted\n        *   Ellipse renders with Bezier approximation\n        *   Integration test creates ellipse successfully",
     "dependencies": [
       "I7.T1",
       "I3.T4"
@@ -53,17 +42,11 @@
     "iteration_goal": "Implement shape creation tools (Rectangle, Ellipse, Polygon, Star) with drag-to-create interaction",
     "description": "Implement PolygonTool in `lib/application/tools/polygon_tool.dart`. Click defines center, drag defines radius. Number of sides configurable (default 6). Generate CreateShapeEvent with parameters {sides, radius, center}. Show live preview during drag. Write integration tests for 3-sided (triangle) and 8-sided polygons.",
     "agent_type_hint": "BackendAgent",
-    "inputs": "Ticket T027 (Polygon Tool)",
-    "target_files": [
-      "lib/application/tools/polygon_tool.dart",
-      "test/application/tools/polygon_tool_test.dart",
-      "integration_test/polygon_tool_workflow_test.dart"
-    ],
-    "input_files": [
-      "lib/application/tools/tool_interface.dart"
-    ],
-    "deliverables": "PolygonTool with click-center-drag-radius interaction\nConfigurable side count (3-20)\nLive preview during drag\nIntegration tests for triangle and octagon",
-    "acceptance_criteria": "Click defines center point\nDrag distance defines radius\nPolygon has correct number of sides\nRegular polygon (all sides equal length)\nIntegration tests create 3-sided and 8-sided polygons",
+    "inputs": "*   Ticket T027 (Polygon Tool)",
+    "target_files": [],
+    "input_files": [],
+    "deliverables": "*   PolygonTool with click-center-drag-radius interaction\n        *   Configurable side count (3-20)\n        *   Live preview during drag\n        *   Integration tests for triangle and octagon",
+    "acceptance_criteria": "*   Click defines center point\n        *   Drag distance defines radius\n        *   Polygon has correct number of sides\n        *   Regular polygon (all sides equal length)\n        *   Integration tests create 3-sided and 8-sided polygons",
     "dependencies": [
       "I5.T1",
       "I3.T4"
@@ -77,17 +60,11 @@
     "iteration_goal": "Implement shape creation tools (Rectangle, Ellipse, Polygon, Star) with drag-to-create interaction",
     "description": "Implement StarTool in `lib/application/tools/star_tool.dart`. Similar to PolygonTool but creates star with inner and outer radius. Click defines center, drag defines outer radius, inner radius = outer * 0.5 (default ratio). Number of points configurable (default 5). Generate CreateShapeEvent with parameters {points, outerRadius, innerRadius, center}. Write integration tests for 5-point and 8-point stars.",
     "agent_type_hint": "BackendAgent",
-    "inputs": "Ticket T028 (Star Tool)",
-    "target_files": [
-      "lib/application/tools/star_tool.dart",
-      "test/application/tools/star_tool_test.dart",
-      "integration_test/star_tool_workflow_test.dart"
-    ],
-    "input_files": [
-      "lib/application/tools/tool_interface.dart"
-    ],
-    "deliverables": "StarTool with click-center-drag-radius interaction\nConfigurable point count and inner/outer ratio\nLive preview\nIntegration tests",
-    "acceptance_criteria": "Click defines center\nDrag distance defines outer radius\nInner radius = outer * 0.5 by default\nStar has alternating outer/inner points\nIntegration tests create 5-point and 8-point stars",
+    "inputs": "*   Ticket T028 (Star Tool)",
+    "target_files": [],
+    "input_files": [],
+    "deliverables": "*   StarTool with click-center-drag-radius interaction\n        *   Configurable point count and inner/outer ratio\n        *   Live preview\n        *   Integration tests",
+    "acceptance_criteria": "*   Click defines center\n        *   Drag distance defines outer radius\n        *   Inner radius = outer * 0.5 by default\n        *   Star has alternating outer/inner points\n        *   Integration tests create 5-point and 8-point stars",
     "dependencies": [
       "I7.T3",
       "I3.T4"
@@ -101,15 +78,11 @@
     "iteration_goal": "Implement shape creation tools (Rectangle, Ellipse, Polygon, Star) with drag-to-create interaction",
     "description": "Update tool toolbar UI to include buttons for Rectangle, Ellipse, Polygon, and Star tools. Add icons for each tool (use Material Design icons or custom SVG). Test tool switching between all tools. Write widget tests.",
     "agent_type_hint": "FrontendAgent",
-    "inputs": "Tool implementations from I7.T1-I7.T4",
-    "target_files": [
-      "lib/presentation/widgets/toolbar/tool_toolbar.dart"
-    ],
-    "input_files": [
-      "lib/presentation/widgets/toolbar/tool_toolbar.dart"
-    ],
-    "deliverables": "Toolbar with all shape tool buttons\nTool switching functional\nWidget tests",
-    "acceptance_criteria": "All 7 tools visible in toolbar (Selection, Direct Selection, Pen, Rectangle, Ellipse, Polygon, Star)\nClicking each button activates corresponding tool\nActive tool highlighted\nWidget tests verify all buttons functional",
+    "inputs": "*   Tool implementations from I7.T1-I7.T4",
+    "target_files": [],
+    "input_files": [],
+    "deliverables": "*   Toolbar with all shape tool buttons\n        *   Tool switching functional\n        *   Widget tests",
+    "acceptance_criteria": "*   All 7 tools visible in toolbar (Selection, Direct Selection, Pen, Rectangle, Ellipse, Polygon, Star)\n        *   Clicking each button activates corresponding tool\n        *   Active tool highlighted\n        *   Widget tests verify all buttons functional",
     "dependencies": [
       "I7.T1",
       "I7.T2",
