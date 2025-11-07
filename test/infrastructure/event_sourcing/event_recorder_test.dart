@@ -52,6 +52,14 @@ class MockEventStore implements EventStore {
     throw UnimplementedError('Not needed for EventRecorder tests');
   }
 
+  @override
+  Future<List<int>> insertEventsBatch(
+    String documentId,
+    List<EventBase> events,
+  ) async {
+    throw UnimplementedError('Not needed for EventRecorder tests');
+  }
+
   /// Verifies that insertEvent was called with the specified parameters.
   bool wasCalledWith(String documentId, EventBase event) {
     return calls.any((call) =>

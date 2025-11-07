@@ -114,4 +114,86 @@ class EventStore {
     final maxSeq = result.first['max_seq'] as int?;
     return maxSeq ?? -1; // -1 if no events
   }
+
+  /// Inserts multiple events in a single atomic transaction.
+  ///
+  /// This method ensures ACID compliance by wrapping all insertions in a database
+  /// transaction. Either all events are inserted successfully, or none are.
+  ///
+  /// This is more efficient than individual insertEvent calls when inserting
+  /// multiple events, as it:
+  /// - Reduces transaction overhead (single transaction vs N transactions)
+  /// - Queries MAX sequence only once instead of N times
+  /// - Ensures atomicity for batch operations
+  ///
+  /// Parameters:
+  /// - [documentId]: The document to insert events for
+  /// - [events]: List of events to insert (must not be empty)
+  ///
+  /// Returns a list of event IDs in the same order as the input events.
+  ///
+  /// Throws:
+  /// - [ArgumentError] if events list is empty
+  /// - [StateError] if document doesn't exist
+  /// - [DatabaseException] for other database errors
+  ///
+  /// Example:
+  /// ```dart
+  /// final events = [event1, event2, event3];
+  /// final eventIds = await eventStore.insertEventsBatch('doc-1', events);
+  /// print('Inserted ${eventIds.length} events');
+  /// ```
+  Future<List<int>> insertEventsBatch(
+    String documentId,
+    List<EventBase> events,
+  ) async {
+    if (events.isEmpty) {
+      throw ArgumentError('Events list cannot be empty');
+    }
+
+    _logger.d('Batch inserting ${events.length} events for document: $documentId');
+
+    return await _db.transaction((txn) async {
+      final eventIds = <int>[];
+
+      // Get the starting sequence number once
+      final maxSeqResult = await txn.rawQuery(
+        'SELECT MAX(event_sequence) as max_seq FROM events WHERE document_id = ?',
+        [documentId],
+      );
+      int nextSeq = (maxSeqResult.first['max_seq'] as int? ?? -1) + 1;
+
+      // Insert each event with incrementing sequence
+      for (final event in events) {
+        final payload = json.encode(event.toJson());
+
+        try {
+          final eventId = await txn.rawInsert(
+            '''
+            INSERT INTO events (document_id, event_sequence, event_type, event_payload, timestamp, user_id)
+            VALUES (?, ?, ?, ?, ?, ?)
+            ''',
+            [documentId, nextSeq, event.eventType, payload, event.timestamp, null],
+          );
+
+          eventIds.add(eventId);
+          nextSeq++;
+        } on DatabaseException catch (e) {
+          final errorMsg = e.toString();
+          if (errorMsg.contains('UNIQUE constraint')) {
+            throw StateError(
+              'Event sequence $nextSeq already exists for document $documentId',
+            );
+          }
+          if (errorMsg.contains('FOREIGN KEY constraint')) {
+            throw StateError('Document $documentId does not exist');
+          }
+          rethrow;
+        }
+      }
+
+      _logger.i('Batch inserted ${eventIds.length} events for document $documentId');
+      return eventIds;
+    });
+  }
 }

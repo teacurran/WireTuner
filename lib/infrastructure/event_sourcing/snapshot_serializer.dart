@@ -28,6 +28,35 @@ class SnapshotSerializer {
 
   SnapshotSerializer({this.enableCompression = true});
 
+  /// Serializes a document to uncompressed JSON bytes (UTF-8).
+  ///
+  /// This method is useful for calculating telemetry metrics like compression ratio.
+  /// Returns the uncompressed byte representation of the document.
+  ///
+  /// Example:
+  /// ```dart
+  /// final serializer = SnapshotSerializer(enableCompression: true);
+  /// final uncompressedBytes = serializer.serializeToJson(document);
+  /// final uncompressedSize = uncompressedBytes.length;
+  /// ```
+  Uint8List serializeToJson(dynamic document) {
+    try {
+      // Step 1: Document → JSON Map
+      final jsonMap = _toJson(document);
+
+      // Step 2: JSON Map → String
+      final jsonString = jsonEncode(jsonMap);
+
+      // Step 3: String → UTF-8 bytes
+      final bytes = utf8.encode(jsonString);
+
+      return Uint8List.fromList(bytes);
+    } catch (e, stackTrace) {
+      _logger.e('Failed to serialize document to JSON', error: e, stackTrace: stackTrace);
+      rethrow;
+    }
+  }
+
   /// Serializes a document to binary format (JSON + optional gzip).
   ///
   /// The serialization process:

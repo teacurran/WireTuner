@@ -65,6 +65,14 @@ class MockEventStore implements EventStore {
   Future<int> insertEvent(String documentId, EventBase event) async {
     throw UnimplementedError('insertEvent not needed for replay tests');
   }
+
+  @override
+  Future<List<int>> insertEventsBatch(
+    String documentId,
+    List<EventBase> events,
+  ) async {
+    throw UnimplementedError('insertEventsBatch not needed for replay tests');
+  }
 }
 
 class MockSnapshotStore implements SnapshotStore {
