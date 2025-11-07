@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
 import 'package:logger/logger.dart';
+import 'package:wiretuner/domain/document/document.dart';
 
 /// Serializes and deserializes document snapshots to/from binary format.
 ///
@@ -107,19 +108,18 @@ class SnapshotSerializer {
     }
   }
 
-  /// Deserializes binary snapshot back to document.
+  /// Deserializes binary snapshot back to Document.
   ///
   /// The deserialization process:
   /// 1. Detect if data is compressed (gzip magic bytes: 0x1f, 0x8b)
   /// 2. Decompress if needed
   /// 3. Decode UTF-8 bytes to string
   /// 4. Parse JSON string to Map
-  /// 5. Return Map (caller constructs document via fromJson())
+  /// 5. Hydrate Document via fromJson()
   ///
-  /// **Note**: This method returns a Map<String, dynamic> instead of a typed
-  /// document object because the Document class is not yet implemented. Once
-  /// the real Document model is available in I3.T6, this can be updated to
-  /// return a typed Document.
+  /// This method returns a typed [Document] instance by using the Document's
+  /// fromJson factory. The Document model handles schema versioning and
+  /// migrations internally.
   ///
   /// Throws [FormatException] if data is corrupted or invalid.
   ///
@@ -127,8 +127,9 @@ class SnapshotSerializer {
   /// ```dart
   /// final serializer = SnapshotSerializer(enableCompression: true);
   /// final document = serializer.deserialize(bytes);
+  /// assert(document is Document);
   /// ```
-  dynamic deserialize(Uint8List bytes) {
+  Document deserialize(Uint8List bytes) {
     try {
       _logger.d('Deserializing snapshot (${bytes.length} bytes)');
 
@@ -150,10 +151,10 @@ class SnapshotSerializer {
       // Step 4: String → JSON Map
       final jsonMap = jsonDecode(jsonString) as Map<String, dynamic>;
 
-      // Step 5: Return Map (caller constructs document via fromJson())
-      final docId = jsonMap['id'] ?? 'unknown';
-      _logger.d('Deserialized document: $docId');
-      return jsonMap;
+      // Step 5: Hydrate Document from JSON
+      final document = Document.fromJson(jsonMap);
+      _logger.d('Deserialized document: ${document.id}');
+      return document;
     } on FormatException catch (e) {
       _logger.e('Failed to deserialize snapshot: Invalid JSON format', error: e);
       throw FormatException(
