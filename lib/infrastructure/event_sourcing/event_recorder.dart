@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:logger/logger.dart';
 import '../../domain/events/event_base.dart';
 import '../persistence/event_store.dart';
@@ -40,29 +41,54 @@ import 'event_sampler.dart';
 /// - **Auto-sequencing**: EventStore automatically assigns sequence numbers
 /// - **Pause/Resume**: Prevents recording during event replay or undo operations
 /// - **Fire-and-forget**: Recording is synchronous, persistence is async (no blocking)
-class EventRecorder {
+/// - **ChangeNotifier**: Emits notifications after successful persistence for UI updates
+/// - **Backpressure Monitoring**: Warns when event buffer age exceeds threshold
+class EventRecorder with ChangeNotifier {
   final EventStore _eventStore;
   final String _documentId;
   late final EventSampler _sampler;
   bool _isPaused = false;
   final Logger _logger = Logger();
 
+  /// Timestamp of when the current buffered event was first recorded.
+  /// Used to track how long an event has been waiting in the sampler buffer.
+  DateTime? _bufferedEventTimestamp;
+
+  /// Threshold in milliseconds for backpressure warning.
+  /// If a buffered event waits longer than this duration, a warning is logged.
+  final int _backpressureThresholdMs;
+
+  /// Count of events successfully persisted (for metrics/testing).
+  int _persistedEventCount = 0;
+
   /// Creates an [EventRecorder] for the specified document.
   ///
   /// The [eventStore] is used for persisting events to SQLite.
   /// The [documentId] identifies which document these events belong to.
+  /// The [backpressureThresholdMs] sets the warning threshold for buffered event age (default 100ms).
   ///
   /// **Note**: Each document should have its own EventRecorder instance.
   EventRecorder({
     required EventStore eventStore,
     required String documentId,
+    int backpressureThresholdMs = 100,
   })  : _eventStore = eventStore,
-        _documentId = documentId {
+        _documentId = documentId,
+        _backpressureThresholdMs = backpressureThresholdMs {
     // Initialize sampler with persistence callback
     _sampler = EventSampler(
       onEventEmit: _persistEvent,
     );
     _logger.i('EventRecorder initialized for document: $_documentId');
+  }
+
+  @override
+  void dispose() {
+    // Flush any remaining buffered events before disposal
+    if (!_isPaused) {
+      flush();
+    }
+    super.dispose();
   }
 
   /// Records an event to the event sourcing system.
@@ -96,6 +122,10 @@ class EventRecorder {
     }
 
     _logger.d('Recording event: ${event.eventType}');
+
+    // Track when event enters buffer (for backpressure monitoring)
+    _bufferedEventTimestamp ??= DateTime.now();
+
     _sampler.recordEvent(event);
   }
 
@@ -169,6 +199,19 @@ class EventRecorder {
   /// Useful for debugging or displaying UI state (e.g., "Replay Mode" indicator).
   bool get isPaused => _isPaused;
 
+  /// Returns the number of events successfully persisted.
+  ///
+  /// Useful for testing, metrics, and debugging.
+  int get persistedEventCount => _persistedEventCount;
+
+  /// Returns the age in milliseconds of the oldest buffered event.
+  ///
+  /// Returns null if no event is currently buffered.
+  int? get bufferedEventAgeMs {
+    if (_bufferedEventTimestamp == null) return null;
+    return DateTime.now().difference(_bufferedEventTimestamp!).inMilliseconds;
+  }
+
   /// Internal callback invoked by EventSampler when an event should be persisted.
   ///
   /// This method:
@@ -186,19 +229,45 @@ class EventRecorder {
   /// - Multiple events may be persisting concurrently
   /// - EventStore handles sequence numbering correctly via database transactions
   void _persistEvent(EventBase event) async {
+    // Check backpressure before persistence
+    _checkBackpressure();
+
     try {
       final eventId = await _eventStore.insertEvent(_documentId, event);
+      _persistedEventCount++;
+
       _logger.d(
         'Event persisted: id=$eventId, type=${event.eventType}, doc=$_documentId',
       );
+
+      // Clear buffer timestamp after successful persistence
+      _bufferedEventTimestamp = null;
+
+      // Notify listeners (UI/Provider) about state change
+      notifyListeners();
     } catch (e, stackTrace) {
       _logger.e(
         'Failed to persist event: ${event.eventType}',
         error: e,
         stackTrace: stackTrace,
       );
+      // Clear buffer timestamp even on error to prevent false backpressure warnings
+      _bufferedEventTimestamp = null;
       // TODO: In production, consider showing a user notification
       // for critical persistence failures (e.g., disk full, database corruption)
+    }
+  }
+
+  /// Checks if buffered event age exceeds backpressure threshold and logs warning.
+  void _checkBackpressure() {
+    if (_bufferedEventTimestamp == null) return;
+
+    final ageMs = DateTime.now().difference(_bufferedEventTimestamp!).inMilliseconds;
+    if (ageMs > _backpressureThresholdMs) {
+      _logger.w(
+        'Event backpressure detected: buffered event age ${ageMs}ms exceeds threshold ${_backpressureThresholdMs}ms. '
+        'Consider adjusting sampling interval or optimizing persistence.',
+      );
     }
   }
 }

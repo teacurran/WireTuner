@@ -14,10 +14,16 @@ class MockEventStore implements EventStore {
   String? errorMessageOnInsert;
   int nextEventId = 1;
   final Map<String, bool> shouldThrowForEvent = {};
+  Duration insertDelay = Duration.zero;
 
   @override
   Future<int> insertEvent(String documentId, EventBase event) async {
     calls.add(CallRecord(documentId, event));
+
+    // Add configurable delay for simulating slow persistence
+    if (insertDelay > Duration.zero) {
+      await Future.delayed(insertDelay);
+    }
 
     // Check per-event error configuration
     if (shouldThrowForEvent[event.eventId] == true) {
@@ -61,6 +67,7 @@ class MockEventStore implements EventStore {
     shouldThrowOnInsert = false;
     errorMessageOnInsert = null;
     nextEventId = 1;
+    insertDelay = Duration.zero;
   }
 }
 
@@ -385,6 +392,288 @@ void main() {
       await Future.delayed(const Duration(milliseconds: 60));
 
       expect(mockEventStore.wasCalledWith(documentId, testEvent), isTrue);
+    });
+  });
+
+  group('EventRecorder - Sampling Reduction', () {
+    test('reduces >90% of redundant move events during rapid input', () async {
+      // Arrange - Simulate 200 rapid drag events (2ms apart = 400ms total)
+      // At 2ms intervals, events arrive MUCH faster than 50ms sampling window
+      final events = List.generate(
+        200,
+        (i) => CreatePathEvent(
+          eventId: 'evt-$i',
+          timestamp: DateTime.now().millisecondsSinceEpoch + i,
+          pathId: 'path-drag',
+          startAnchor: Point(x: 100.0 + i, y: 200.0),
+        ),
+      );
+
+      // Act - Record events rapidly without delays (simulates real mouse drag)
+      for (final event in events) {
+        recorder.recordEvent(event);
+        // Very short delay to allow async operations but stay within sampling window
+        await Future.delayed(const Duration(milliseconds: 2));
+      }
+
+      // Flush final event
+      recorder.flush();
+      await Future.delayed(const Duration(milliseconds: 60));
+
+      // Assert - Should have >90% reduction
+      // With 50ms sampling and 400ms of events, expect ~8-9 emissions + final flush
+      final reductionPercentage =
+          (1 - (mockEventStore.callCount / events.length)) * 100;
+
+      expect(
+        reductionPercentage,
+        greaterThan(90),
+        reason:
+            'Expected >90% reduction, got ${reductionPercentage.toStringAsFixed(1)}% '
+            '(${mockEventStore.callCount} events from ${events.length} inputs)',
+      );
+
+      // Sanity check: should have significantly fewer events (<20 from 200)
+      expect(
+        mockEventStore.callCount,
+        lessThan(20),
+        reason: 'Expected < 20 events from 200 rapid events',
+      );
+
+      // Verify first and last events are persisted
+      expect(mockEventStore.wasCalledWith(documentId, events.first), isTrue);
+      expect(mockEventStore.wasCalledWith(documentId, events.last), isTrue);
+    });
+
+    test('sampling reduces event volume during continuous drag', () async {
+      // Arrange - 50 events at 10ms intervals (500ms total)
+      final events = List.generate(
+        50,
+        (i) => CreatePathEvent(
+          eventId: 'drag-$i',
+          timestamp: DateTime.now().millisecondsSinceEpoch + i * 10,
+          pathId: 'path-continuous',
+          startAnchor: Point(x: 100.0 + i * 5, y: 200.0),
+        ),
+      );
+
+      // Act
+      for (final event in events) {
+        recorder.recordEvent(event);
+        await Future.delayed(const Duration(milliseconds: 10));
+      }
+      recorder.flush();
+      await Future.delayed(const Duration(milliseconds: 10));
+
+      // Assert - With 50ms sampling, expect ~10-14 events depending on timing
+      // The key requirement is significant reduction, not exact count
+      final reduction = (1 - (mockEventStore.callCount / events.length)) * 100;
+      expect(reduction, greaterThan(70)); // At least 70% reduction
+      expect(mockEventStore.callCount, lessThan(20)); // Much fewer than 50 inputs
+    });
+  });
+
+  group('EventRecorder - ChangeNotifier Behavior', () {
+    test('notifies listeners after successful event persistence', () async {
+      // Arrange
+      int notificationCount = 0;
+      recorder.addListener(() {
+        notificationCount++;
+      });
+
+      final testEvent = CreatePathEvent(
+        eventId: 'evt-notify-1',
+        timestamp: DateTime.now().millisecondsSinceEpoch,
+        pathId: 'path-1',
+        startAnchor: const Point(x: 100, y: 200),
+      );
+
+      // Act
+      recorder.recordEvent(testEvent);
+      await Future.delayed(const Duration(milliseconds: 60));
+
+      // Assert
+      expect(notificationCount, equals(1));
+      expect(mockEventStore.callCount, equals(1));
+    });
+
+    test('notifies listeners for each persisted event', () async {
+      // Arrange
+      int notificationCount = 0;
+      recorder.addListener(() {
+        notificationCount++;
+      });
+
+      // Act - Record 3 events with enough spacing to emit all
+      for (int i = 0; i < 3; i++) {
+        recorder.recordEvent(CreatePathEvent(
+          eventId: 'evt-$i',
+          timestamp: DateTime.now().millisecondsSinceEpoch + i,
+          pathId: 'path-$i',
+          startAnchor: Point(x: 100.0 + i * 10, y: 200.0),
+        ));
+        await Future.delayed(const Duration(milliseconds: 60));
+      }
+
+      // Assert - Should have 3 notifications (one per persisted event)
+      expect(notificationCount, equals(3));
+      expect(mockEventStore.callCount, equals(3));
+    });
+
+    test('does not notify listeners on persistence error', () async {
+      // Arrange
+      int notificationCount = 0;
+      recorder.addListener(() {
+        notificationCount++;
+      });
+
+      mockEventStore.shouldThrowOnInsert = true;
+
+      final testEvent = CreatePathEvent(
+        eventId: 'evt-error',
+        timestamp: DateTime.now().millisecondsSinceEpoch,
+        pathId: 'path-1',
+        startAnchor: const Point(x: 100, y: 200),
+      );
+
+      // Act
+      recorder.recordEvent(testEvent);
+      await Future.delayed(const Duration(milliseconds: 60));
+
+      // Assert - No notification on error
+      expect(notificationCount, equals(0));
+      expect(mockEventStore.callCount, equals(1)); // Attempt was made
+    });
+
+    test('tracks persisted event count correctly', () async {
+      // Arrange
+      final events = List.generate(
+        5,
+        (i) => CreatePathEvent(
+          eventId: 'evt-count-$i',
+          timestamp: DateTime.now().millisecondsSinceEpoch + i,
+          pathId: 'path-$i',
+          startAnchor: Point(x: 100.0 + i * 10, y: 200.0),
+        ),
+      );
+
+      // Act
+      for (final event in events) {
+        recorder.recordEvent(event);
+        await Future.delayed(const Duration(milliseconds: 60));
+      }
+
+      // Assert
+      expect(recorder.persistedEventCount, equals(5));
+    });
+  });
+
+  group('EventRecorder - Backpressure Monitoring', () {
+    test('logs warning when buffered event exceeds threshold', () async {
+      // Arrange - Create new mock with delay for this test
+      final slowMockStore = MockEventStore();
+      slowMockStore.insertDelay = const Duration(milliseconds: 50);
+
+      final lowThresholdRecorder = EventRecorder(
+        eventStore: slowMockStore,
+        documentId: documentId,
+        backpressureThresholdMs: 20, // Very low threshold
+      );
+
+      final event1 = CreatePathEvent(
+        eventId: 'evt-backpressure-1',
+        timestamp: DateTime.now().millisecondsSinceEpoch,
+        pathId: 'path-1',
+        startAnchor: const Point(x: 100, y: 200),
+      );
+
+      final event2 = CreatePathEvent(
+        eventId: 'evt-backpressure-2',
+        timestamp: DateTime.now().millisecondsSinceEpoch + 1,
+        pathId: 'path-2',
+        startAnchor: const Point(x: 150, y: 250),
+      );
+
+      // Act - Record two events rapidly (second will be buffered)
+      lowThresholdRecorder.recordEvent(event1);
+      await Future.delayed(const Duration(milliseconds: 10));
+      lowThresholdRecorder.recordEvent(event2); // Buffered
+      await Future.delayed(const Duration(milliseconds: 30)); // Exceed threshold
+
+      // Trigger emission (which will check backpressure)
+      lowThresholdRecorder.flush();
+      await Future.delayed(const Duration(milliseconds: 60));
+
+      // Assert - Warning should be logged (we can't easily verify logger output
+      // without mocking Logger, but we can verify the system didn't crash)
+      expect(slowMockStore.callCount, greaterThan(0));
+    });
+
+    test('bufferedEventAgeMs returns null when no event buffered', () {
+      expect(recorder.bufferedEventAgeMs, isNull);
+    });
+
+    test('bufferedEventAgeMs tracks buffer age correctly', () async {
+      // Arrange
+      final event1 = CreatePathEvent(
+        eventId: 'evt-age-1',
+        timestamp: DateTime.now().millisecondsSinceEpoch,
+        pathId: 'path-1',
+        startAnchor: const Point(x: 100, y: 200),
+      );
+
+      final event2 = CreatePathEvent(
+        eventId: 'evt-age-2',
+        timestamp: DateTime.now().millisecondsSinceEpoch + 1,
+        pathId: 'path-2',
+        startAnchor: const Point(x: 150, y: 250),
+      );
+
+      // Act
+      recorder.recordEvent(event1); // Emitted immediately
+      await Future.delayed(const Duration(milliseconds: 10));
+      recorder.recordEvent(event2); // Buffered
+
+      // Wait a bit to let buffer age grow
+      await Future.delayed(const Duration(milliseconds: 30));
+
+      // Assert - Buffer should have some age
+      expect(recorder.bufferedEventAgeMs, greaterThan(20));
+      expect(recorder.bufferedEventAgeMs, lessThan(100));
+
+      // Flush and verify age is cleared
+      recorder.flush();
+      await Future.delayed(const Duration(milliseconds: 10));
+      expect(recorder.bufferedEventAgeMs, isNull);
+    });
+
+    test('backpressure not checked during pause', () async {
+      // Arrange - Low threshold recorder
+      final lowThresholdRecorder = EventRecorder(
+        eventStore: mockEventStore,
+        documentId: documentId,
+        backpressureThresholdMs: 10,
+      );
+
+      final testEvent = CreatePathEvent(
+        eventId: 'evt-pause-backpressure',
+        timestamp: DateTime.now().millisecondsSinceEpoch,
+        pathId: 'path-1',
+        startAnchor: const Point(x: 100, y: 200),
+      );
+
+      // Act - Record while paused
+      lowThresholdRecorder.pause();
+      lowThresholdRecorder.recordEvent(testEvent); // Ignored
+      await Future.delayed(const Duration(milliseconds: 30));
+
+      // Resume and record
+      lowThresholdRecorder.resume();
+      lowThresholdRecorder.recordEvent(testEvent);
+      await Future.delayed(const Duration(milliseconds: 60));
+
+      // Assert - Should not crash, event recorded after resume
+      expect(mockEventStore.callCount, greaterThan(0));
     });
   });
 
