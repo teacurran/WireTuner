@@ -3,6 +3,9 @@ import 'package:wiretuner/domain/events/event_base.dart';
 import 'package:wiretuner/domain/events/path_events.dart';
 import 'package:wiretuner/domain/events/object_events.dart';
 import 'package:wiretuner/domain/events/style_events.dart';
+import 'package:wiretuner/domain/events/selection_events.dart';
+import 'package:wiretuner/domain/events/viewport_events.dart';
+import 'package:wiretuner/domain/events/file_events.dart';
 import 'package:wiretuner/api/event_schema.dart' as event_schema;
 
 void main() {
@@ -586,6 +589,582 @@ void main() {
       final deserialized = CreateShapeEvent.fromJson(json);
 
       expect(deserialized.parameters, isEmpty);
+      expect(deserialized, equals(event));
+    });
+  });
+
+  group('DeleteObjectEvent', () {
+    test('serializes and deserializes correctly with single object', () {
+      const event = DeleteObjectEvent(
+        eventId: 'evt_300',
+        timestamp: 1699305900000,
+        objectIds: ['path_001'],
+      );
+
+      final json = event.toJson();
+      final deserialized = DeleteObjectEvent.fromJson(json);
+
+      expect(deserialized.eventId, equals(event.eventId));
+      expect(deserialized.timestamp, equals(event.timestamp));
+      expect(deserialized.objectIds, equals(event.objectIds));
+      expect(deserialized, equals(event));
+    });
+
+    test('serializes and deserializes correctly with multiple objects', () {
+      const event = DeleteObjectEvent(
+        eventId: 'evt_301',
+        timestamp: 1699305901000,
+        objectIds: ['path_001', 'shape_002', 'path_003'],
+      );
+
+      final json = event.toJson();
+      final deserialized = DeleteObjectEvent.fromJson(json);
+
+      expect(deserialized.objectIds.length, equals(3));
+      expect(deserialized.objectIds, containsAll(event.objectIds));
+      expect(deserialized, equals(event));
+    });
+
+    test('eventType field is correct', () {
+      const event = DeleteObjectEvent(
+        eventId: 'evt_302',
+        timestamp: 1699305902000,
+        objectIds: ['obj_001'],
+      );
+
+      expect(event.eventType, equals('DeleteObjectEvent'));
+    });
+  });
+
+  group('SelectObjectsEvent', () {
+    test('serializes and deserializes correctly with replace mode', () {
+      const event = SelectObjectsEvent(
+        eventId: 'evt_400',
+        timestamp: 1699306000000,
+        objectIds: ['path_001', 'shape_002'],
+        mode: SelectionMode.replace,
+      );
+
+      final json = event.toJson();
+      final deserialized = SelectObjectsEvent.fromJson(json);
+
+      expect(deserialized.eventId, equals(event.eventId));
+      expect(deserialized.timestamp, equals(event.timestamp));
+      expect(deserialized.objectIds, equals(event.objectIds));
+      expect(deserialized.mode, equals(SelectionMode.replace));
+      expect(deserialized, equals(event));
+    });
+
+    test('serializes and deserializes correctly with add mode', () {
+      const event = SelectObjectsEvent(
+        eventId: 'evt_401',
+        timestamp: 1699306001000,
+        objectIds: ['path_003'],
+        mode: SelectionMode.add,
+      );
+
+      final json = event.toJson();
+      final deserialized = SelectObjectsEvent.fromJson(json);
+
+      expect(deserialized.mode, equals(SelectionMode.add));
+      expect(deserialized, equals(event));
+    });
+
+    test('defaults to replace mode', () {
+      const event = SelectObjectsEvent(
+        eventId: 'evt_402',
+        timestamp: 1699306002000,
+        objectIds: ['obj_001'],
+      );
+
+      final json = event.toJson();
+      final deserialized = SelectObjectsEvent.fromJson(json);
+
+      expect(deserialized.mode, equals(SelectionMode.replace));
+      expect(deserialized, equals(event));
+    });
+
+    test('eventType field is correct', () {
+      const event = SelectObjectsEvent(
+        eventId: 'evt_403',
+        timestamp: 1699306003000,
+        objectIds: ['obj_001'],
+      );
+
+      expect(event.eventType, equals('SelectObjectsEvent'));
+    });
+  });
+
+  group('DeselectObjectsEvent', () {
+    test('serializes and deserializes correctly', () {
+      const event = DeselectObjectsEvent(
+        eventId: 'evt_410',
+        timestamp: 1699306100000,
+        objectIds: ['path_001', 'shape_002'],
+      );
+
+      final json = event.toJson();
+      final deserialized = DeselectObjectsEvent.fromJson(json);
+
+      expect(deserialized.eventId, equals(event.eventId));
+      expect(deserialized.timestamp, equals(event.timestamp));
+      expect(deserialized.objectIds, equals(event.objectIds));
+      expect(deserialized, equals(event));
+    });
+
+    test('eventType field is correct', () {
+      const event = DeselectObjectsEvent(
+        eventId: 'evt_411',
+        timestamp: 1699306101000,
+        objectIds: ['obj_001'],
+      );
+
+      expect(event.eventType, equals('DeselectObjectsEvent'));
+    });
+  });
+
+  group('ClearSelectionEvent', () {
+    test('serializes and deserializes correctly', () {
+      const event = ClearSelectionEvent(
+        eventId: 'evt_420',
+        timestamp: 1699306200000,
+      );
+
+      final json = event.toJson();
+      final deserialized = ClearSelectionEvent.fromJson(json);
+
+      expect(deserialized.eventId, equals(event.eventId));
+      expect(deserialized.timestamp, equals(event.timestamp));
+      expect(deserialized, equals(event));
+    });
+
+    test('eventType field is correct', () {
+      const event = ClearSelectionEvent(
+        eventId: 'evt_421',
+        timestamp: 1699306201000,
+      );
+
+      expect(event.eventType, equals('ClearSelectionEvent'));
+    });
+  });
+
+  group('ViewportPanEvent', () {
+    test('serializes and deserializes correctly', () {
+      const event = ViewportPanEvent(
+        eventId: 'evt_500',
+        timestamp: 1699306500000,
+        delta: Point(x: 50.0, y: -30.0),
+      );
+
+      final json = event.toJson();
+      final deserialized = ViewportPanEvent.fromJson(json);
+
+      expect(deserialized.eventId, equals(event.eventId));
+      expect(deserialized.timestamp, equals(event.timestamp));
+      expect(deserialized.delta, equals(event.delta));
+      expect(deserialized, equals(event));
+    });
+
+    test('eventType field is correct', () {
+      const event = ViewportPanEvent(
+        eventId: 'evt_501',
+        timestamp: 1699306501000,
+        delta: Point(x: 0.0, y: 0.0),
+      );
+
+      expect(event.eventType, equals('ViewportPanEvent'));
+    });
+  });
+
+  group('ViewportZoomEvent', () {
+    test('serializes and deserializes correctly', () {
+      const event = ViewportZoomEvent(
+        eventId: 'evt_510',
+        timestamp: 1699306600000,
+        factor: 2.0,
+        focalPoint: Point(x: 400.0, y: 300.0),
+      );
+
+      final json = event.toJson();
+      final deserialized = ViewportZoomEvent.fromJson(json);
+
+      expect(deserialized.eventId, equals(event.eventId));
+      expect(deserialized.timestamp, equals(event.timestamp));
+      expect(deserialized.factor, equals(event.factor));
+      expect(deserialized.focalPoint, equals(event.focalPoint));
+      expect(deserialized, equals(event));
+    });
+
+    test('handles zoom out (factor < 1.0)', () {
+      const event = ViewportZoomEvent(
+        eventId: 'evt_511',
+        timestamp: 1699306601000,
+        factor: 0.5,
+        focalPoint: Point(x: 200.0, y: 150.0),
+      );
+
+      final json = event.toJson();
+      final deserialized = ViewportZoomEvent.fromJson(json);
+
+      expect(deserialized.factor, equals(0.5));
+      expect(deserialized, equals(event));
+    });
+
+    test('eventType field is correct', () {
+      const event = ViewportZoomEvent(
+        eventId: 'evt_512',
+        timestamp: 1699306602000,
+        factor: 1.0,
+        focalPoint: Point(x: 0.0, y: 0.0),
+      );
+
+      expect(event.eventType, equals('ViewportZoomEvent'));
+    });
+  });
+
+  group('ViewportResetEvent', () {
+    test('serializes and deserializes correctly', () {
+      const event = ViewportResetEvent(
+        eventId: 'evt_520',
+        timestamp: 1699306700000,
+      );
+
+      final json = event.toJson();
+      final deserialized = ViewportResetEvent.fromJson(json);
+
+      expect(deserialized.eventId, equals(event.eventId));
+      expect(deserialized.timestamp, equals(event.timestamp));
+      expect(deserialized, equals(event));
+    });
+
+    test('eventType field is correct', () {
+      const event = ViewportResetEvent(
+        eventId: 'evt_521',
+        timestamp: 1699306701000,
+      );
+
+      expect(event.eventType, equals('ViewportResetEvent'));
+    });
+  });
+
+  group('SaveDocumentEvent', () {
+    test('serializes and deserializes correctly with file path', () {
+      const event = SaveDocumentEvent(
+        eventId: 'evt_600',
+        timestamp: 1699306800000,
+        filePath: '/path/to/document.wiretuner',
+      );
+
+      final json = event.toJson();
+      final deserialized = SaveDocumentEvent.fromJson(json);
+
+      expect(deserialized.eventId, equals(event.eventId));
+      expect(deserialized.timestamp, equals(event.timestamp));
+      expect(deserialized.filePath, equals(event.filePath));
+      expect(deserialized, equals(event));
+    });
+
+    test('serializes and deserializes correctly without file path', () {
+      const event = SaveDocumentEvent(
+        eventId: 'evt_601',
+        timestamp: 1699306801000,
+      );
+
+      final json = event.toJson();
+      final deserialized = SaveDocumentEvent.fromJson(json);
+
+      expect(deserialized.filePath, isNull);
+      expect(deserialized, equals(event));
+    });
+
+    test('eventType field is correct', () {
+      const event = SaveDocumentEvent(
+        eventId: 'evt_602',
+        timestamp: 1699306802000,
+      );
+
+      expect(event.eventType, equals('SaveDocumentEvent'));
+    });
+  });
+
+  group('LoadDocumentEvent', () {
+    test('serializes and deserializes correctly', () {
+      const event = LoadDocumentEvent(
+        eventId: 'evt_610',
+        timestamp: 1699306900000,
+        filePath: '/path/to/document.wiretuner',
+      );
+
+      final json = event.toJson();
+      final deserialized = LoadDocumentEvent.fromJson(json);
+
+      expect(deserialized.eventId, equals(event.eventId));
+      expect(deserialized.timestamp, equals(event.timestamp));
+      expect(deserialized.filePath, equals(event.filePath));
+      expect(deserialized, equals(event));
+    });
+
+    test('eventType field is correct', () {
+      const event = LoadDocumentEvent(
+        eventId: 'evt_611',
+        timestamp: 1699306901000,
+        filePath: '/path/to/doc.wiretuner',
+      );
+
+      expect(event.eventType, equals('LoadDocumentEvent'));
+    });
+  });
+
+  group('DocumentLoadedEvent', () {
+    test('serializes and deserializes correctly', () {
+      const event = DocumentLoadedEvent(
+        eventId: 'evt_620',
+        timestamp: 1699307000000,
+        filePath: '/path/to/document.wiretuner',
+        eventCount: 1234,
+      );
+
+      final json = event.toJson();
+      final deserialized = DocumentLoadedEvent.fromJson(json);
+
+      expect(deserialized.eventId, equals(event.eventId));
+      expect(deserialized.timestamp, equals(event.timestamp));
+      expect(deserialized.filePath, equals(event.filePath));
+      expect(deserialized.eventCount, equals(event.eventCount));
+      expect(deserialized, equals(event));
+    });
+
+    test('eventType field is correct', () {
+      const event = DocumentLoadedEvent(
+        eventId: 'evt_621',
+        timestamp: 1699307001000,
+        filePath: '/path/to/doc.wiretuner',
+        eventCount: 0,
+      );
+
+      expect(event.eventType, equals('DocumentLoadedEvent'));
+    });
+  });
+
+  group('Polymorphic deserialization - New Events', () {
+    test('eventFromJson deserializes DeleteObjectEvent correctly', () {
+      final json = {
+        'eventType': 'DeleteObjectEvent',
+        'eventId': 'evt_700',
+        'timestamp': 1699307100000,
+        'objectIds': ['obj_1', 'obj_2'],
+      };
+
+      final event = event_schema.eventFromJson(json);
+
+      expect(event, isA<DeleteObjectEvent>());
+      expect((event as DeleteObjectEvent).objectIds.length, equals(2));
+    });
+
+    test('eventFromJson deserializes SelectObjectsEvent correctly', () {
+      final json = {
+        'eventType': 'SelectObjectsEvent',
+        'eventId': 'evt_701',
+        'timestamp': 1699307101000,
+        'objectIds': ['obj_1'],
+        'mode': 'add',
+      };
+
+      final event = event_schema.eventFromJson(json);
+
+      expect(event, isA<SelectObjectsEvent>());
+      expect((event as SelectObjectsEvent).mode, equals(SelectionMode.add));
+    });
+
+    test('eventFromJson deserializes DeselectObjectsEvent correctly', () {
+      final json = {
+        'eventType': 'DeselectObjectsEvent',
+        'eventId': 'evt_702',
+        'timestamp': 1699307102000,
+        'objectIds': ['obj_1'],
+      };
+
+      final event = event_schema.eventFromJson(json);
+
+      expect(event, isA<DeselectObjectsEvent>());
+    });
+
+    test('eventFromJson deserializes ClearSelectionEvent correctly', () {
+      final json = {
+        'eventType': 'ClearSelectionEvent',
+        'eventId': 'evt_703',
+        'timestamp': 1699307103000,
+      };
+
+      final event = event_schema.eventFromJson(json);
+
+      expect(event, isA<ClearSelectionEvent>());
+    });
+
+    test('eventFromJson deserializes ViewportPanEvent correctly', () {
+      final json = {
+        'eventType': 'ViewportPanEvent',
+        'eventId': 'evt_704',
+        'timestamp': 1699307104000,
+        'delta': {'x': 10.0, 'y': -5.0},
+      };
+
+      final event = event_schema.eventFromJson(json);
+
+      expect(event, isA<ViewportPanEvent>());
+      expect((event as ViewportPanEvent).delta.x, equals(10.0));
+    });
+
+    test('eventFromJson deserializes ViewportZoomEvent correctly', () {
+      final json = {
+        'eventType': 'ViewportZoomEvent',
+        'eventId': 'evt_705',
+        'timestamp': 1699307105000,
+        'factor': 2.0,
+        'focalPoint': {'x': 400.0, 'y': 300.0},
+      };
+
+      final event = event_schema.eventFromJson(json);
+
+      expect(event, isA<ViewportZoomEvent>());
+      expect((event as ViewportZoomEvent).factor, equals(2.0));
+    });
+
+    test('eventFromJson deserializes ViewportResetEvent correctly', () {
+      final json = {
+        'eventType': 'ViewportResetEvent',
+        'eventId': 'evt_706',
+        'timestamp': 1699307106000,
+      };
+
+      final event = event_schema.eventFromJson(json);
+
+      expect(event, isA<ViewportResetEvent>());
+    });
+
+    test('eventFromJson deserializes SaveDocumentEvent correctly', () {
+      final json = {
+        'eventType': 'SaveDocumentEvent',
+        'eventId': 'evt_707',
+        'timestamp': 1699307107000,
+        'filePath': '/path/to/doc.wiretuner',
+      };
+
+      final event = event_schema.eventFromJson(json);
+
+      expect(event, isA<SaveDocumentEvent>());
+      expect((event as SaveDocumentEvent).filePath, equals('/path/to/doc.wiretuner'));
+    });
+
+    test('eventFromJson deserializes LoadDocumentEvent correctly', () {
+      final json = {
+        'eventType': 'LoadDocumentEvent',
+        'eventId': 'evt_708',
+        'timestamp': 1699307108000,
+        'filePath': '/path/to/doc.wiretuner',
+      };
+
+      final event = event_schema.eventFromJson(json);
+
+      expect(event, isA<LoadDocumentEvent>());
+    });
+
+    test('eventFromJson deserializes DocumentLoadedEvent correctly', () {
+      final json = {
+        'eventType': 'DocumentLoadedEvent',
+        'eventId': 'evt_709',
+        'timestamp': 1699307109000,
+        'filePath': '/path/to/doc.wiretuner',
+        'eventCount': 500,
+      };
+
+      final event = event_schema.eventFromJson(json);
+
+      expect(event, isA<DocumentLoadedEvent>());
+      expect((event as DocumentLoadedEvent).eventCount, equals(500));
+    });
+  });
+
+  group('Enum serialization - New Enums', () {
+    test('SelectionMode serializes to string', () {
+      expect(SelectionMode.replace.name, equals('replace'));
+      expect(SelectionMode.add.name, equals('add'));
+      expect(SelectionMode.toggle.name, equals('toggle'));
+      expect(SelectionMode.subtract.name, equals('subtract'));
+    });
+  });
+
+  group('Validation and error cases', () {
+    test('DeleteObjectEvent with empty object list is valid', () {
+      const event = DeleteObjectEvent(
+        eventId: 'evt_800',
+        timestamp: 1699307200000,
+        objectIds: [],
+      );
+
+      final json = event.toJson();
+      final deserialized = DeleteObjectEvent.fromJson(json);
+
+      expect(deserialized.objectIds, isEmpty);
+      expect(deserialized, equals(event));
+    });
+
+    test('SelectObjectsEvent with empty object list is valid', () {
+      const event = SelectObjectsEvent(
+        eventId: 'evt_801',
+        timestamp: 1699307201000,
+        objectIds: [],
+      );
+
+      final json = event.toJson();
+      final deserialized = SelectObjectsEvent.fromJson(json);
+
+      expect(deserialized.objectIds, isEmpty);
+      expect(deserialized, equals(event));
+    });
+
+    test('ViewportZoomEvent with zero factor serializes correctly', () {
+      const event = ViewportZoomEvent(
+        eventId: 'evt_802',
+        timestamp: 1699307202000,
+        factor: 0.0,
+        focalPoint: Point(x: 0.0, y: 0.0),
+      );
+
+      final json = event.toJson();
+      final deserialized = ViewportZoomEvent.fromJson(json);
+
+      expect(deserialized.factor, equals(0.0));
+      expect(deserialized, equals(event));
+    });
+
+    test('ViewportZoomEvent with negative factor serializes correctly', () {
+      const event = ViewportZoomEvent(
+        eventId: 'evt_803',
+        timestamp: 1699307203000,
+        factor: -1.0,
+        focalPoint: Point(x: 100.0, y: 100.0),
+      );
+
+      final json = event.toJson();
+      final deserialized = ViewportZoomEvent.fromJson(json);
+
+      expect(deserialized.factor, equals(-1.0));
+      expect(deserialized, equals(event));
+    });
+
+    test('DocumentLoadedEvent with zero event count is valid', () {
+      const event = DocumentLoadedEvent(
+        eventId: 'evt_804',
+        timestamp: 1699307204000,
+        filePath: '/path/to/empty.wiretuner',
+        eventCount: 0,
+      );
+
+      final json = event.toJson();
+      final deserialized = DocumentLoadedEvent.fromJson(json);
+
+      expect(deserialized.eventCount, equals(0));
       expect(deserialized, equals(event));
     });
   });
