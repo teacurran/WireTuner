@@ -6,6 +6,27 @@ import '../persistence/snapshot_store.dart';
 import 'event_dispatcher.dart';
 import 'snapshot_serializer.dart';
 
+/// Result of a replay operation, including the final state and metadata about issues encountered.
+class ReplayResult {
+  /// The reconstructed document state
+  final dynamic state;
+
+  /// Event sequences that were skipped due to corruption
+  final List<int> skippedSequences;
+
+  /// Warnings generated during replay
+  final List<String> warnings;
+
+  ReplayResult({
+    required this.state,
+    this.skippedSequences = const [],
+    this.warnings = const [],
+  });
+
+  /// Whether the replay encountered any issues
+  bool get hasIssues => skippedSequences.isNotEmpty || warnings.isNotEmpty;
+}
+
 /// Reconstructs document state from event sequences using snapshots for optimization.
 ///
 /// The [EventReplayer] is the final piece of the event sourcing infrastructure,
@@ -177,6 +198,208 @@ class EventReplayer {
     } catch (e, stackTrace) {
       _logger.e(
         'Failed to replay events for doc=$documentId',
+        error: e,
+        stackTrace: stackTrace,
+      );
+      rethrow;
+    }
+  }
+
+  /// Reconstructs document state to a specific sequence number with corruption handling.
+  ///
+  /// This is the primary method for document loading and navigation (undo/redo).
+  /// It uses snapshot optimization and gracefully handles corrupted events.
+  ///
+  /// **Process:**
+  /// 1. Find nearest snapshot ≤ targetSequence
+  /// 2. Load snapshot as base state (or start with empty document)
+  /// 3. Replay events from snapshot to targetSequence
+  /// 4. Handle corruption: wrap each event in try-catch, log warnings, skip bad events
+  /// 5. Return ReplayResult with state and any warnings/skipped sequences
+  ///
+  /// **Usage Example:**
+  /// ```dart
+  /// // Navigate to specific sequence
+  /// final result = await replayer.replayToSequence(
+  ///   documentId: 'doc123',
+  ///   targetSequence: 5000,
+  /// );
+  ///
+  /// if (result.hasIssues) {
+  ///   print('Skipped ${result.skippedSequences.length} corrupt events');
+  ///   for (final warning in result.warnings) {
+  ///     print('Warning: $warning');
+  ///   }
+  /// }
+  ///
+  /// final document = result.state;
+  /// ```
+  ///
+  /// **Parameters:**
+  /// - [documentId]: The document to replay
+  /// - [targetSequence]: Sequence number to reconstruct state at
+  /// - [continueOnError]: If true, skip corrupt events; if false, throw on first error (default: true)
+  ///
+  /// **Returns:** ReplayResult containing state, skipped sequences, and warnings
+  ///
+  /// **Performance Target:** < 200ms for documents with 5000 events using snapshots
+  Future<ReplayResult> replayToSequence({
+    required String documentId,
+    required int targetSequence,
+    bool continueOnError = true,
+  }) async {
+    try {
+      _logger.d(
+        'Replaying to sequence: doc=$documentId, target=$targetSequence',
+      );
+
+      final skippedSequences = <int>[];
+      final warnings = <String>[];
+
+      // Step 1: Try to load nearest snapshot
+      final snapshotData = await _snapshotStore.getLatestSnapshot(
+        documentId,
+        targetSequence,
+      );
+
+      dynamic currentState;
+      int startSequence;
+
+      if (snapshotData == null) {
+        // No snapshot - start from empty document
+        _logger.d('No snapshot found, starting from empty document');
+        currentState = {
+          'id': documentId,
+          'title': 'New Document',
+          'layers': [],
+        };
+        startSequence = 0;
+      } else {
+        // Load snapshot
+        final snapshotBytes = snapshotData['snapshot_data'] as Uint8List;
+        final snapshotSequence = snapshotData['event_sequence'] as int;
+
+        _logger.d(
+          'Found snapshot at sequence $snapshotSequence '
+          '(${snapshotBytes.length} bytes)',
+        );
+
+        try {
+          currentState = _serializer.deserialize(snapshotBytes);
+          startSequence = snapshotSequence + 1;
+
+          // If snapshot is at or beyond target, we're done
+          if (snapshotSequence >= targetSequence) {
+            _logger.d(
+              'Snapshot at $snapshotSequence >= target $targetSequence, '
+              'no replay needed',
+            );
+            return ReplayResult(state: currentState);
+          }
+        } catch (e, stackTrace) {
+          _logger.w(
+            'Snapshot deserialization failed at sequence $snapshotSequence, '
+            'attempting to find previous snapshot',
+            error: e,
+            stackTrace: stackTrace,
+          );
+          warnings.add(
+            'Snapshot at sequence $snapshotSequence corrupted: $e',
+          );
+
+          // Try to find previous snapshot
+          if (snapshotSequence > 0) {
+            final prevSnapshot = await _snapshotStore.getLatestSnapshot(
+              documentId,
+              snapshotSequence - 1,
+            );
+            if (prevSnapshot != null) {
+              final prevBytes = prevSnapshot['snapshot_data'] as Uint8List;
+              final prevSeq = prevSnapshot['event_sequence'] as int;
+              try {
+                currentState = _serializer.deserialize(prevBytes);
+                startSequence = prevSeq + 1;
+                _logger.i('Recovered using snapshot at sequence $prevSeq');
+              } catch (e2) {
+                _logger.e(
+                  'Previous snapshot also corrupted, falling back to full replay',
+                );
+                currentState = {
+                  'id': documentId,
+                  'title': 'New Document',
+                  'layers': [],
+                };
+                startSequence = 0;
+              }
+            } else {
+              // No previous snapshot, start from beginning
+              currentState = {
+                'id': documentId,
+                'title': 'New Document',
+                'layers': [],
+              };
+              startSequence = 0;
+            }
+          } else {
+            // First snapshot corrupted, start from beginning
+            currentState = {
+              'id': documentId,
+              'title': 'New Document',
+              'layers': [],
+            };
+            startSequence = 0;
+          }
+        }
+      }
+
+      // Step 2: Query and replay delta events
+      if (startSequence <= targetSequence) {
+        final events = await _eventStore.getEvents(
+          documentId,
+          fromSeq: startSequence,
+          toSeq: targetSequence,
+        );
+
+        _logger.d('Replaying ${events.length} events from $startSequence to $targetSequence');
+
+        // Replay each event with error handling
+        int currentSequence = startSequence;
+        for (final event in events) {
+          try {
+            currentState = _dispatcher.dispatch(currentState, event);
+          } catch (e, stackTrace) {
+            final errorMsg =
+              'Event at sequence $currentSequence failed to apply: $e';
+            _logger.w(errorMsg, error: e, stackTrace: stackTrace);
+            warnings.add(errorMsg);
+            skippedSequences.add(currentSequence);
+
+            if (!continueOnError) {
+              rethrow;
+            }
+            // Continue with next event
+          }
+          currentSequence++;
+        }
+      }
+
+      if (skippedSequences.isNotEmpty) {
+        _logger.w(
+          'Replay completed with ${skippedSequences.length} skipped events: '
+          '$skippedSequences',
+        );
+      } else {
+        _logger.i('Replay completed successfully to sequence $targetSequence');
+      }
+
+      return ReplayResult(
+        state: currentState,
+        skippedSequences: skippedSequences,
+        warnings: warnings,
+      );
+    } catch (e, stackTrace) {
+      _logger.e(
+        'Failed to replay to sequence $targetSequence for doc=$documentId',
         error: e,
         stackTrace: stackTrace,
       );
