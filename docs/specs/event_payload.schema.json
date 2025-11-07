@@ -1,0 +1,554 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://wiretuner.dev/schemas/event-payload.schema.json",
+  "title": "WireTuner Event Payload Schema",
+  "description": "JSON Schema for all event types in the WireTuner event sourcing system",
+  "$defs": {
+    "point": {
+      "type": "object",
+      "description": "A 2D point with x and y coordinates",
+      "properties": {
+        "x": {
+          "type": "number",
+          "description": "X coordinate"
+        },
+        "y": {
+          "type": "number",
+          "description": "Y coordinate"
+        }
+      },
+      "required": ["x", "y"],
+      "additionalProperties": false
+    },
+    "anchorTypeEnum": {
+      "type": "string",
+      "description": "Type of anchor point in a path",
+      "enum": ["line", "bezier"]
+    },
+    "shapeTypeEnum": {
+      "type": "string",
+      "description": "Type of parametric shape",
+      "enum": ["rectangle", "ellipse", "star", "polygon"]
+    },
+    "selectionModeEnum": {
+      "type": "string",
+      "description": "Mode for selection operations",
+      "enum": ["replace", "add", "toggle", "subtract"]
+    },
+    "eventEnvelope": {
+      "type": "object",
+      "description": "Base fields shared by all events",
+      "properties": {
+        "eventId": {
+          "type": "string",
+          "description": "Unique identifier for this event",
+          "minLength": 1
+        },
+        "timestamp": {
+          "type": "integer",
+          "description": "Unix timestamp in milliseconds when event was created",
+          "minimum": 0
+        },
+        "eventType": {
+          "type": "string",
+          "description": "Discriminator for polymorphic event deserialization"
+        }
+      },
+      "required": ["eventId", "timestamp", "eventType"]
+    },
+    "styleProperties": {
+      "type": "object",
+      "description": "Optional style properties for visual objects",
+      "properties": {
+        "fillColor": {
+          "type": "string",
+          "description": "Fill color in hex format (e.g., #FF5733)",
+          "pattern": "^#[0-9A-Fa-f]{6}$"
+        },
+        "strokeColor": {
+          "type": "string",
+          "description": "Stroke color in hex format (e.g., #000000)",
+          "pattern": "^#[0-9A-Fa-f]{6}$"
+        },
+        "strokeWidth": {
+          "type": "number",
+          "description": "Width of the stroke in pixels",
+          "minimum": 0
+        },
+        "opacity": {
+          "type": "number",
+          "description": "Opacity value from 0.0 (transparent) to 1.0 (opaque)",
+          "minimum": 0,
+          "maximum": 1
+        }
+      },
+      "additionalProperties": false
+    },
+    "CreatePathEvent": {
+      "allOf": [
+        {"$ref": "#/$defs/eventEnvelope"},
+        {
+          "type": "object",
+          "properties": {
+            "eventType": {
+              "const": "CreatePathEvent"
+            },
+            "pathId": {
+              "type": "string",
+              "description": "Unique identifier for the path being created",
+              "minLength": 1
+            },
+            "startAnchor": {
+              "$ref": "#/$defs/point",
+              "description": "Initial anchor point of the path"
+            },
+            "fillColor": {
+              "$ref": "#/$defs/styleProperties/properties/fillColor"
+            },
+            "strokeColor": {
+              "$ref": "#/$defs/styleProperties/properties/strokeColor"
+            },
+            "strokeWidth": {
+              "$ref": "#/$defs/styleProperties/properties/strokeWidth"
+            },
+            "opacity": {
+              "$ref": "#/$defs/styleProperties/properties/opacity"
+            }
+          },
+          "required": ["pathId", "startAnchor"],
+          "unevaluatedProperties": false
+        }
+      ]
+    },
+    "AddAnchorEvent": {
+      "allOf": [
+        {"$ref": "#/$defs/eventEnvelope"},
+        {
+          "type": "object",
+          "properties": {
+            "eventType": {
+              "const": "AddAnchorEvent"
+            },
+            "pathId": {
+              "type": "string",
+              "description": "Identifier of the path to add anchor to",
+              "minLength": 1
+            },
+            "position": {
+              "$ref": "#/$defs/point",
+              "description": "Position of the new anchor point"
+            },
+            "anchorType": {
+              "$ref": "#/$defs/anchorTypeEnum",
+              "description": "Type of anchor (defaults to 'line' if not specified)"
+            },
+            "handleIn": {
+              "$ref": "#/$defs/point",
+              "description": "Incoming Bezier control handle (for bezier anchors)"
+            },
+            "handleOut": {
+              "$ref": "#/$defs/point",
+              "description": "Outgoing Bezier control handle (for bezier anchors)"
+            }
+          },
+          "required": ["pathId", "position"],
+          "unevaluatedProperties": false
+        }
+      ]
+    },
+    "FinishPathEvent": {
+      "allOf": [
+        {"$ref": "#/$defs/eventEnvelope"},
+        {
+          "type": "object",
+          "properties": {
+            "eventType": {
+              "const": "FinishPathEvent"
+            },
+            "pathId": {
+              "type": "string",
+              "description": "Identifier of the path being finished",
+              "minLength": 1
+            },
+            "closed": {
+              "type": "boolean",
+              "description": "Whether the path should be closed (defaults to false)",
+              "default": false
+            }
+          },
+          "required": ["pathId"],
+          "unevaluatedProperties": false
+        }
+      ]
+    },
+    "ModifyAnchorEvent": {
+      "allOf": [
+        {"$ref": "#/$defs/eventEnvelope"},
+        {
+          "type": "object",
+          "properties": {
+            "eventType": {
+              "const": "ModifyAnchorEvent"
+            },
+            "pathId": {
+              "type": "string",
+              "description": "Identifier of the path containing the anchor",
+              "minLength": 1
+            },
+            "anchorIndex": {
+              "type": "integer",
+              "description": "Index of the anchor to modify",
+              "minimum": 0
+            },
+            "position": {
+              "$ref": "#/$defs/point",
+              "description": "New position for the anchor (optional)"
+            },
+            "handleIn": {
+              "$ref": "#/$defs/point",
+              "description": "New incoming Bezier control handle (optional)"
+            },
+            "handleOut": {
+              "$ref": "#/$defs/point",
+              "description": "New outgoing Bezier control handle (optional)"
+            },
+            "anchorType": {
+              "$ref": "#/$defs/anchorTypeEnum",
+              "description": "New anchor type (optional)"
+            }
+          },
+          "required": ["pathId", "anchorIndex"],
+          "unevaluatedProperties": false
+        }
+      ]
+    },
+    "MoveObjectEvent": {
+      "allOf": [
+        {"$ref": "#/$defs/eventEnvelope"},
+        {
+          "type": "object",
+          "properties": {
+            "eventType": {
+              "const": "MoveObjectEvent"
+            },
+            "objectIds": {
+              "type": "array",
+              "description": "Identifiers of objects to move",
+              "items": {
+                "type": "string",
+                "minLength": 1
+              }
+            },
+            "delta": {
+              "$ref": "#/$defs/point",
+              "description": "Translation delta to apply"
+            }
+          },
+          "required": ["objectIds", "delta"],
+          "unevaluatedProperties": false
+        }
+      ]
+    },
+    "CreateShapeEvent": {
+      "allOf": [
+        {"$ref": "#/$defs/eventEnvelope"},
+        {
+          "type": "object",
+          "properties": {
+            "eventType": {
+              "const": "CreateShapeEvent"
+            },
+            "shapeId": {
+              "type": "string",
+              "description": "Unique identifier for the shape being created",
+              "minLength": 1
+            },
+            "shapeType": {
+              "$ref": "#/$defs/shapeTypeEnum",
+              "description": "Type of parametric shape"
+            },
+            "parameters": {
+              "type": "object",
+              "description": "Shape-specific parameters (keys/values depend on shapeType)",
+              "additionalProperties": {
+                "type": "number"
+              }
+            },
+            "fillColor": {
+              "$ref": "#/$defs/styleProperties/properties/fillColor"
+            },
+            "strokeColor": {
+              "$ref": "#/$defs/styleProperties/properties/strokeColor"
+            },
+            "strokeWidth": {
+              "$ref": "#/$defs/styleProperties/properties/strokeWidth"
+            },
+            "opacity": {
+              "$ref": "#/$defs/styleProperties/properties/opacity"
+            }
+          },
+          "required": ["shapeId", "shapeType", "parameters"],
+          "unevaluatedProperties": false
+        }
+      ]
+    },
+    "DeleteObjectEvent": {
+      "allOf": [
+        {"$ref": "#/$defs/eventEnvelope"},
+        {
+          "type": "object",
+          "properties": {
+            "eventType": {
+              "const": "DeleteObjectEvent"
+            },
+            "objectIds": {
+              "type": "array",
+              "description": "Identifiers of objects to delete",
+              "items": {
+                "type": "string",
+                "minLength": 1
+              }
+            }
+          },
+          "required": ["objectIds"],
+          "unevaluatedProperties": false
+        }
+      ]
+    },
+    "ModifyStyleEvent": {
+      "allOf": [
+        {"$ref": "#/$defs/eventEnvelope"},
+        {
+          "type": "object",
+          "properties": {
+            "eventType": {
+              "const": "ModifyStyleEvent"
+            },
+            "objectId": {
+              "type": "string",
+              "description": "Identifier of the object to modify",
+              "minLength": 1
+            },
+            "fillColor": {
+              "$ref": "#/$defs/styleProperties/properties/fillColor"
+            },
+            "strokeColor": {
+              "$ref": "#/$defs/styleProperties/properties/strokeColor"
+            },
+            "strokeWidth": {
+              "$ref": "#/$defs/styleProperties/properties/strokeWidth"
+            },
+            "opacity": {
+              "$ref": "#/$defs/styleProperties/properties/opacity"
+            }
+          },
+          "required": ["objectId"],
+          "unevaluatedProperties": false
+        }
+      ]
+    },
+    "SelectObjectsEvent": {
+      "allOf": [
+        {"$ref": "#/$defs/eventEnvelope"},
+        {
+          "type": "object",
+          "properties": {
+            "eventType": {
+              "const": "SelectObjectsEvent"
+            },
+            "objectIds": {
+              "type": "array",
+              "description": "Identifiers of objects to select",
+              "items": {
+                "type": "string",
+                "minLength": 1
+              }
+            },
+            "mode": {
+              "$ref": "#/$defs/selectionModeEnum",
+              "description": "Selection mode (defaults to 'replace' if not specified)",
+              "default": "replace"
+            }
+          },
+          "required": ["objectIds"],
+          "unevaluatedProperties": false
+        }
+      ]
+    },
+    "DeselectObjectsEvent": {
+      "allOf": [
+        {"$ref": "#/$defs/eventEnvelope"},
+        {
+          "type": "object",
+          "properties": {
+            "eventType": {
+              "const": "DeselectObjectsEvent"
+            },
+            "objectIds": {
+              "type": "array",
+              "description": "Identifiers of objects to deselect",
+              "items": {
+                "type": "string",
+                "minLength": 1
+              }
+            }
+          },
+          "required": ["objectIds"],
+          "unevaluatedProperties": false
+        }
+      ]
+    },
+    "ClearSelectionEvent": {
+      "allOf": [
+        {"$ref": "#/$defs/eventEnvelope"},
+        {
+          "type": "object",
+          "properties": {
+            "eventType": {
+              "const": "ClearSelectionEvent"
+            }
+          },
+          "unevaluatedProperties": false
+        }
+      ]
+    },
+    "ViewportPanEvent": {
+      "allOf": [
+        {"$ref": "#/$defs/eventEnvelope"},
+        {
+          "type": "object",
+          "properties": {
+            "eventType": {
+              "const": "ViewportPanEvent"
+            },
+            "delta": {
+              "$ref": "#/$defs/point",
+              "description": "Translation delta for viewport pan"
+            }
+          },
+          "required": ["delta"],
+          "unevaluatedProperties": false
+        }
+      ]
+    },
+    "ViewportZoomEvent": {
+      "allOf": [
+        {"$ref": "#/$defs/eventEnvelope"},
+        {
+          "type": "object",
+          "properties": {
+            "eventType": {
+              "const": "ViewportZoomEvent"
+            },
+            "factor": {
+              "type": "number",
+              "description": "Multiplicative zoom factor (1.0 = no change, 2.0 = double size, 0.5 = half size)"
+            },
+            "focalPoint": {
+              "$ref": "#/$defs/point",
+              "description": "Zoom center point in canvas coordinates"
+            }
+          },
+          "required": ["factor", "focalPoint"],
+          "unevaluatedProperties": false
+        }
+      ]
+    },
+    "ViewportResetEvent": {
+      "allOf": [
+        {"$ref": "#/$defs/eventEnvelope"},
+        {
+          "type": "object",
+          "properties": {
+            "eventType": {
+              "const": "ViewportResetEvent"
+            }
+          },
+          "unevaluatedProperties": false
+        }
+      ]
+    },
+    "SaveDocumentEvent": {
+      "allOf": [
+        {"$ref": "#/$defs/eventEnvelope"},
+        {
+          "type": "object",
+          "properties": {
+            "eventType": {
+              "const": "SaveDocumentEvent"
+            },
+            "filePath": {
+              "type": "string",
+              "description": "Path where document was saved (optional)"
+            }
+          },
+          "unevaluatedProperties": false
+        }
+      ]
+    },
+    "LoadDocumentEvent": {
+      "allOf": [
+        {"$ref": "#/$defs/eventEnvelope"},
+        {
+          "type": "object",
+          "properties": {
+            "eventType": {
+              "const": "LoadDocumentEvent"
+            },
+            "filePath": {
+              "type": "string",
+              "description": "Path to the document file being loaded",
+              "minLength": 1
+            }
+          },
+          "required": ["filePath"],
+          "unevaluatedProperties": false
+        }
+      ]
+    },
+    "DocumentLoadedEvent": {
+      "allOf": [
+        {"$ref": "#/$defs/eventEnvelope"},
+        {
+          "type": "object",
+          "properties": {
+            "eventType": {
+              "const": "DocumentLoadedEvent"
+            },
+            "filePath": {
+              "type": "string",
+              "description": "Path to the document file that was loaded",
+              "minLength": 1
+            },
+            "eventCount": {
+              "type": "integer",
+              "description": "Number of events loaded from the document",
+              "minimum": 0
+            }
+          },
+          "required": ["filePath", "eventCount"],
+          "unevaluatedProperties": false
+        }
+      ]
+    }
+  },
+  "oneOf": [
+    {"$ref": "#/$defs/CreatePathEvent"},
+    {"$ref": "#/$defs/AddAnchorEvent"},
+    {"$ref": "#/$defs/FinishPathEvent"},
+    {"$ref": "#/$defs/ModifyAnchorEvent"},
+    {"$ref": "#/$defs/MoveObjectEvent"},
+    {"$ref": "#/$defs/CreateShapeEvent"},
+    {"$ref": "#/$defs/DeleteObjectEvent"},
+    {"$ref": "#/$defs/ModifyStyleEvent"},
+    {"$ref": "#/$defs/SelectObjectsEvent"},
+    {"$ref": "#/$defs/DeselectObjectsEvent"},
+    {"$ref": "#/$defs/ClearSelectionEvent"},
+    {"$ref": "#/$defs/ViewportPanEvent"},
+    {"$ref": "#/$defs/ViewportZoomEvent"},
+    {"$ref": "#/$defs/ViewportResetEvent"},
+    {"$ref": "#/$defs/SaveDocumentEvent"},
+    {"$ref": "#/$defs/LoadDocumentEvent"},
+    {"$ref": "#/$defs/DocumentLoadedEvent"}
+  ]
+}
