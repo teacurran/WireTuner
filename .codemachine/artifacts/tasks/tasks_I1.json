@@ -23,7 +23,7 @@
     "acceptance_criteria": "- `flutter doctor` passes locally; README documents prerequisites and commands.\n        - CI workflow runs `flutter analyze` + `flutter test` on push.\n        - Analyzer enforces null-safety, immutability hints, and forbids `print` debugging in lib/.",
     "dependencies": [],
     "parallelizable": true,
-    "done": false
+    "done": true
   },
   {
     "task_id": "I1.T2",

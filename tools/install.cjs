@@ -97,6 +97,35 @@ function main() {
     console.error('[install] Warning: pubspec.lock was not created');
   }
 
+  // Step 6: Run code generation if build_runner is present
+  console.error('[install] Checking for code generation requirements...');
+  const { readFileSync } = require('fs');
+  try {
+    const pubspecContent = readFileSync(PUBSPEC_FILE, 'utf-8');
+    const needsCodeGen = pubspecContent.includes('build_runner:') ||
+                         pubspecContent.includes('freezed:') ||
+                         pubspecContent.includes('json_serializable:');
+
+    if (needsCodeGen) {
+      console.error('[install] Code generation dependencies detected, running build_runner...');
+      try {
+        execSync('flutter pub run build_runner build --delete-conflicting-outputs', {
+          cwd: PROJECT_ROOT,
+          stdio: 'inherit',
+          encoding: 'utf-8'
+        });
+        console.error('[install] Code generation completed successfully');
+      } catch (genError) {
+        console.error('[install] Warning: Code generation encountered issues (may be expected if no annotations present)');
+        // Don't fail the installation if code generation fails
+      }
+    } else {
+      console.error('[install] No code generation dependencies found, skipping');
+    }
+  } catch (error) {
+    console.error('[install] Warning: Could not check for code generation requirements');
+  }
+
   console.error('[install] Environment setup completed successfully!');
   console.error('[install] All dependencies are installed and up-to-date.');
   process.exit(0);

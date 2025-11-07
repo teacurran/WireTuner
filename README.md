@@ -24,26 +24,32 @@ WireTuner is a desktop vector drawing application designed with an event-sourcin
 
 ## Getting Started
 
-### 1. Clone the Repository
+### 1. Verify Flutter Installation
+
+Before starting, ensure your Flutter environment is correctly configured:
+
+```bash
+flutter doctor
+```
+
+All checks should pass. If you see any issues, follow the Flutter installation guide at https://docs.flutter.dev/get-started/install.
+
+### 2. Clone the Repository
 
 ```bash
 git clone https://github.com/yourusername/wiretuner.git
 cd wiretuner
 ```
 
-### 2. Install Dependencies
+### 3. Install Dependencies
 
 ```bash
 flutter pub get
 ```
 
-For SQLite desktop support, you may need to run:
+**Note**: SQLite desktop support is automatically configured when the application starts. No additional setup command is required.
 
-```bash
-flutter pub run sqflite_common_ffi:setup
-```
-
-### 3. Verify Installation
+### 4. Verify Installation
 
 Run the analyzer to check for any issues:
 
@@ -51,7 +57,13 @@ Run the analyzer to check for any issues:
 flutter analyze
 ```
 
-### 4. Run the Application
+Run tests to ensure everything is working:
+
+```bash
+flutter test
+```
+
+### 5. Run the Application
 
 For macOS:
 
@@ -181,7 +193,66 @@ This is an active development project. The current iteration focuses on establis
 
 ## Contributing
 
-This is currently a solo development project. Contribution guidelines will be added once the core architecture is stable.
+### Setup Checklist for Contributors
+
+Before starting development, ensure your environment meets all requirements:
+
+1. **Verify Flutter Environment**
+   ```bash
+   flutter doctor
+   ```
+   All checks must pass (✓). Address any issues before proceeding.
+
+2. **Install Project Dependencies**
+   ```bash
+   flutter pub get
+   ```
+
+3. **Run Code Generation** (if working with models)
+   ```bash
+   flutter pub run build_runner build --delete-conflicting-outputs
+   ```
+
+4. **Verify Code Quality**
+   ```bash
+   flutter analyze
+   dart format --set-exit-if-changed lib/ test/
+   flutter test
+   ```
+   All commands must succeed without errors or warnings.
+
+5. **Test Platform Builds**
+   - macOS: `flutter build macos --debug`
+   - Windows: `flutter build windows --debug`
+
+### Development Workflow
+
+1. **Before Committing**:
+   - Run `flutter analyze` - must pass with zero issues
+   - Run `flutter test` - all tests must pass
+   - Run `dart format lib/ test/` - format all code
+   - Verify your changes build on target platform
+
+2. **Code Style**:
+   - Follow strict linting rules in `analysis_options.yaml`
+   - Use `logger` package for logging, NOT `print()` statements
+   - All public APIs must have documentation comments
+   - Prefer immutable data structures (const, final)
+
+3. **Commit Messages**:
+   - Follow conventional commits format: `type(scope): description`
+   - Types: feat, fix, docs, refactor, test, chore
+   - Example: `feat(persistence): add event snapshot compression`
+
+### Continuous Integration
+
+All pull requests are automatically validated via GitHub Actions CI:
+- Analyzer checks (warnings treated as errors)
+- Code formatting verification
+- Full test suite execution
+- Platform-specific builds (macOS and Windows)
+
+Reference: `.github/workflows/ci.yml`
 
 ## Contact
 
