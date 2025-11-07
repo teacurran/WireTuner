@@ -68,8 +68,12 @@ Container_Boundary(vector_engine, "Vector Engine") {
 
 ' Persistence Layer
 Container_Boundary(persistence_layer, "Persistence Layer") {
-  ContainerDb(event_store, "Event Store", "SQLite")
-  ContainerDb(snapshot_store, "Snapshot Store", "SQLite")
+  Component(sqlite_repository, "SQLite Repository", "Dart Service", "Unified CRUD interface for metadata, events, snapshots")
+  Component(database_provider, "Database Provider", "Dart Service", "Manages SQLite connection lifecycle and migrations")
+  Component(event_store, "Event Store", "Dart Service", "Append-only event log operations")
+  Component(schema_manager, "Schema Manager", "Dart Service", "Creates and migrates database schema")
+
+  ContainerDb(sqlite_db, "SQLite Database", ".wiretuner file", "metadata, events, snapshots tables")
 }
 
 ' Import/Export Services
@@ -120,10 +124,17 @@ Rel(event_replayer, event_handler, "Applies events via", "State reconstruction")
 Rel(event_navigator, event_replayer, "Uses for state at index", "Undo/redo navigation")
 
 ' Event Sourcing to Persistence
-Rel(event_recorder, event_store, "Persists to", "Append-only SQL INSERT")
-Rel(snapshot_manager, snapshot_store, "Persists to", "BLOB SQL INSERT")
-Rel(event_replayer, event_store, "Reads events from", "SQL SELECT")
-Rel(event_replayer, snapshot_store, "Loads base snapshot from", "SQL SELECT")
+Rel(event_recorder, sqlite_repository, "Persists events via", "insertEvent()")
+Rel(snapshot_manager, sqlite_repository, "Creates snapshots via", "createSnapshot()")
+Rel(event_replayer, sqlite_repository, "Loads state via", "getLatestSnapshot() + getEvents()")
+
+' Persistence Layer Internal
+Rel(sqlite_repository, database_provider, "Uses connection from", "getDatabase()")
+Rel(sqlite_repository, event_store, "Delegates event ops to", "EventStore wrapper")
+Rel(database_provider, schema_manager, "Creates schema via", "onCreate callback")
+Rel(event_store, sqlite_db, "Queries/inserts to", "events table")
+Rel(sqlite_repository, sqlite_db, "Queries/inserts to", "metadata, snapshots tables")
+Rel(database_provider, sqlite_db, "Opens/closes", "Connection management")
 
 ' Vector Engine Internal
 Rel(document, path, "Contains 0..n", "")
