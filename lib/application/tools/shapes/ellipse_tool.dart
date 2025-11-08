@@ -26,6 +26,10 @@ import 'package:wiretuner/domain/events/event_base.dart';
 ///
 /// Related: T026 (Ellipse Tool), I4.T1
 class EllipseTool extends ShapeToolBase {
+  /// Creates an ellipse tool instance.
+  ///
+  /// Requires [document], [viewportController], and [eventRecorder] for
+  /// event sourcing and coordinate conversion.
   EllipseTool({
     required super.document,
     required super.viewportController,
@@ -47,7 +51,7 @@ class EllipseTool extends ShapeToolBase {
   ) {
     // Fill preview with semi-transparent green
     final fillPaint = Paint()
-      ..color = Colors.green.withOpacity(0.3)
+      ..color = Colors.green.withValues(alpha: 0.3)
       ..style = PaintingStyle.fill;
     canvas.drawOval(boundingBox, fillPaint);
 
@@ -118,7 +122,7 @@ class EllipseTool extends ShapeToolBase {
       textPainter.height + 4,
     );
     final backgroundPaint = Paint()
-      ..color = Colors.white.withOpacity(0.9)
+      ..color = Colors.white.withValues(alpha: 0.9)
       ..style = PaintingStyle.fill;
     canvas.drawRect(backgroundRect, backgroundPaint);
 
