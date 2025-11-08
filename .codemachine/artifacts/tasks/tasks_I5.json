@@ -69,7 +69,7 @@
       "docs/specs/export_import.md"
     ],
     "deliverables": "Export service + writer utilities, tests verifying path/shape serialization, style mapping, and transform preservation.",
-    "acceptance_criteria": "- Supports groups, layers, selection markers removed; output passes `svglint`.\n        - Handles >5k objects within 5 s for benchmark doc.\n        - Documented limitations (filters, gradients) noted in export spec.",
+    "acceptance_criteria": "- Supports groups, layers, selection markers removed; output passes `svglint`.\n        - Handles >5k objects within 5 s for benchmark doc.\n        - Documented limitations (filters, gradients) noted in export spec.",
     "dependencies": [
       "I2.T6",
       "I4.T5"
@@ -93,12 +93,12 @@
       "test/unit/pdf_exporter_test.dart"
     ],
     "deliverables": "PDF exporter with artboard/page selection, CMYK color conversion helper, tests verifying Bezier accuracy via path length comparison.",
-    "acceptance_criteria": "- Exported PDF opens in Preview/Adobe without rasterization; vector selectors confirm path presence.\n        - Color profiles embedded; metadata includes document title/version.\n        - Exports complete with <10 s for benchmark doc.",
+    "acceptance_criteria": "- Exported PDF opens in Preview/Adobe without rasterization; vector selectors confirm path presence.\n        - Color profiles embedded; metadata includes document title/version.\n        - Exports complete with <10 s for benchmark doc.",
     "dependencies": [
       "I5.T3"
     ],
     "parallelizable": false,
-    "done": false
+    "done": true
   },
   {
     "task_id": "I5.T5",
