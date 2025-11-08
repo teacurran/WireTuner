@@ -39,12 +39,12 @@ class PolygonTool extends ShapeToolBase {
     required super.viewportController,
     required super.eventRecorder,
   });
-  /// Number of sides for the polygon (minimum 3).
+  /// Number of sides for the polygon (minimum 3, maximum 20).
   ///
-  /// Future enhancement: Make this configurable via property panel.
-  /// For MVP, use fixed value of 5 (pentagon).
-  static const int _defaultSideCount = 5;
-  final int _sideCount = _defaultSideCount;
+  /// Can be configured via [setSideCount] method.
+  /// Default: 6 (hexagon).
+  static const int _defaultSideCount = 6;
+  int _sideCount = _defaultSideCount;
 
   @override
   String get toolId => 'polygon';
@@ -144,6 +144,20 @@ class PolygonTool extends ShapeToolBase {
 
   @override
   ShapeType getShapeType() => ShapeType.polygon;
+
+  /// Sets the number of sides for the polygon.
+  ///
+  /// The side count must be between 3 and 20 (inclusive).
+  /// Values outside this range will be clamped.
+  ///
+  /// This method allows configuring the polygon before dragging.
+  /// In the future, this will be integrated with the property panel UI.
+  void setSideCount(int count) {
+    _sideCount = count.clamp(3, 20);
+  }
+
+  /// Gets the current number of sides.
+  int get sideCount => _sideCount;
 
   /// Draws constraint labels to provide visual feedback during drag.
   void _drawConstraintLabels(

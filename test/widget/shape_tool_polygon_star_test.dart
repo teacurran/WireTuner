@@ -1,3 +1,4 @@
+import 'dart:math';
 import 'dart:ui' as ui;
 import 'package:flutter/gestures.dart';
 import 'package:flutter/services.dart';
@@ -124,7 +125,7 @@ void main() {
         expect(params['centerX'], equals(150.0)); // (100 + 200) / 2
         expect(params['centerY'], equals(150.0)); // (100 + 200) / 2
         expect(params['radius'], equals(50.0)); // max(100/2, 100/2)
-        expect(params['sides'], equals(5.0)); // Default pentagon
+        expect(params['sides'], equals(6.0)); // Default hexagon
         expect(params['rotation'], equals(0.0));
 
         // Verify optional style fields
@@ -248,7 +249,7 @@ void main() {
         final originalShape = shape_model.Shape.polygon(
           center: const Point(x: 150, y: 150),
           radius: 50,
-          sides: 5,
+          sides: 6, // Updated default
           rotation: 0,
         );
 
@@ -268,7 +269,7 @@ void main() {
         final recreatedPath = recreatedShape.toPath();
 
         expect(recreatedPath.anchors.length, equals(originalPath.anchors.length));
-        expect(recreatedPath.anchors.length, equals(5)); // 5-sided polygon
+        expect(recreatedPath.anchors.length, equals(6)); // 6-sided polygon (hexagon)
 
         // Verify each anchor position matches
         for (int i = 0; i < originalPath.anchors.length; i++) {
@@ -277,6 +278,194 @@ void main() {
             closeToPoint(originalPath.anchors[i].position, epsilon: 0.01),
           );
         }
+      });
+    });
+
+    group('Configurable Side Count', () {
+      test('should create triangle (3-sided polygon) when configured', () {
+        // Configure polygon tool for triangle
+        polygonTool.setSideCount(3);
+        expect(polygonTool.sideCount, equals(3));
+
+        // Clear any previous events
+        eventRecorder.clear();
+
+        // Create triangle via drag
+        polygonTool.onPointerDown(const PointerDownEvent(
+          position: ui.Offset(100, 100),
+        ),);
+
+        polygonTool.onPointerUp(const PointerUpEvent(
+          position: ui.Offset(200, 200),
+        ),);
+
+        // Verify event was created
+        expect(eventRecorder.recordedEvents.length, equals(1));
+
+        final event = eventRecorder.recordedEvents[0] as CreateShapeEvent;
+        expect(event.shapeType, equals(ShapeType.polygon));
+
+        // Verify triangle parameters
+        final params = event.parameters;
+        expect(params['sides'], equals(3.0));
+        expect(params['centerX'], equals(150.0));
+        expect(params['centerY'], equals(150.0));
+        expect(params['radius'], equals(50.0));
+
+        // Create shape from event and verify geometry
+        final triangleShape = shape_model.Shape.polygon(
+          center: Point(
+            x: params['centerX']!,
+            y: params['centerY']!,
+          ),
+          radius: params['radius']!,
+          sides: params['sides']!.toInt(),
+          rotation: params['rotation'] ?? 0.0,
+        );
+
+        final path = triangleShape.toPath();
+
+        // Triangle should have exactly 3 vertices
+        expect(path.anchors.length, equals(3));
+        expect(path.closed, isTrue);
+
+        // Verify triangle is regular (all sides equal length)
+        // Calculate distances between consecutive vertices
+        final distances = <double>[];
+        for (int i = 0; i < path.anchors.length; i++) {
+          final current = path.anchors[i].position;
+          final next = path.anchors[(i + 1) % path.anchors.length].position;
+          final dx = next.x - current.x;
+          final dy = next.y - current.y;
+          distances.add(sqrt(dx * dx + dy * dy));
+        }
+
+        // All sides should be approximately equal
+        final avgDistance = distances.reduce((a, b) => a + b) / distances.length;
+        for (final distance in distances) {
+          expect((distance - avgDistance).abs(), lessThan(0.01));
+        }
+      });
+
+      test('should create octagon (8-sided polygon) when configured', () {
+        // Configure polygon tool for octagon
+        polygonTool.setSideCount(8);
+        expect(polygonTool.sideCount, equals(8));
+
+        // Clear any previous events
+        eventRecorder.clear();
+
+        // Create octagon via drag
+        polygonTool.onPointerDown(const PointerDownEvent(
+          position: ui.Offset(100, 100),
+        ),);
+
+        polygonTool.onPointerUp(const PointerUpEvent(
+          position: ui.Offset(300, 300),
+        ),);
+
+        // Verify event was created
+        expect(eventRecorder.recordedEvents.length, equals(1));
+
+        final event = eventRecorder.recordedEvents[0] as CreateShapeEvent;
+        expect(event.shapeType, equals(ShapeType.polygon));
+
+        // Verify octagon parameters
+        final params = event.parameters;
+        expect(params['sides'], equals(8.0));
+        expect(params['centerX'], equals(200.0));
+        expect(params['centerY'], equals(200.0));
+        expect(params['radius'], equals(100.0));
+
+        // Create shape from event and verify geometry
+        final octagonShape = shape_model.Shape.polygon(
+          center: Point(
+            x: params['centerX']!,
+            y: params['centerY']!,
+          ),
+          radius: params['radius']!,
+          sides: params['sides']!.toInt(),
+          rotation: params['rotation'] ?? 0.0,
+        );
+
+        final path = octagonShape.toPath();
+
+        // Octagon should have exactly 8 vertices
+        expect(path.anchors.length, equals(8));
+        expect(path.closed, isTrue);
+
+        // Verify octagon is regular (all sides equal length)
+        final distances = <double>[];
+        for (int i = 0; i < path.anchors.length; i++) {
+          final current = path.anchors[i].position;
+          final next = path.anchors[(i + 1) % path.anchors.length].position;
+          final dx = next.x - current.x;
+          final dy = next.y - current.y;
+          distances.add(sqrt(dx * dx + dy * dy));
+        }
+
+        // All sides should be approximately equal
+        final avgDistance = distances.reduce((a, b) => a + b) / distances.length;
+        for (final distance in distances) {
+          expect((distance - avgDistance).abs(), lessThan(0.01));
+        }
+      });
+
+      test('should clamp side count to valid range (3-20)', () {
+        // Test minimum clamping
+        polygonTool.setSideCount(1);
+        expect(polygonTool.sideCount, equals(3));
+
+        polygonTool.setSideCount(2);
+        expect(polygonTool.sideCount, equals(3));
+
+        // Test maximum clamping
+        polygonTool.setSideCount(25);
+        expect(polygonTool.sideCount, equals(20));
+
+        polygonTool.setSideCount(100);
+        expect(polygonTool.sideCount, equals(20));
+
+        // Test valid values
+        polygonTool.setSideCount(5);
+        expect(polygonTool.sideCount, equals(5));
+
+        polygonTool.setSideCount(12);
+        expect(polygonTool.sideCount, equals(12));
+      });
+
+      test('should use configured side count in event parameters', () {
+        // Configure for pentagon
+        polygonTool.setSideCount(5);
+        eventRecorder.clear();
+
+        polygonTool.onPointerDown(const PointerDownEvent(
+          position: ui.Offset(100, 100),
+        ),);
+
+        polygonTool.onPointerUp(const PointerUpEvent(
+          position: ui.Offset(200, 200),
+        ),);
+
+        final params =
+            (eventRecorder.recordedEvents[0] as CreateShapeEvent).parameters;
+        expect(params['sides'], equals(5.0));
+
+        // Change to heptagon and verify
+        polygonTool.setSideCount(7);
+        eventRecorder.clear();
+
+        polygonTool.onPointerDown(const PointerDownEvent(
+          position: ui.Offset(100, 100),
+        ),);
+
+        polygonTool.onPointerUp(const PointerUpEvent(
+          position: ui.Offset(200, 200),
+        ),);
+
+        final params2 =
+            (eventRecorder.recordedEvents[0] as CreateShapeEvent).parameters;
+        expect(params2['sides'], equals(7.0));
       });
     });
 
