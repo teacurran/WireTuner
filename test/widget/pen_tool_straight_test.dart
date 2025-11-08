@@ -212,6 +212,40 @@ void main() {
         expect(eventRecorder.recordedEvents.every((e) => e is AddAnchorEvent),
             isTrue,);
       });
+
+      test('should create 5-point straight path successfully', () {
+        final positions = [
+          const ui.Offset(100, 100), // Point 1 - creates path
+          const ui.Offset(200, 100), // Point 2
+          const ui.Offset(250, 200), // Point 3
+          const ui.Offset(150, 250), // Point 4
+          const ui.Offset(50, 200),  // Point 5
+        ];
+
+        // First click creates path
+        penTool.onPointerDown(PointerDownEvent(position: positions[0]));
+        penTool.onPointerUp(PointerUpEvent(position: positions[0]));
+        eventRecorder.clear();
+
+        // Subsequent clicks add anchors
+        for (int i = 1; i < positions.length; i++) {
+          penTool.onPointerDown(PointerDownEvent(position: positions[i]));
+          penTool.onPointerUp(PointerUpEvent(position: positions[i]));
+        }
+
+        // Should have 4 AddAnchorEvent events (5 total points - 1 initial)
+        expect(eventRecorder.recordedEvents.length, equals(4));
+        expect(eventRecorder.recordedEvents.every((e) => e is AddAnchorEvent),
+            isTrue,);
+
+        // Verify all anchors have correct properties
+        for (final event in eventRecorder.recordedEvents) {
+          final addAnchor = event as AddAnchorEvent;
+          expect(addAnchor.anchorType, equals(AnchorType.line));
+          expect(addAnchor.handleIn, isNull);
+          expect(addAnchor.handleOut, isNull);
+        }
+      });
     });
 
     group('Path Completion', () {
