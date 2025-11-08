@@ -1,0 +1,990 @@
+openapi: 3.0.3
+
+info:
+  title: WireTuner Document Persistence API
+  version: 1.0.0
+  description: |
+    Internal API contract for document save/load operations in WireTuner.
+
+    This specification documents the save/load workflow, error handling,
+    and data schemas for WireTuner's event-sourced vector editor.
+
+    **Important:** This is NOT an HTTP API. WireTuner is a desktop application.
+    Paths represent logical operations (method calls), not HTTP endpoints.
+    The OpenAPI format is used for documentation, validation, and tooling support.
+
+    **File Format:** Documents are persisted as SQLite 3 databases with the
+    `.wiretuner` extension, containing three tables: metadata, events, and snapshots.
+
+    **Event Sourcing:** Current document state is derived by loading the most
+    recent snapshot and replaying subsequent events from the append-only event log.
+
+    **Validation:**
+    ```bash
+    npx @apidevtools/swagger-cli validate api/save_load.yaml
+    ```
+
+  contact:
+    name: WireTuner Development Team
+    url: https://wiretuner.dev
+
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+
+servers: []
+
+paths:
+  /document/save:
+    post:
+      summary: Save document to .wiretuner file
+      description: |
+        Persists the current document state to a SQLite database file.
+
+        **Workflow:**
+        1. Create or update metadata table entry
+        2. Insert new events since last save (append-only)
+        3. Create snapshot if event count threshold reached (1000 events)
+        4. Update modified_at timestamp
+        5. Flush WAL to disk
+
+        **File Format:** SQLite 3 database with .wiretuner extension
+
+        **Triggers:**
+        - User action: Cmd+S / Ctrl+S
+        - If new document (no filePath): Prompts file picker before save
+        - If existing document: Overwrites file in-place
+
+        **Performance Target:** < 100ms for typical documents (< 1000 events since last save)
+
+      operationId: saveDocument
+      tags:
+        - Document Persistence
+
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SaveRequest'
+            examples:
+              newDocument:
+                summary: Save new document (first save)
+                value:
+                  filePath: /Users/alice/Documents/my-drawing.wiretuner
+                  overwrite: false
+              existingDocument:
+                summary: Save existing document (overwrite)
+                value:
+                  filePath: /Users/alice/Documents/my-drawing.wiretuner
+                  overwrite: true
+
+      responses:
+        '200':
+          description: Document saved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SaveResponse'
+              example:
+                success: true
+                documentId: doc-a1b2c3d4-e5f6-7890-abcd-ef1234567890
+                eventCount: 1234
+                snapshotCount: 2
+                snapshotCreated: true
+                filePath: /Users/alice/Documents/my-drawing.wiretuner
+                fileSize: 524288
+
+        '400':
+          description: Bad request (invalid file path or parameters)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                errorCode: E_INVALID_PATH
+                message: Invalid file path
+                details: File path must be absolute and end with .wiretuner extension
+
+        '403':
+          description: Permission denied (cannot write to file)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                errorCode: E_PERMISSION_DENIED
+                message: Cannot write to file (permission denied)
+                details: Check file permissions or choose a different location
+                recoveryActions:
+                  - Choose a different save location (Documents folder)
+                  - Check file system permissions
+                  - Ensure the file is not locked by another application
+
+        '409':
+          description: Conflict (file exists and overwrite is false)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                errorCode: E_FILE_EXISTS
+                message: File already exists
+                details: Set overwrite=true or choose a different file path
+                recoveryActions:
+                  - Enable overwrite flag
+                  - Choose a different file name
+
+        '507':
+          description: Disk full (SQLITE_FULL error)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                errorCode: E_DISK_FULL
+                message: Cannot save document - disk full
+                details: Free up disk space and try again. Application will enter read-only mode.
+                recoveryActions:
+                  - Free up disk space (delete files, empty trash)
+                  - Save to external drive or different volume
+                  - Export to SVG/PDF (smaller file size)
+
+  /document/save-as:
+    post:
+      summary: Save document with new file path
+      description: |
+        Saves the document to a new file path, creating a copy of all events
+        and metadata. This operation always prompts for a new file path and
+        never overwrites the original file.
+
+        **Use Cases:**
+        - Duplicate document
+        - Create backup before major changes
+        - Upgrade file format version (future)
+
+        **Workflow:**
+        1. Prompt user for new file path via file picker
+        2. Create new SQLite database at new path
+        3. Copy all events from session start to current state
+        4. Create metadata entry with new document_id
+        5. Create initial snapshot
+
+        **Performance Target:** < 500ms (includes full event copy)
+
+      operationId: saveDocumentAs
+      tags:
+        - Document Persistence
+
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SaveAsRequest'
+            example:
+              newFilePath: /Users/alice/Documents/my-drawing-copy.wiretuner
+
+      responses:
+        '200':
+          description: Document saved successfully with new path
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SaveResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '403':
+          $ref: '#/components/responses/PermissionDenied'
+        '507':
+          $ref: '#/components/responses/DiskFull'
+
+  /document/load:
+    post:
+      summary: Load document from .wiretuner file
+      description: |
+        Loads a document from a .wiretuner file by deserializing the most
+        recent snapshot and replaying subsequent events.
+
+        **Workflow:**
+        1. Open SQLite database at filePath
+        2. Read metadata table (validate format_version)
+        3. Query max event_sequence
+        4. Find most recent snapshot ≤ maxSequence
+        5. Deserialize snapshot to base document state
+        6. Query events WHERE event_sequence > snapshot_sequence
+        7. Replay events sequentially via event dispatcher
+        8. Display final document state
+
+        **Version Checking:**
+        - If file format_version > app version: Reject with E_VERSION_MISMATCH
+        - If file format_version < app version: Apply migrations (forward compatibility)
+        - If file format_version = app version: Load directly
+
+        **Performance Target:** < 200ms (snapshot + up to 1000 event replays)
+
+        **Failure Handling:**
+        - Snapshot corruption: Fallback to previous snapshot, warn user
+        - Event corruption: Halt at corrupted event, offer partial load
+        - Missing events: Detect sequence gaps, warn user
+
+      operationId: loadDocument
+      tags:
+        - Document Persistence
+
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoadRequest'
+            example:
+              filePath: /Users/alice/Documents/my-drawing.wiretuner
+
+      responses:
+        '200':
+          description: Document loaded successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoadResponse'
+              example:
+                success: true
+                document:
+                  id: doc-a1b2c3d4-e5f6-7890-abcd-ef1234567890
+                  title: My Drawing
+                  schemaVersion: 1
+                  layers: []
+                  selection:
+                    selectedObjectIds: []
+                    selectedAnchors: []
+                  viewport:
+                    pan: { x: 0, y: 0 }
+                    zoom: 1.0
+                    canvasSize: { width: 1920, height: 1080 }
+                metadata:
+                  document_id: doc-a1b2c3d4-e5f6-7890-abcd-ef1234567890
+                  title: My Drawing
+                  format_version: 1
+                  created_at: 1699564800000
+                  modified_at: 1699651200000
+                  author: null
+                eventCount: 1234
+                snapshotUsed: true
+                snapshotSequence: 1000
+                eventsReplayed: 234
+
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          description: File not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                errorCode: E_FILE_NOT_FOUND
+                message: Document file not found
+                details: The file may have been moved, renamed, or deleted
+                recoveryActions:
+                  - Check if file was moved to different location
+                  - Restore from backup if available
+                  - Remove from recent files list
+
+        '409':
+          description: Version mismatch (file format too new)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                errorCode: E_VERSION_MISMATCH
+                message: This document requires a newer version of WireTuner
+                details: File format version 2 requires WireTuner 0.2 or later. Current app version is 0.1.
+                recoveryActions:
+                  - Upgrade WireTuner to latest version
+                  - Open file on different computer with newer app version
+                  - Contact document author for older format version
+
+        '500':
+          description: Internal error (corruption, unexpected failure)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                snapshotCorruption:
+                  summary: Snapshot corruption detected
+                  value:
+                    errorCode: E_CORRUPT_SNAPSHOT
+                    message: Snapshot decompression failed
+                    details: Gzip decompression error at snapshot_id 5. Attempting fallback to previous snapshot.
+                    recoveryActions:
+                      - Fallback to older snapshot (may lose recent changes)
+                      - Export partial document if fallback succeeds
+                      - Restore from backup if available
+                eventCorruption:
+                  summary: Event corruption detected
+                  value:
+                    errorCode: E_CORRUPT_EVENT
+                    message: Event JSON parsing failed
+                    details: Corrupted event at sequence 1523. Can load partial document up to sequence 1522.
+                    recoveryActions:
+                      - Load partial document (events 0-1522)
+                      - Export recovered content to new file
+                      - Report corruption with diagnostic logs
+
+  /document/auto-save:
+    post:
+      summary: Auto-save document (background operation)
+      description: |
+        Periodically flushes pending events to disk without user interaction.
+
+        **Trigger:** Timer-based, every 30 seconds after first unsaved change
+
+        **Workflow:**
+        1. Check if document has file path (skip if new document)
+        2. Append pending events to event log
+        3. Flush SQLite WAL to disk
+        4. Do NOT create snapshot (only on 1000-event threshold)
+        5. Do NOT update modified_at timestamp (only manual save does)
+
+        **Performance Target:** < 50ms (should not block UI)
+
+        **User Visibility:** Background operation, no UI indication
+
+      operationId: autoSaveDocument
+      tags:
+        - Document Persistence
+
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                documentId:
+                  type: string
+                  description: ID of document to auto-save
+                pendingEventCount:
+                  type: integer
+                  description: Number of events to persist
+              required:
+                - documentId
+            example:
+              documentId: doc-a1b2c3d4-e5f6-7890-abcd-ef1234567890
+              pendingEventCount: 15
+
+      responses:
+        '200':
+          description: Auto-save completed successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  eventsPersisted:
+                    type: integer
+              example:
+                success: true
+                eventsPersisted: 15
+
+        '507':
+          description: Disk full (degrade gracefully)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                errorCode: E_DISK_FULL
+                message: Auto-save failed - disk full
+                details: Events remain in memory. Manual save required.
+
+  /document/export/svg:
+    post:
+      summary: Export document to SVG format
+      description: |
+        Converts the current document to SVG 1.1 XML and writes to file.
+
+        **Important:** This is NOT a save operation. The .wiretuner file
+        is not modified. This creates a separate .svg export.
+
+        **Workflow:**
+        1. Convert document objects to SVG elements
+        2. Generate SVG XML with proper namespaces
+        3. Write to file at exportPath
+
+        **Performance Target:** < 200ms for typical documents
+
+      operationId: exportDocumentSVG
+      tags:
+        - Export
+
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ExportRequest'
+            example:
+              exportPath: /Users/alice/Documents/my-drawing.svg
+              options:
+                includeMetadata: true
+                compressOutput: false
+
+      responses:
+        '200':
+          description: Export completed successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExportResponse'
+              example:
+                success: true
+                exportPath: /Users/alice/Documents/my-drawing.svg
+                fileSize: 8192
+                format: svg
+
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '403':
+          $ref: '#/components/responses/PermissionDenied'
+
+components:
+  schemas:
+    # Request Schemas
+
+    SaveRequest:
+      type: object
+      required:
+        - filePath
+      properties:
+        filePath:
+          type: string
+          description: Absolute path to save location (must end with .wiretuner)
+          example: /Users/alice/Documents/my-drawing.wiretuner
+        overwrite:
+          type: boolean
+          default: false
+          description: If true, overwrite existing file without confirmation
+
+    SaveAsRequest:
+      type: object
+      required:
+        - newFilePath
+      properties:
+        newFilePath:
+          type: string
+          description: Absolute path to new save location (must end with .wiretuner)
+          example: /Users/alice/Documents/my-drawing-copy.wiretuner
+
+    LoadRequest:
+      type: object
+      required:
+        - filePath
+      properties:
+        filePath:
+          type: string
+          description: Absolute path to .wiretuner file to load
+          example: /Users/alice/Documents/my-drawing.wiretuner
+
+    ExportRequest:
+      type: object
+      required:
+        - exportPath
+      properties:
+        exportPath:
+          type: string
+          description: Absolute path to export destination
+          example: /Users/alice/Documents/my-drawing.svg
+        options:
+          type: object
+          description: Format-specific export options
+          properties:
+            includeMetadata:
+              type: boolean
+              default: true
+              description: Include document metadata in export
+            compressOutput:
+              type: boolean
+              default: false
+              description: Compress output file (gzip)
+
+    # Response Schemas
+
+    SaveResponse:
+      type: object
+      required:
+        - success
+        - documentId
+        - eventCount
+        - snapshotCount
+      properties:
+        success:
+          type: boolean
+          description: Whether save completed successfully
+        documentId:
+          type: string
+          description: Unique document identifier (UUID)
+        eventCount:
+          type: integer
+          description: Total number of events in document
+        snapshotCount:
+          type: integer
+          description: Total number of snapshots in file
+        snapshotCreated:
+          type: boolean
+          description: Whether a new snapshot was created during this save
+        filePath:
+          type: string
+          description: Absolute path where document was saved
+        fileSize:
+          type: integer
+          description: File size in bytes
+
+    LoadResponse:
+      type: object
+      required:
+        - success
+        - document
+        - metadata
+        - eventCount
+      properties:
+        success:
+          type: boolean
+          description: Whether load completed successfully
+        document:
+          $ref: '#/components/schemas/Document'
+        metadata:
+          $ref: '#/components/schemas/DocumentMetadata'
+        eventCount:
+          type: integer
+          description: Total number of events in document
+        snapshotUsed:
+          type: boolean
+          description: Whether a snapshot was used (false if replayed all events)
+        snapshotSequence:
+          type: integer
+          description: Event sequence of snapshot used (if any)
+        eventsReplayed:
+          type: integer
+          description: Number of events replayed after snapshot
+
+    ExportResponse:
+      type: object
+      required:
+        - success
+        - exportPath
+      properties:
+        success:
+          type: boolean
+          description: Whether export completed successfully
+        exportPath:
+          type: string
+          description: Absolute path where file was exported
+        fileSize:
+          type: integer
+          description: Export file size in bytes
+        format:
+          type: string
+          description: Export format
+          enum: [svg, pdf, png]
+
+    ErrorResponse:
+      type: object
+      required:
+        - errorCode
+        - message
+      properties:
+        errorCode:
+          type: string
+          description: Machine-readable error code
+          enum:
+            - E_DISK_FULL
+            - E_PERMISSION_DENIED
+            - E_FILE_NOT_FOUND
+            - E_FILE_EXISTS
+            - E_INVALID_PATH
+            - E_CORRUPT_SNAPSHOT
+            - E_CORRUPT_EVENT
+            - E_VERSION_MISMATCH
+            - E_SCHEMA_INVALID
+            - E_SEQUENCE_GAP
+            - E_FOREIGN_KEY_VIOLATION
+        message:
+          type: string
+          description: Human-readable error message for display to user
+        details:
+          type: string
+          description: Additional context or technical details
+        recoveryActions:
+          type: array
+          description: Suggested actions user can take to recover
+          items:
+            type: string
+
+    # Domain Model Schemas
+
+    Document:
+      type: object
+      description: |
+        Root document aggregate containing all layers, objects, selection, and viewport state.
+        Corresponds to lib/domain/document/document.dart Document class.
+      required:
+        - id
+        - title
+        - schemaVersion
+        - layers
+        - selection
+        - viewport
+      properties:
+        id:
+          type: string
+          description: Unique document identifier (UUID or similar)
+        title:
+          type: string
+          description: Document title shown in UI and file system
+          default: Untitled
+        schemaVersion:
+          type: integer
+          description: |
+            Document model schema version for migrations.
+            This is separate from format_version (file-level version).
+            Current version: 1 (Milestone 0.1)
+          default: 1
+        layers:
+          type: array
+          description: Ordered list of layers (bottom-to-top rendering order)
+          items:
+            $ref: '#/components/schemas/Layer'
+        selection:
+          $ref: '#/components/schemas/Selection'
+        viewport:
+          $ref: '#/components/schemas/Viewport'
+
+    Layer:
+      type: object
+      description: A layer containing vector objects with visibility and lock properties
+      required:
+        - id
+        - name
+        - visible
+        - locked
+        - objects
+      properties:
+        id:
+          type: string
+          description: Unique layer identifier
+        name:
+          type: string
+          description: Layer name shown in layers panel
+          default: Layer
+        visible:
+          type: boolean
+          description: Whether layer is visible in viewport
+          default: true
+        locked:
+          type: boolean
+          description: Whether layer is locked for editing
+          default: false
+        objects:
+          type: array
+          description: Ordered list of vector objects in this layer
+          items:
+            $ref: '#/components/schemas/VectorObject'
+
+    VectorObject:
+      type: object
+      description: |
+        Discriminated union representing either a Path or a Shape.
+        Uses Freezed union type pattern from lib/domain/document/document.dart
+      required:
+        - runtimeType
+        - id
+      properties:
+        runtimeType:
+          type: string
+          description: Discriminator field
+          enum: [PathObject, ShapeObject]
+        id:
+          type: string
+          description: Unique object identifier
+      oneOf:
+        - $ref: '#/components/schemas/PathObject'
+        - $ref: '#/components/schemas/ShapeObject'
+
+    PathObject:
+      type: object
+      description: A freeform bezier path with anchors and control points
+      required:
+        - id
+        - path
+      properties:
+        id:
+          type: string
+        path:
+          type: object
+          description: Path data (see lib/domain/models/path.dart)
+
+    ShapeObject:
+      type: object
+      description: A parametric shape (rectangle, ellipse, polygon, star)
+      required:
+        - id
+        - shape
+      properties:
+        id:
+          type: string
+        shape:
+          type: object
+          description: Shape data (see lib/domain/models/shape.dart)
+
+    Selection:
+      type: object
+      description: Current selection state (objects and anchor points)
+      properties:
+        selectedObjectIds:
+          type: array
+          description: IDs of selected objects
+          items:
+            type: string
+        selectedAnchors:
+          type: array
+          description: Selected anchor points (pathId + anchorIndex)
+          items:
+            type: object
+
+    Viewport:
+      type: object
+      description: Viewport state controlling pan, zoom, and coordinate transformations
+      required:
+        - pan
+        - zoom
+        - canvasSize
+      properties:
+        pan:
+          $ref: '#/components/schemas/Point'
+        zoom:
+          type: number
+          description: Zoom level (1.0 = 100%, 2.0 = 200%, 0.5 = 50%)
+          default: 1.0
+          minimum: 0.1
+          maximum: 10.0
+        canvasSize:
+          $ref: '#/components/schemas/Size'
+
+    Point:
+      type: object
+      description: 2D point with x and y coordinates
+      required:
+        - x
+        - y
+      properties:
+        x:
+          type: number
+        y:
+          type: number
+
+    Size:
+      type: object
+      description: 2D size with width and height
+      required:
+        - width
+        - height
+      properties:
+        width:
+          type: number
+        height:
+          type: number
+
+    # Database Schemas (SQLite tables)
+
+    DocumentMetadata:
+      type: object
+      description: |
+        Document metadata stored in SQLite metadata table.
+        Corresponds to lib/infrastructure/persistence/schema.dart metadata table.
+      required:
+        - document_id
+        - title
+        - format_version
+        - created_at
+        - modified_at
+      properties:
+        document_id:
+          type: string
+          description: Primary key (UUID or similar unique identifier)
+        title:
+          type: string
+          description: Document title (user-editable)
+        format_version:
+          type: integer
+          description: |
+            File format version for compatibility checking.
+            Separate from document.schemaVersion (document model version).
+            Current version: 1 (Milestone 0.1)
+        created_at:
+          type: integer
+          format: int64
+          description: Unix timestamp (milliseconds) when document first saved
+        modified_at:
+          type: integer
+          format: int64
+          description: Unix timestamp (milliseconds) of last save operation
+        author:
+          type: string
+          nullable: true
+          description: Optional author name (null for Milestone 0.1)
+
+    EventRecord:
+      type: object
+      description: |
+        Event record stored in SQLite events table.
+        Corresponds to lib/infrastructure/persistence/schema.dart events table.
+      required:
+        - event_id
+        - document_id
+        - event_sequence
+        - event_type
+        - event_payload
+        - timestamp
+      properties:
+        event_id:
+          type: integer
+          description: Auto-incremented primary key
+        document_id:
+          type: string
+          description: Foreign key to metadata.document_id
+        event_sequence:
+          type: integer
+          description: |
+            0-based sequence number unique per document.
+            UNIQUE constraint on (document_id, event_sequence).
+        event_type:
+          type: string
+          description: Event type name
+          enum:
+            - CreatePathEvent
+            - AddAnchorEvent
+            - MoveAnchorEvent
+            - MoveBCPEvent
+            - DeleteAnchorEvent
+            - FinishPathEvent
+            - ModifyStyleEvent
+            - MoveObjectEvent
+            - DeleteObjectEvent
+            - CreateShapeEvent
+            - ModifyShapeParametersEvent
+            - ChangeSelectionEvent
+            - DeselectAllEvent
+            - SaveDocumentEvent
+            - LoadDocumentEvent
+            - DocumentLoadedEvent
+        event_payload:
+          type: string
+          description: |
+            JSON-serialized event data conforming to event_payload.schema.json.
+            SQLite CHECK constraint enforces JSON validity: CHECK(json_valid(event_payload))
+          externalDocs:
+            description: Complete event payload schema
+            url: ../docs/specs/event_payload.schema.json
+        timestamp:
+          type: integer
+          format: int64
+          description: Unix timestamp (milliseconds) when event created
+        user_id:
+          type: string
+          nullable: true
+          description: User ID for future collaboration features (null for Milestone 0.1)
+
+    SnapshotRecord:
+      type: object
+      description: |
+        Snapshot record stored in SQLite snapshots table.
+        Corresponds to lib/infrastructure/persistence/schema.dart snapshots table.
+      required:
+        - snapshot_id
+        - document_id
+        - event_sequence
+        - snapshot_data
+        - created_at
+        - compression
+      properties:
+        snapshot_id:
+          type: integer
+          description: Auto-incremented primary key
+        document_id:
+          type: string
+          description: Foreign key to metadata.document_id
+        event_sequence:
+          type: integer
+          description: |
+            Last event sequence included in this snapshot.
+            Snapshot represents document state after replaying events 0..event_sequence.
+        snapshot_data:
+          type: string
+          format: byte
+          description: |
+            Base64-encoded BLOB containing serialized Document.
+            Format: JSON (Document.toJson()) + gzip compression.
+            Compression auto-detected via magic bytes (0x1f 0x8b = gzip).
+            See lib/infrastructure/event_sourcing/snapshot_serializer.dart
+        created_at:
+          type: integer
+          format: int64
+          description: Unix timestamp (milliseconds) when snapshot created
+        compression:
+          type: string
+          description: Compression algorithm used
+          enum: [gzip, none]
+
+  responses:
+    BadRequest:
+      description: Bad request (invalid parameters)
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            errorCode: E_INVALID_PATH
+            message: Invalid file path
+            details: File path must be absolute and end with .wiretuner extension
+
+    PermissionDenied:
+      description: Permission denied (cannot access file)
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            errorCode: E_PERMISSION_DENIED
+            message: Cannot access file (permission denied)
+            details: Check file permissions or choose a different location
+
+    DiskFull:
+      description: Disk full (cannot write)
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            errorCode: E_DISK_FULL
+            message: Cannot save - disk full
+            details: Free up disk space and try again
+
+tags:
+  - name: Document Persistence
+    description: Save and load operations for .wiretuner documents
+  - name: Export
+    description: Export operations to other file formats (SVG, PDF)
+
+externalDocs:
+  description: |
+    Related documentation:
+    - Event Lifecycle Specification
+    - Event Payload JSON Schema
+    - Persistence Contract (narrative)
+  url: ../docs/specs/
