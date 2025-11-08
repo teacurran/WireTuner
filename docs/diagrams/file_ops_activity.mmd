@@ -1,0 +1,192 @@
+---
+title: WireTuner File Operations Activity Diagram
+description: Complete workflow for save, load, export, and import operations
+version: 1.0.0
+date: 2024-11-08
+---
+
+graph TD
+    Start([User Action]) --> Choice{Which Operation?}
+
+    %% ============================================================
+    %% SAVE WORKFLOW
+    %% ============================================================
+    Choice -->|Save Cmd+S| SaveCheck{Has File Path?}
+    SaveCheck -->|No| SaveDialog[Show Save Dialog]
+    SaveDialog --> SaveCancel{User Cancelled?}
+    SaveCancel -->|Yes| End([End])
+    SaveCancel -->|No| SaveValidate[Validate File Path]
+    SaveCheck -->|Yes| SaveValidate
+
+    SaveValidate --> SaveOpen[Open/Reuse Database]
+    SaveOpen --> SaveDiskCheck{Disk Space Available?}
+    SaveDiskCheck -->|No| ErrorDiskFull[Error: Disk Full]
+    SaveDiskCheck -->|Yes| SaveTransaction[Begin Transaction]
+
+    SaveTransaction --> SaveMetadata[Upsert Metadata]
+    SaveMetadata --> SaveEvents{Has Pending Events?}
+    SaveEvents -->|Yes| SaveBatchInsert[Batch Insert Events]
+    SaveEvents -->|No| SaveSnapshotCheck
+    SaveBatchInsert --> SaveSnapshotCheck{Snapshot Threshold Reached?}
+    SaveSnapshotCheck -->|Yes| SaveCreateSnapshot[Create Snapshot]
+    SaveSnapshotCheck -->|No| SaveCommit[Commit Transaction]
+    SaveCreateSnapshot --> SaveCommit
+
+    SaveCommit --> SaveWAL[Flush WAL Checkpoint]
+    SaveWAL --> SaveTelemetry[Log Telemetry]
+    SaveTelemetry --> SaveSuccess[Save Complete]
+    SaveSuccess --> End
+
+    ErrorDiskFull --> End
+
+    %% ============================================================
+    %% SAVE AS WORKFLOW
+    %% ============================================================
+    Choice -->|Save As Shift+Cmd+S| SaveAsDialog[Show Save Dialog]
+    SaveAsDialog --> SaveAsCancel{User Cancelled?}
+    SaveAsCancel -->|Yes| End
+    SaveAsCancel -->|No| SaveAsValidate[Validate File Path]
+    SaveAsValidate --> SaveAsClose[Close Current Database]
+    SaveAsClose --> SaveAsOpen[Open New Database]
+    SaveAsOpen --> SaveAsTransaction[Begin Transaction]
+    SaveAsTransaction --> SaveAsNewId[Generate New Document ID]
+    SaveAsNewId --> SaveAsMetadata[Insert Metadata]
+    SaveAsMetadata --> SaveAsCopyEvents[Copy All Events]
+    SaveAsCopyEvents --> SaveAsSnapshot[Create Initial Snapshot]
+    SaveAsSnapshot --> SaveAsCommit[Commit Transaction]
+    SaveAsCommit --> SaveAsWAL[Flush WAL Checkpoint]
+    SaveAsWAL --> SaveAsTelemetry[Log Telemetry]
+    SaveAsTelemetry --> SaveAsSuccess[Save As Complete]
+    SaveAsSuccess --> End
+
+    %% ============================================================
+    %% LOAD WORKFLOW
+    %% ============================================================
+    Choice -->|Load Cmd+O| LoadDialog[Show Open Dialog]
+    LoadDialog --> LoadCancel{User Cancelled?}
+    LoadCancel -->|Yes| End
+    LoadCancel -->|No| LoadValidate[Validate File Path]
+
+    LoadValidate --> LoadExists{File Exists?}
+    LoadExists -->|No| ErrorNotFound[Error: File Not Found]
+    LoadExists -->|Yes| LoadExtension{Has .wiretuner Extension?}
+    LoadExtension -->|No| ErrorInvalidType[Error: Invalid File Type]
+    LoadExtension -->|Yes| LoadOpen[Open Database]
+
+    LoadOpen --> LoadMetadata{Metadata Table Exists?}
+    LoadMetadata -->|No| ErrorCorrupt[Error: Corrupt Database]
+    LoadMetadata -->|Yes| LoadReadMetadata[Read Metadata]
+
+    LoadReadMetadata --> LoadVersion{Check Format Version}
+    LoadVersion -->|version > app| ErrorTooNew[Error: Version Too New]
+    LoadVersion -->|version < app| LoadMigrate{Migrator Available?}
+    LoadVersion -->|version == app| LoadMaxSeq
+
+    LoadMigrate -->|No| LoadMigrateWarn[Log Warning: No Migrator]
+    LoadMigrate -->|Yes| LoadApplyMigrations[Apply Migrations Sequentially]
+    LoadMigrateWarn --> LoadMaxSeq
+    LoadApplyMigrations --> LoadUpdateVersion[Update format_version in Metadata]
+    LoadUpdateVersion --> LoadMaxSeq[Get Max Event Sequence]
+
+    LoadMaxSeq --> LoadSnapshot{Snapshot Found?}
+    LoadSnapshot -->|Yes| LoadDeserialize[Deserialize Snapshot]
+    LoadSnapshot -->|No| LoadEmpty[Create Empty Document]
+
+    LoadDeserialize --> LoadSnapshotCorrupt{Snapshot Corrupt?}
+    LoadSnapshotCorrupt -->|Yes| LoadFallback[Try Previous Snapshot]
+    LoadSnapshotCorrupt -->|No| LoadReplay
+
+    LoadFallback --> LoadFallbackFound{Previous Snapshot Found?}
+    LoadFallbackFound -->|Yes| LoadDeserialize
+    LoadFallbackFound -->|No| LoadEmpty
+
+    LoadEmpty --> LoadReplay[Replay Events from Start/Snapshot]
+    LoadReplay --> LoadReplayLoop{For Each Event}
+
+    LoadReplayLoop --> LoadApplyEvent[Apply Event to State]
+    LoadApplyEvent --> LoadEventCorrupt{Event Corrupt?}
+    LoadEventCorrupt -->|Yes| LoadSkipEvent[Skip Event + Log Warning]
+    LoadEventCorrupt -->|No| LoadNextEvent
+    LoadSkipEvent --> LoadNextEvent{More Events?}
+    LoadNextEvent -->|Yes| LoadReplayLoop
+    LoadNextEvent -->|No| LoadCheckIssues{Had Issues?}
+
+    LoadCheckIssues -->|Yes| LoadWarnUser[Show Warning to User]
+    LoadCheckIssues -->|No| LoadTelemetry[Log Telemetry]
+    LoadWarnUser --> LoadTelemetry
+
+    LoadTelemetry --> LoadSuccess[Load Complete]
+    LoadSuccess --> End
+
+    ErrorNotFound --> End
+    ErrorInvalidType --> End
+    ErrorCorrupt --> End
+    ErrorTooNew --> End
+
+    %% ============================================================
+    %% LOAD RECENT FILE
+    %% ============================================================
+    Choice -->|Load Recent| LoadRecentCheck{File Still Exists?}
+    LoadRecentCheck -->|No| LoadRecentRemove[Remove from Recent Files]
+    LoadRecentRemove --> ErrorNotFound
+    LoadRecentCheck -->|Yes| LoadValidate
+
+    %% ============================================================
+    %% EXPORT SVG WORKFLOW (Stub for I5.T3)
+    %% ============================================================
+    Choice -->|Export SVG| ExportSVGDialog[Show Save Dialog]
+    ExportSVGDialog --> ExportSVGCancel{User Cancelled?}
+    ExportSVGCancel -->|Yes| End
+    ExportSVGCancel -->|No| ExportSVGRender[Render Document to SVG]
+    ExportSVGRender --> ExportSVGWrite[Write SVG to File]
+    ExportSVGWrite --> ExportSVGPermission{Permission Denied?}
+    ExportSVGPermission -->|Yes| ErrorPermission[Error: Permission Denied]
+    ExportSVGPermission -->|No| ExportSVGSuccess[Export SVG Complete]
+    ExportSVGSuccess --> End
+    ErrorPermission --> End
+
+    %% ============================================================
+    %% EXPORT PDF WORKFLOW (Stub for I5.T4)
+    %% ============================================================
+    Choice -->|Export PDF| ExportPDFDialog[Show Save Dialog]
+    ExportPDFDialog --> ExportPDFCancel{User Cancelled?}
+    ExportPDFCancel -->|Yes| End
+    ExportPDFCancel -->|No| ExportPDFRender[Render Document to PDF]
+    ExportPDFRender --> ExportPDFWrite[Write PDF to File]
+    ExportPDFWrite --> ExportPDFPermission{Permission Denied?}
+    ExportPDFPermission -->|Yes| ErrorPermission
+    ExportPDFPermission -->|No| ExportPDFSuccess[Export PDF Complete]
+    ExportPDFSuccess --> End
+
+    %% ============================================================
+    %% IMPORT AI/SVG WORKFLOW (Stub for I5.T5)
+    %% ============================================================
+    Choice -->|Import AI/SVG| ImportDialog[Show Open Dialog]
+    ImportDialog --> ImportCancel{User Cancelled?}
+    ImportCancel -->|Yes| End
+    ImportCancel -->|No| ImportValidate[Validate File Type]
+    ImportValidate --> ImportType{AI or SVG?}
+    ImportType -->|AI| ImportParseAI[Parse Adobe Illustrator File]
+    ImportType -->|SVG| ImportParseSVG[Parse SVG File]
+    ImportType -->|Other| ErrorUnsupportedFormat[Error: Unsupported Format]
+
+    ImportParseAI --> ImportConvert[Convert to WireTuner Format]
+    ImportParseSVG --> ImportConvert
+    ImportConvert --> ImportCreateEvents[Create Events for Imported Objects]
+    ImportCreateEvents --> ImportApply[Apply Events to Document]
+    ImportApply --> ImportSuccess[Import Complete]
+    ImportSuccess --> End
+    ErrorUnsupportedFormat --> End
+
+    %% ============================================================
+    %% STYLING
+    %% ============================================================
+    classDef errorNode fill:#ff6b6b,stroke:#c92a2a,stroke-width:2px,color:#fff
+    classDef successNode fill:#51cf66,stroke:#2f9e44,stroke-width:2px,color:#fff
+    classDef processNode fill:#4dabf7,stroke:#1971c2,stroke-width:2px,color:#fff
+    classDef decisionNode fill:#ffd43b,stroke:#f08c00,stroke-width:2px,color:#000
+
+    class ErrorDiskFull,ErrorNotFound,ErrorInvalidType,ErrorCorrupt,ErrorTooNew,ErrorPermission,ErrorUnsupportedFormat errorNode
+    class SaveSuccess,SaveAsSuccess,LoadSuccess,ExportSVGSuccess,ExportPDFSuccess,ImportSuccess successNode
+    class SaveTransaction,SaveMetadata,SaveBatchInsert,SaveCreateSnapshot,LoadOpen,LoadReadMetadata,LoadReplay,LoadApplyEvent processNode
+    class Choice,SaveCheck,SaveCancel,LoadExists,LoadVersion,LoadSnapshot,LoadEventCorrupt decisionNode
