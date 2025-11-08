@@ -18,6 +18,9 @@ enum PathState {
 
   /// Creating path state - actively placing anchors.
   creatingPath,
+
+  /// Adjusting handles state - adjusting Bezier control points of last anchor.
+  adjustingHandles,
 }
 
 /// Tool for creating vector paths with anchors and segments.
@@ -147,6 +150,11 @@ class PenTool implements ITool {
   /// Used to calculate handle direction and magnitude.
   Point? _currentDragPosition;
 
+  /// Counter to track the number of anchors added to the current path.
+  /// Used for calculating anchor indices in ModifyAnchorEvent.
+  /// First anchor (from CreatePathEvent) has index 0, subsequent anchors increment.
+  int _anchorCount = 0;
+
   @override
   String get toolId => 'pen';
 
@@ -182,15 +190,6 @@ class PenTool implements ITool {
     final worldPos = _viewportController.screenToWorld(event.localPosition);
     final now = DateTime.now().millisecondsSinceEpoch;
 
-    // Check for double-click
-    if (_isDoubleClick(worldPos, now)) {
-      _logger.d('Double-click detected - finishing path');
-      if (_state == PathState.creatingPath) {
-        _finishPath(closed: false);
-        return true;
-      }
-    }
-
     // Handle based on current state
     if (_state == PathState.idle) {
       // First click - start new path
@@ -198,6 +197,26 @@ class PenTool implements ITool {
       _updateClickTracking(worldPos, now);
       return true;
     } else if (_state == PathState.creatingPath) {
+      // Check if click is on last anchor (enable handle adjustment)
+      // This must be checked BEFORE double-click detection, because clicking
+      // on the last anchor would otherwise be detected as a double-click
+      if (_isClickOnLastAnchor(worldPos)) {
+        _logger.d('Click on last anchor - entering handle adjustment mode');
+        _state = PathState.adjustingHandles;
+        _dragStartPosition = worldPos;
+        _currentDragPosition = worldPos;
+        _isDragging = false; // Will become true if pointer moves
+        _updateClickTracking(worldPos, now);
+        return true;
+      }
+
+      // Check for double-click (to finish path)
+      if (_isDoubleClick(worldPos, now)) {
+        _logger.d('Double-click detected - finishing path');
+        _finishPath(closed: false);
+        return true;
+      }
+
       // Track drag start for potential Bezier curve creation
       // But don't emit event yet - wait to see if user drags or just clicks
       _dragStartPosition = worldPos;
@@ -231,6 +250,16 @@ class PenTool implements ITool {
     // If no drag tracking, this pointer up is not related to our tool
     if (_dragStartPosition == null) {
       return false;
+    }
+
+    // Handle adjustment completion (adjusting handles on last anchor)
+    if (_state == PathState.adjustingHandles) {
+      _commitHandleAdjustment(event);
+      _state = PathState.creatingPath; // Return to path creation
+      _isDragging = false;
+      _dragStartPosition = null;
+      _currentDragPosition = null;
+      return true;
     }
 
     // Calculate drag distance to determine if this was a click or drag
@@ -284,25 +313,92 @@ class PenTool implements ITool {
 
   @override
   void renderOverlay(Canvas canvas, ui.Size size) {
-    if (_state != PathState.creatingPath) {
+    if (_state != PathState.creatingPath && _state != PathState.adjustingHandles) {
       return;
     }
 
     final zoomLevel = _viewportController.zoomLevel;
 
-    // If dragging, render handle preview
+    // If dragging (either creating anchor or adjusting handles), render handle preview
     if (_isDragging && _dragStartPosition != null && _currentDragPosition != null) {
-      _renderHandlePreview(canvas, zoomLevel);
+      if (_state == PathState.adjustingHandles) {
+        _renderHandleAdjustmentPreview(canvas, zoomLevel);
+      } else {
+        _renderHandlePreview(canvas, zoomLevel);
+      }
     }
     // Otherwise, render normal path preview
-    else if (_hoverPosition != null && _lastAnchorPosition != null) {
+    else if (_hoverPosition != null && _lastAnchorPosition != null && _state == PathState.creatingPath) {
       _renderPathPreview(canvas, zoomLevel);
     }
   }
 
-  /// Renders handle preview during drag gesture.
+  /// Renders handle preview during drag gesture (for new anchor creation).
   void _renderHandlePreview(Canvas canvas, double zoomLevel) {
     final anchorPos = _dragStartPosition!;
+    final dragPos = _currentDragPosition!;
+
+    // Paint for handle lines
+    final handlePaint = ui.Paint()
+      ..color = const ui.Color(0xFF2196F3) // Blue for handles
+      ..style = ui.PaintingStyle.stroke
+      ..strokeWidth = 1.0 / zoomLevel
+      ..strokeCap = ui.StrokeCap.round;
+
+    // Paint for handle control points
+    final handlePointPaint = ui.Paint()
+      ..color = const ui.Color(0xFF2196F3)
+      ..style = ui.PaintingStyle.fill;
+
+    // Paint for anchor point
+    final anchorPaint = ui.Paint()
+      ..color = const ui.Color(0xFFFFFFFF) // White
+      ..style = ui.PaintingStyle.fill;
+
+    final anchorStrokePaint = ui.Paint()
+      ..color = const ui.Color(0xFF000000) // Black stroke
+      ..style = ui.PaintingStyle.stroke
+      ..strokeWidth = 1.0 / zoomLevel;
+
+    final anchorOffset = ui.Offset(anchorPos.x, anchorPos.y);
+    final dragOffset = ui.Offset(dragPos.x, dragPos.y);
+
+    // Draw handleOut line from anchor to drag position
+    canvas.drawLine(anchorOffset, dragOffset, handlePaint);
+
+    // Draw handleOut control point
+    canvas.drawCircle(dragOffset, 3.0 / zoomLevel, handlePointPaint);
+
+    // If Alt not pressed (smooth anchor mode), draw mirrored handleIn
+    if (!HardwareKeyboard.instance.isAltPressed) {
+      // Calculate mirrored position: anchor - (drag - anchor) = anchor - handleOut
+      final mirrorX = anchorPos.x - (dragPos.x - anchorPos.x);
+      final mirrorY = anchorPos.y - (dragPos.y - anchorPos.y);
+      final mirrorOffset = ui.Offset(mirrorX, mirrorY);
+
+      // Draw handleIn line
+      canvas.drawLine(anchorOffset, mirrorOffset, handlePaint);
+
+      // Draw handleIn control point
+      canvas.drawCircle(mirrorOffset, 3.0 / zoomLevel, handlePointPaint);
+    }
+
+    // Draw anchor point (on top of handles)
+    canvas.drawCircle(anchorOffset, 5.0 / zoomLevel, anchorPaint);
+    canvas.drawCircle(anchorOffset, 5.0 / zoomLevel, anchorStrokePaint);
+  }
+
+  /// Renders handle adjustment preview (when adjusting existing anchor handles).
+  ///
+  /// Similar to _renderHandlePreview, but uses _lastAnchorPosition as the
+  /// anchor base instead of _dragStartPosition, since the user is adjusting
+  /// handles on an already-placed anchor.
+  void _renderHandleAdjustmentPreview(Canvas canvas, double zoomLevel) {
+    if (_lastAnchorPosition == null) {
+      return;
+    }
+
+    final anchorPos = _lastAnchorPosition!;
     final dragPos = _currentDragPosition!;
 
     // Paint for handle lines
@@ -404,6 +500,7 @@ class PenTool implements ITool {
     _isDragging = false;
     _dragStartPosition = null;
     _currentDragPosition = null;
+    _anchorCount = 0;
   }
 
   /// Starts a new path with the first anchor.
@@ -437,6 +534,7 @@ class PenTool implements ITool {
     _currentPathId = pathId;
     _currentGroupId = groupId;
     _lastAnchorPosition = startAnchor;
+    _anchorCount = 1; // First anchor (index 0)
 
     _logger.i('Path created: pathId=$pathId, groupId=$groupId');
   }
@@ -467,6 +565,7 @@ class PenTool implements ITool {
     ),);
 
     _lastAnchorPosition = anchorPosition;
+    _anchorCount++;
 
     _logger.d('Straight line anchor added: position=$anchorPosition');
   }
@@ -513,6 +612,7 @@ class PenTool implements ITool {
     ),);
 
     _lastAnchorPosition = anchorPosition;
+    _anchorCount++;
 
     _logger.d(
       'Bezier anchor added: position=$anchorPosition, '
@@ -621,5 +721,80 @@ class PenTool implements ITool {
   void _updateClickTracking(Point worldPos, int timestamp) {
     _lastClickTime = timestamp;
     _lastClickPosition = worldPos;
+  }
+
+  /// Checks if the current click is on the last anchor position.
+  ///
+  /// This is used to enter handle adjustment mode when the user clicks
+  /// on the last anchor during path creation.
+  ///
+  /// Returns true if:
+  /// - A last anchor position exists
+  /// - The distance between worldPos and last anchor is within threshold
+  ///
+  /// Uses the same distance threshold as double-click detection (10.0 world units).
+  bool _isClickOnLastAnchor(Point worldPos) {
+    if (_lastAnchorPosition == null) {
+      return false;
+    }
+
+    final distance = _calculateDistance(worldPos, _lastAnchorPosition!);
+    return distance < _doubleClickDistanceThreshold;
+  }
+
+  /// Commits handle adjustment for the last anchor.
+  ///
+  /// This method is called when the user finishes adjusting handles
+  /// by releasing the pointer after dragging from the last anchor.
+  ///
+  /// Behavior:
+  /// - Calculates handleOut from drag end position
+  /// - If Alt pressed: independent handles (handleIn = null)
+  /// - If Alt not pressed: symmetric handles (handleIn = -handleOut)
+  /// - Emits ModifyAnchorEvent with updated handles
+  ///
+  /// Note: ModifyAnchorEvent uses AnchorType from event_base.dart (line/bezier),
+  /// not the more detailed AnchorType from anchor_point.dart (corner/smooth/symmetric).
+  /// The anchorType field is optional and set to null since we're modifying a bezier anchor.
+  void _commitHandleAdjustment(PointerEvent event) {
+    if (_currentPathId == null || _lastAnchorPosition == null) {
+      _logger.e('Cannot commit handle adjustment: no active path or anchor');
+      return;
+    }
+
+    // Calculate handleOut from drag end position
+    final dragEndPosition = _currentDragPosition ?? _dragStartPosition!;
+    final handleOut = Point(
+      x: dragEndPosition.x - _lastAnchorPosition!.x,
+      y: dragEndPosition.y - _lastAnchorPosition!.y,
+    );
+
+    // Check Alt key to determine handle behavior
+    final isAltPressed = HardwareKeyboard.instance.isAltPressed;
+
+    // For symmetric handles: handleIn is mirrored (-handleOut)
+    // For independent handles (Alt pressed): no handleIn
+    final Point? handleIn = isAltPressed
+        ? null
+        : Point(x: -handleOut.x, y: -handleOut.y);
+
+    final now = DateTime.now().millisecondsSinceEpoch;
+
+    // Emit ModifyAnchorEvent to record handle adjustment
+    // anchorType is null since we're only modifying handles, not changing anchor type
+    _eventRecorder.recordEvent(ModifyAnchorEvent(
+      eventId: _uuid.v4(),
+      timestamp: now,
+      pathId: _currentPathId!,
+      anchorIndex: _anchorCount - 1, // Last anchor (0-based index)
+      handleOut: handleOut,
+      handleIn: handleIn,
+    ),);
+
+    _logger.d(
+      'Handle adjustment committed: anchorIndex=${_anchorCount - 1}, '
+      'handleOut=$handleOut, handleIn=$handleIn, '
+      'isAlt=$isAltPressed',
+    );
   }
 }
