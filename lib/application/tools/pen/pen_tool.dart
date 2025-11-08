@@ -88,17 +88,18 @@ enum PathState {
 /// toolManager.activateTool('pen');
 /// ```
 class PenTool implements ITool {
-
+  /// Creates a new PenTool instance.
+  ///
+  /// The tool requires a [document] for path creation, a [viewportController]
+  /// for coordinate transformations, and an [eventRecorder] for event emission.
   PenTool({
     required Document document,
     required ViewportController viewportController,
     required dynamic eventRecorder,
-  })  : _document = document,
-        _viewportController = viewportController,
+  })  : _viewportController = viewportController,
         _eventRecorder = eventRecorder {
     _logger.i('PenTool initialized');
   }
-  final Document _document;
   final ViewportController _viewportController;
   final dynamic _eventRecorder;
   final Logger _logger = Logger();
@@ -231,8 +232,6 @@ class PenTool implements ITool {
     if (_dragStartPosition == null) {
       return false;
     }
-
-    final worldPos = _viewportController.screenToWorld(event.localPosition);
 
     // Calculate drag distance to determine if this was a click or drag
     final dragDistance = _calculateDistance(

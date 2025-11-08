@@ -164,10 +164,16 @@ void main() {
         penTool.onPointerDown(const PointerDownEvent(
           position: ui.Offset(100, 100),
         ),);
+        penTool.onPointerUp(const PointerUpEvent(
+          position: ui.Offset(100, 100),
+        ),);
         eventRecorder.clear();
 
         // Second click - add anchor
         penTool.onPointerDown(const PointerDownEvent(
+          position: ui.Offset(200, 100),
+        ),);
+        penTool.onPointerUp(const PointerUpEvent(
           position: ui.Offset(200, 100),
         ),);
 
@@ -192,11 +198,13 @@ void main() {
 
         // First click creates path
         penTool.onPointerDown(PointerDownEvent(position: positions[0]));
+        penTool.onPointerUp(PointerUpEvent(position: positions[0]));
         eventRecorder.clear();
 
         // Subsequent clicks add anchors
         for (int i = 1; i < positions.length; i++) {
           penTool.onPointerDown(PointerDownEvent(position: positions[i]));
+          penTool.onPointerUp(PointerUpEvent(position: positions[i]));
         }
 
         // Should have 3 AddAnchorEvent events (after the first CreatePathEvent)
@@ -262,14 +270,13 @@ void main() {
 
       test('should finish path on double-click', () async {
         // First click to add anchor
-        final now = DateTime.now().millisecondsSinceEpoch;
         penTool.onPointerDown(const PointerDownEvent(
           position: ui.Offset(200, 100),
         ),);
         eventRecorder.clear();
 
         // Simulate double-click (within time and distance threshold)
-        await Future.delayed(const Duration(milliseconds: 100));
+        await Future<void>.delayed(const Duration(milliseconds: 100));
         penTool.onPointerDown(const PointerDownEvent(
           position: ui.Offset(202, 102), // Very close position
         ),);
@@ -313,6 +320,9 @@ void main() {
         penTool.onPointerDown(const PointerDownEvent(
           position: ui.Offset(200, 110),
         ),);
+        penTool.onPointerUp(const PointerUpEvent(
+          position: ui.Offset(200, 110),
+        ),);
 
         // Release Shift
         HardwareKeyboard.instance.handleKeyEvent(
@@ -341,6 +351,9 @@ void main() {
 
         // Click at roughly 50° (should snap to 45°)
         penTool.onPointerDown(const PointerDownEvent(
+          position: ui.Offset(200, 200),
+        ),);
+        penTool.onPointerUp(const PointerUpEvent(
           position: ui.Offset(200, 200),
         ),);
 
@@ -376,6 +389,9 @@ void main() {
         penTool.onPointerDown(const PointerDownEvent(
           position: ui.Offset(105, 200),
         ),);
+        penTool.onPointerUp(const PointerUpEvent(
+          position: ui.Offset(105, 200),
+        ),);
 
         HardwareKeyboard.instance.handleKeyEvent(
           const KeyUpEvent(
@@ -409,6 +425,7 @@ void main() {
 
         for (final pos in positions) {
           penTool.onPointerDown(PointerDownEvent(position: pos));
+          penTool.onPointerUp(PointerUpEvent(position: pos));
         }
 
         // Finish path
@@ -444,8 +461,14 @@ void main() {
         penTool.onPointerDown(const PointerDownEvent(
           position: ui.Offset(100, 100),
         ),);
+        penTool.onPointerUp(const PointerUpEvent(
+          position: ui.Offset(100, 100),
+        ),);
 
         penTool.onPointerDown(const PointerDownEvent(
+          position: ui.Offset(200, 100),
+        ),);
+        penTool.onPointerUp(const PointerUpEvent(
           position: ui.Offset(200, 100),
         ),);
 
@@ -470,8 +493,14 @@ void main() {
         penTool.onPointerDown(const PointerDownEvent(
           position: ui.Offset(100, 100),
         ),);
+        penTool.onPointerUp(const PointerUpEvent(
+          position: ui.Offset(100, 100),
+        ),);
 
         penTool.onPointerDown(const PointerDownEvent(
+          position: ui.Offset(200, 100),
+        ),);
+        penTool.onPointerUp(const PointerUpEvent(
           position: ui.Offset(200, 100),
         ),);
 
