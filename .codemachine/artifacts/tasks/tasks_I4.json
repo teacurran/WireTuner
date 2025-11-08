@@ -111,13 +111,13 @@
     "agent_type_hint": "FrontendAgent",
     "inputs": "Selection tool, document selection APIs, viewport transforms.",
     "target_files": [
-      "lib/src/tools/selection/object_drag_controller.dart",
-      "lib/src/domain/document/selection.dart",
+      "lib/application/tools/selection/object_drag_controller.dart",
+      "lib/domain/document/selection.dart",
       "test/widget/multi_selection_test.dart"
     ],
     "input_files": [
-      "lib/src/tools/selection/",
-      "lib/src/domain/document/selection.dart",
+      "lib/application/tools/selection/",
+      "lib/domain/document/selection.dart",
       "test/widget/multi_selection_test.dart"
     ],
     "deliverables": "Object drag controller with grid snapping, SHIFT-proportional scaling, multi-selection data model enhancements, widget tests verifying selection sets.",
@@ -127,6 +127,6 @@
       "I3.T4"
     ],
     "parallelizable": false,
-    "done": false
+    "done": true
   }
 ]

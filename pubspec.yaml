@@ -38,6 +38,8 @@ dependencies:
 dev_dependencies:
   flutter_test:
     sdk: flutter
+  integration_test:
+    sdk: flutter
 
   # Code Generation
   freezed: ^2.4.0
@@ -46,6 +48,9 @@ dev_dependencies:
 
   # Linting
   flutter_lints: ^3.0.0
+
+  # Testing Utilities
+  crypto: ^3.0.3
 
 flutter:
   uses-material-design: true
