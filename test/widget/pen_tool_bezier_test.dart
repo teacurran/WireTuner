@@ -415,6 +415,70 @@ void main() {
         expect(anchor2.handleOut, isNotNull);
         expect(anchor2.handleIn, isNotNull);
       });
+
+      test('should create S-curve path with opposite curvature directions', () {
+        // First anchor (click - creates path start)
+        penTool.onPointerDown(const PointerDownEvent(
+          position: ui.Offset(100, 200),
+        ),);
+        penTool.onPointerUp(const PointerUpEvent(
+          position: ui.Offset(100, 200),
+        ),);
+
+        eventRecorder.clear();
+
+        // Second anchor (drag upward - first curve bulges up)
+        penTool.onPointerDown(const PointerDownEvent(
+          position: ui.Offset(200, 200),
+        ),);
+        penTool.onPointerMove(const PointerMoveEvent(
+          position: ui.Offset(250, 150), // Drag up and right
+        ),);
+        penTool.onPointerUp(const PointerUpEvent(
+          position: ui.Offset(250, 150),
+        ),);
+
+        // Third anchor (drag downward - second curve bulges down, creating S-shape)
+        penTool.onPointerDown(const PointerDownEvent(
+          position: ui.Offset(300, 200),
+        ),);
+        penTool.onPointerMove(const PointerMoveEvent(
+          position: ui.Offset(350, 250), // Drag down and right (opposite direction)
+        ),);
+        penTool.onPointerUp(const PointerUpEvent(
+          position: ui.Offset(350, 250),
+        ),);
+
+        // Should have 2 Bezier anchor events
+        expect(eventRecorder.recordedEvents.length, equals(2));
+
+        final anchor1 = eventRecorder.recordedEvents[0] as AddAnchorEvent;
+        final anchor2 = eventRecorder.recordedEvents[1] as AddAnchorEvent;
+
+        // First anchor curves upward (handleOut has negative Y)
+        expect(anchor1.anchorType, equals(AnchorType.bezier));
+        expect(anchor1.position.x, equals(200.0));
+        expect(anchor1.position.y, equals(200.0));
+        expect(anchor1.handleOut!.x, equals(50.0)); // Right
+        expect(anchor1.handleOut!.y, equals(-50.0)); // Up
+        expect(anchor1.handleIn!.x, equals(-50.0)); // Mirrored
+        expect(anchor1.handleIn!.y, equals(50.0)); // Mirrored
+
+        // Second anchor curves downward (handleOut has positive Y)
+        expect(anchor2.anchorType, equals(AnchorType.bezier));
+        expect(anchor2.position.x, equals(300.0));
+        expect(anchor2.position.y, equals(200.0));
+        expect(anchor2.handleOut!.x, equals(50.0)); // Right
+        expect(anchor2.handleOut!.y, equals(50.0)); // Down (opposite of first)
+        expect(anchor2.handleIn!.x, equals(-50.0)); // Mirrored
+        expect(anchor2.handleIn!.y, equals(-50.0)); // Mirrored
+
+        // Verify opposite curvature directions create S-curve
+        // First curve: handleOut Y is negative (curves up)
+        // Second curve: handleOut Y is positive (curves down)
+        expect(anchor1.handleOut!.y < 0, isTrue); // Upward curve
+        expect(anchor2.handleOut!.y > 0, isTrue); // Downward curve
+      });
     });
 
     group('Mixed Straight and Bezier Anchors', () {
