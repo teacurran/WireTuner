@@ -1,0 +1,383 @@
+@startuml
+title Tool Interaction Sequence - Pen Tool and Selection Tool Workflows
+
+' ============================================================================
+' This diagram illustrates the tool interaction patterns in WireTuner,
+' showing how pointer events flow through the tool framework for both
+' the Pen Tool (path creation) and Selection/Direct Selection tools (object
+' manipulation). Includes event sampling, undo grouping, and state management.
+'
+' Date: 2025-11-08
+' Version: 1.0
+' Related: docs/specs/tool_interactions.md, docs/specs/event_lifecycle.md
+' Related Tickets: T018-T024
+' ============================================================================
+
+actor User
+participant "Canvas Widget" as Canvas
+participant "Tool Manager" as ToolMgr
+
+box "Tools" #LightCyan
+  participant "Pen Tool" as PenTool
+  participant "Direct Selection\nTool" as DirectSel
+end box
+
+box "Event Recording & Sampling" #LightBlue
+  participant "Event Sampler" as Sampler
+  participant "Event Recorder" as Recorder
+end box
+
+box "Event Processing" #LightGreen
+  participant "Event Dispatcher" as Dispatcher
+  participant "Document State\n(Immutable)" as Doc
+end box
+
+box "Persistence & Undo" #LightYellow
+  participant "Event Store" as EventStore
+  participant "Snapshot Manager" as SnapMgr
+end box
+
+participant "Canvas Renderer" as Renderer
+
+' ============================================================================
+' SCENARIO 1: PEN TOOL - Creating a Path with Straight Segments
+' ============================================================================
+
+== Pen Tool: Creating a Path ==
+
+User -> ToolMgr : Activate Pen Tool
+ToolMgr -> PenTool : onActivate()
+PenTool -> PenTool : State: IDLE
+
+note right of PenTool
+  Tool lifecycle:
+  1. onActivate() initializes state
+  2. Cursor updated via CursorService
+  3. Ready for pointer events
+end note
+
+User -> Canvas : Click at point A
+Canvas -> ToolMgr : handlePointerDown(event)
+ToolMgr -> PenTool : onPointerDown(event)
+
+alt First Click (Start Path)
+  PenTool -> PenTool : State: IDLE → CREATING_PATH
+  PenTool -> Recorder : recordEvent(StartGroupEvent)
+
+  note right of Recorder
+    **Undo Grouping:**
+    StartGroupEvent marks beginning
+    of undoable operation. All events
+    until EndGroupEvent are treated
+    as single undo unit.
+  end note
+
+  Recorder -> Recorder : Assign sequence #N
+  Recorder -> Dispatcher : dispatch(StartGroupEvent)
+  Recorder -> EventStore : INSERT INTO events
+
+  PenTool -> Recorder : recordEvent(CreatePathEvent(pathId, startAnchor: A))
+  Recorder -> Recorder : Assign sequence #N+1
+  Recorder -> Dispatcher : dispatch(CreatePathEvent)
+  Dispatcher -> Doc : applyEvent(CreatePathEvent)
+  Doc -> Doc : Create new Path with anchor at A
+  Doc --> Dispatcher : New Document state
+  Recorder -> EventStore : INSERT INTO events
+
+  Recorder -> Canvas : notifyListeners()
+  Canvas -> Renderer : paint(Document)
+  Renderer --> User : Shows anchor point at A
+end
+
+User -> Canvas : Click at point B
+Canvas -> ToolMgr : handlePointerDown(event)
+ToolMgr -> PenTool : onPointerDown(event)
+
+PenTool -> Recorder : recordEvent(AddAnchorEvent(pathId, position: B, type: LINE))
+Recorder -> Recorder : Assign sequence #N+2
+Recorder -> Dispatcher : dispatch(AddAnchorEvent)
+Dispatcher -> Doc : applyEvent(AddAnchorEvent)
+Doc -> Doc : Add anchor B, create line segment A→B
+Recorder -> EventStore : INSERT INTO events
+Recorder -> Canvas : notifyListeners()
+Canvas -> Renderer : paint(Document)
+Renderer --> User : Shows line segment A→B
+
+User -> Canvas : Click at point C
+note right: Same flow as point B
+
+PenTool -> Recorder : recordEvent(AddAnchorEvent(pathId, position: C, type: LINE))
+Recorder -> Dispatcher : dispatch(AddAnchorEvent)
+Dispatcher -> Doc : applyEvent(AddAnchorEvent)
+Doc -> Doc : Add anchor C, create line segment B→C
+Recorder -> EventStore : INSERT INTO events
+Recorder -> Canvas : notifyListeners()
+Renderer --> User : Shows path A→B→C
+
+User -> Canvas : Double-click or press Enter
+Canvas -> ToolMgr : onPointerDown(event) [double-click detected]\n  OR onKeyPress(Enter)
+ToolMgr -> PenTool : finishPath()
+
+PenTool -> Recorder : recordEvent(FinishPathEvent(pathId, closed: false))
+Recorder -> Dispatcher : dispatch(FinishPathEvent)
+Dispatcher -> Doc : applyEvent(FinishPathEvent)
+Doc -> Doc : Mark path as complete
+
+PenTool -> Recorder : recordEvent(EndGroupEvent)
+note right of Recorder
+  **Undo Grouping:**
+  EndGroupEvent marks completion.
+  Single Cmd+Z will undo all events
+  between Start/End markers.
+end note
+
+Recorder -> EventStore : INSERT INTO events
+PenTool -> PenTool : State: CREATING_PATH → IDLE
+Recorder -> Canvas : notifyListeners()
+Renderer --> User : Shows completed open path
+
+' ============================================================================
+' SCENARIO 2: DIRECT SELECTION TOOL - Dragging an Anchor Point (with Sampling)
+' ============================================================================
+
+== Direct Selection Tool: Dragging an Anchor ==
+
+User -> ToolMgr : Activate Direct Selection Tool
+ToolMgr -> PenTool : onDeactivate()
+PenTool -> PenTool : Cleanup state
+
+note right of ToolMgr
+  **Tool Switch Protocol:**
+  1. Flush pending events
+  2. Deactivate current tool
+  3. Activate new tool
+  4. Update cursor
+end note
+
+ToolMgr -> Recorder : flush()
+Recorder -> EventStore : Persist buffered events
+ToolMgr -> DirectSel : onActivate()
+DirectSel -> DirectSel : State: IDLE
+
+User -> Canvas : Mouse down on anchor point
+Canvas -> ToolMgr : handlePointerDown(event)
+ToolMgr -> DirectSel : onPointerDown(event)
+
+DirectSel -> Doc : hitTestAnchors(point)
+Doc --> DirectSel : Found: pathId=P1, anchorIndex=3
+
+DirectSel -> DirectSel : State: IDLE → DRAGGING_ANCHOR\ndragContext = {pathId: P1, anchorIndex: 3}
+
+DirectSel -> Recorder : recordEvent(StartGroupEvent)
+Recorder -> EventStore : INSERT INTO events
+
+note right of DirectSel
+  Drag operation begins.
+  Subsequent moves will be sampled.
+end note
+
+User -> Canvas : Mouse move (drag at t=0ms)
+Canvas -> ToolMgr : handlePointerMove(event)
+ToolMgr -> DirectSel : onPointerMove(event)
+
+DirectSel -> Sampler : recordMove(pathId: P1, anchorIndex: 3,\nnewPosition, timestamp: t0)
+
+alt First move event
+  Sampler -> Sampler : Initialize sampling window (t0)
+  Sampler -> Recorder : recordEvent(MoveAnchorEvent(P1, 3, delta))
+
+  note right of Sampler
+    **50ms Sampling:**
+    First event emitted immediately.
+    Subsequent events buffered until
+    50ms threshold reached.
+  end note
+
+  Recorder -> Dispatcher : dispatch(MoveAnchorEvent)
+  Dispatcher -> Doc : applyEvent(MoveAnchorEvent)
+  Doc -> Doc : Create new Path with moved anchor
+  Recorder -> EventStore : INSERT INTO events
+  Recorder -> Canvas : notifyListeners()
+  Renderer --> User : Anchor position updated
+end
+
+User -> Canvas : Mouse move (drag at t=10ms)
+Canvas -> ToolMgr : handlePointerMove(event)
+ToolMgr -> DirectSel : onPointerMove(event)
+DirectSel -> Sampler : recordMove(..., timestamp: t10)
+
+Sampler -> Sampler : Buffer position (t10 - t0 = 10ms < 50ms)
+note right of Sampler
+  Movement buffered.
+  No event emitted yet.
+end note
+
+User -> Canvas : Mouse move (drag at t=25ms)
+Canvas -> ToolMgr : handlePointerMove(event)
+DirectSel -> Sampler : recordMove(..., timestamp: t25)
+Sampler -> Sampler : Buffer position (t25 - t0 = 25ms < 50ms)
+
+User -> Canvas : Mouse move (drag at t=55ms)
+Canvas -> ToolMgr : handlePointerMove(event)
+DirectSel -> Sampler : recordMove(..., timestamp: t55)
+
+alt 50ms threshold exceeded
+  Sampler -> Sampler : Emit buffered position (t55 - t0 = 55ms ≥ 50ms)
+  Sampler -> Recorder : recordEvent(MoveAnchorEvent(P1, 3, delta_from_buffered))
+
+  note right of Sampler
+    **Sampling Result:**
+    4 raw mouse moves → 1 event
+    Reduces storage by ~75%
+    Maintains smooth visual feedback
+  end note
+
+  Recorder -> Dispatcher : dispatch(MoveAnchorEvent)
+  Dispatcher -> Doc : applyEvent(MoveAnchorEvent)
+  Recorder -> EventStore : INSERT INTO events
+  Recorder -> Canvas : notifyListeners()
+  Renderer --> User : Smooth anchor movement
+
+  Sampler -> Sampler : Reset sampling window (t55)
+end
+
+note over User, Renderer
+  **Drag continues...**
+  More pointer moves occur, sampled at 50ms intervals.
+  A 2-second drag generates ~40 events instead of ~200.
+end note
+
+User -> Canvas : Mouse up (release at t=2000ms)
+Canvas -> ToolMgr : handlePointerUp(event)
+ToolMgr -> DirectSel : onPointerUp(event)
+
+DirectSel -> Sampler : flush()
+
+alt Buffered movement exists
+  Sampler -> Recorder : recordEvent(MoveAnchorEvent(final position))
+
+  note right of Sampler
+    **Flush on Release:**
+    Ensures final position is persisted
+    even if < 50ms since last sample.
+  end note
+
+  Recorder -> Dispatcher : dispatch(MoveAnchorEvent)
+  Dispatcher -> Doc : applyEvent(MoveAnchorEvent)
+  Recorder -> EventStore : INSERT INTO events
+end
+
+DirectSel -> Recorder : recordEvent(EndGroupEvent)
+Recorder -> EventStore : INSERT INTO events
+
+DirectSel -> DirectSel : State: DRAGGING_ANCHOR → IDLE
+
+ToolMgr -> Recorder : flush()
+note right of ToolMgr
+  **Pointer Up Protocol:**
+  ToolManager calls flush() after
+  pointer up to ensure all events
+  persisted before next operation.
+end note
+
+Recorder -> Canvas : notifyListeners()
+Renderer --> User : Final anchor position rendered
+
+' ============================================================================
+' SCENARIO 3: UNDO OPERATION (Event Navigation)
+' ============================================================================
+
+== Undo: Reverting the Anchor Drag ==
+
+User -> Canvas : Press Cmd+Z (Undo)
+Canvas -> ToolMgr : undo()
+
+ToolMgr -> Recorder : pauseRecording()
+note right of Recorder
+  **Pause During Undo:**
+  Prevents circular event creation
+  when replaying events to restore
+  previous state.
+end note
+
+Recorder -> Recorder : currentSequence = N\nFind previous EndGroupEvent
+Recorder -> EventStore : SELECT event_sequence\nFROM events\nWHERE event_type = 'EndGroupEvent'\nAND event_sequence < N\nORDER BY event_sequence DESC\nLIMIT 1
+
+EventStore --> Recorder : targetSequence = M (before drag group)
+
+Recorder -> SnapMgr : getSnapshotBefore(targetSequence: M)
+SnapMgr -> EventStore : SELECT snapshot_data, event_sequence\nFROM snapshots\nWHERE event_sequence <= M\nORDER BY event_sequence DESC\nLIMIT 1
+
+EventStore --> SnapMgr : Snapshot at sequence K, BLOB
+SnapMgr -> SnapMgr : Decompress and deserialize
+SnapMgr --> Recorder : Base Document at sequence K
+
+Recorder -> EventStore : SELECT * FROM events\nWHERE event_sequence > K\nAND event_sequence <= M\nORDER BY event_sequence ASC
+
+EventStore --> Recorder : Events K+1 to M
+
+loop For each event (K+1 to M)
+  Recorder -> Dispatcher : dispatch(event)
+  Dispatcher -> Doc : applyEvent(event)
+  Doc -> Doc : Rebuild state
+end
+
+Recorder -> Recorder : currentSequence = M
+Recorder -> ToolMgr : resumeRecording()
+
+note right of Recorder
+  Resume recording after state
+  restored. New events will start
+  from sequence M+1.
+end note
+
+Recorder -> Canvas : notifyListeners()
+Renderer --> User : Document state before drag (undo complete)
+
+note over User, Renderer
+  **Undo Grouping Benefits:**
+  - Single Cmd+Z undoes entire drag operation (~40 events)
+  - Users perceive drag as atomic action
+  - Matches expectations from other design tools
+end note
+
+' ============================================================================
+' ANNOTATIONS: Snapshot Management
+' ============================================================================
+
+note over SnapMgr
+  **Snapshot Triggers:**
+  - Created every 1000 events
+  - Enables fast undo/redo (< 100ms)
+  - Max 1000 events to replay
+
+  **Latency Budget:**
+  - Snapshot creation: < 25ms
+  - Undo/Redo navigation: < 100ms
+end note
+
+note over Sampler
+  **Sampling Configuration:**
+  - Threshold: 50ms (20 samples/sec)
+  - Buffering: Latest position kept
+  - Flush triggers: pointer up, tool switch
+
+  **Performance Impact:**
+  - Storage: 5-10x reduction
+  - Replay: Smooth at 20 fps
+  - Imperceptible to users
+end note
+
+note over Recorder
+  **Undo Grouping Markers:**
+  - StartGroupEvent: Begin atomic operation
+  - EndGroupEvent: Complete atomic operation
+  - Navigator finds group boundaries
+
+  **Use Cases:**
+  - Drag operations (all moves = 1 undo)
+  - Multi-step tool actions
+  - Batch modifications
+end note
+
+@enduml
