@@ -4,12 +4,15 @@ import 'package:flutter/rendering.dart';
 import 'package:logger/logger.dart';
 import 'package:uuid/uuid.dart';
 import 'package:wiretuner/application/tools/framework/tool_interface.dart';
+import 'package:wiretuner/application/tools/direct_selection/snapping_service.dart';
 import 'package:wiretuner/domain/document/document.dart';
 import 'package:wiretuner/domain/events/event_base.dart';
 import 'package:wiretuner/domain/events/selection_events.dart' as events;
 import 'package:wiretuner/domain/events/object_events.dart';
+import 'package:wiretuner/domain/events/group_events.dart';
 import 'package:wiretuner/presentation/canvas/viewport/viewport_controller.dart';
 import 'marquee_controller.dart';
+import 'object_drag_controller.dart';
 import 'dart:ui' as ui;
 
 /// Tool for selecting and manipulating vector objects.
@@ -63,13 +66,22 @@ import 'dart:ui' as ui;
 /// ```
 class SelectionTool implements ITool {
 
+  /// Creates a new selection tool.
+  ///
+  /// [document] is the document to operate on.
+  /// [viewportController] manages the canvas viewport transformations.
+  /// [eventRecorder] records user interactions as events.
+  /// [snappingService] provides optional grid snapping functionality.
   SelectionTool({
     required Document document,
     required ViewportController viewportController,
     required dynamic eventRecorder,
+    SnappingService? snappingService,
   })  : _document = document,
         _viewportController = viewportController,
-        _eventRecorder = eventRecorder {
+        _eventRecorder = eventRecorder,
+        _snappingService = snappingService ?? SnappingService(snapEnabled: false),
+        _objectDragController = ObjectDragController(snappingService: snappingService) {
     _logger.i('SelectionTool initialized');
   }
   final Document _document;
@@ -77,6 +89,12 @@ class SelectionTool implements ITool {
   final dynamic _eventRecorder;
   final Logger _logger = Logger();
   final Uuid _uuid = const Uuid();
+
+  /// Snapping service for grid snapping during object drags.
+  final SnappingService _snappingService;
+
+  /// Controller for object drag operations.
+  final ObjectDragController _objectDragController;
 
   /// Controller for marquee selection rectangle.
   MarqueeController? _marqueeController;
@@ -86,6 +104,9 @@ class SelectionTool implements ITool {
 
   /// Current cursor based on hover state.
   MouseCursor _currentCursor = SystemMouseCursors.click;
+
+  /// Whether snapping is currently enabled (toggled by Shift key).
+  bool _snappingEnabled = false;
 
   @override
   String get toolId => 'selection';
@@ -220,6 +241,14 @@ class SelectionTool implements ITool {
 
   @override
   bool onKeyPress(KeyEvent event) {
+    // Shift key enables snapping
+    if (event is KeyDownEvent &&
+        event.logicalKey == LogicalKeyboardKey.shift) {
+      _snappingEnabled = true;
+      _snappingService.setSnapEnabled(true);
+      return false; // Allow other handlers to process
+    }
+
     // Escape key cancels current operation
     if (event is KeyDownEvent &&
         event.logicalKey == LogicalKeyboardKey.escape) {
@@ -235,6 +264,21 @@ class SelectionTool implements ITool {
     return false;
   }
 
+  /// Handles key release events.
+  ///
+  /// Returns true if the event was handled, false otherwise.
+  bool onKeyRelease(KeyEvent event) {
+    // Shift key disables snapping
+    if (event is KeyUpEvent &&
+        event.logicalKey == LogicalKeyboardKey.shift) {
+      _snappingEnabled = false;
+      _snappingService.setSnapEnabled(false);
+      return false; // Allow other handlers to process
+    }
+
+    return false;
+  }
+
   @override
   void renderOverlay(ui.Canvas canvas, ui.Size size) {
     // Render marquee rectangle if active
@@ -245,35 +289,50 @@ class SelectionTool implements ITool {
 
   /// Starts a drag operation for moving selected objects.
   void _startDrag(Offset screenPos, Point worldPos, List<String> objectIds) {
+    // Generate group ID for undo grouping
+    final groupId = 'drag-${_uuid.v4()}';
+
+    // Emit StartGroupEvent for undo grouping
+    final startGroupEvent = StartGroupEvent(
+      eventId: _uuid.v4(),
+      timestamp: DateTime.now().millisecondsSinceEpoch,
+      groupId: groupId,
+      description: 'Move ${objectIds.length} object${objectIds.length > 1 ? 's' : ''}',
+    );
+    _eventRecorder.recordEvent(startGroupEvent);
+
     _dragState = _DragState(
       startScreenPos: screenPos,
       startWorldPos: worldPos,
       currentWorldPos: worldPos,
       selectedObjectIds: objectIds,
+      groupId: groupId,
     );
     _currentCursor = SystemMouseCursors.move;
-    _logger.d('Started drag operation for ${_dragState!.selectedObjectIds.length} objects');
+    _logger.d('Started drag operation for ${_dragState!.selectedObjectIds.length} objects (groupId: $groupId)');
   }
 
   /// Updates the drag operation with new position.
   void _updateDrag(Offset screenPos, Point worldPos) {
     if (_dragState == null) return;
 
-    final previousWorldPos = _dragState!.currentWorldPos;
+    // Update current position
     _dragState = _dragState!.copyWith(
       currentScreenPos: screenPos,
       currentWorldPos: worldPos,
     );
 
-    // Calculate delta from previous position
-    final delta = Point(
-      x: worldPos.x - previousWorldPos.x,
-      y: worldPos.y - previousWorldPos.y,
+    // Calculate cumulative delta from start position (not previous frame)
+    // This ensures deterministic event replay
+    final cumulativeDelta = _objectDragController.calculateSnappedDelta(
+      startWorldPos: _dragState!.startWorldPos,
+      currentWorldPos: worldPos,
+      snapEnabled: _snappingEnabled,
     );
 
     // Only emit event if delta is non-zero
-    if (delta.x != 0 || delta.y != 0) {
-      _recordMoveEvent(_dragState!.selectedObjectIds, delta);
+    if (cumulativeDelta.x != 0 || cumulativeDelta.y != 0) {
+      _recordMoveEvent(_dragState!.selectedObjectIds, cumulativeDelta);
     }
   }
 
@@ -283,6 +342,15 @@ class SelectionTool implements ITool {
 
     _logger.d('Finished drag operation');
     _flushDragEvent();
+
+    // Emit EndGroupEvent for undo grouping
+    final endGroupEvent = EndGroupEvent(
+      eventId: _uuid.v4(),
+      timestamp: DateTime.now().millisecondsSinceEpoch,
+      groupId: _dragState!.groupId,
+    );
+    _eventRecorder.recordEvent(endGroupEvent);
+
     _dragState = null;
     _currentCursor = SystemMouseCursors.click;
   }
@@ -385,12 +453,14 @@ class _DragState {
     this.currentScreenPos,
     required this.currentWorldPos,
     required this.selectedObjectIds,
+    required this.groupId,
   });
   final Offset startScreenPos;
   final Point startWorldPos;
   final Offset? currentScreenPos;
   final Point currentWorldPos;
   final List<String> selectedObjectIds;
+  final String groupId;
 
   _DragState copyWith({
     Offset? currentScreenPos,
@@ -401,5 +471,6 @@ class _DragState {
       currentScreenPos: currentScreenPos ?? this.currentScreenPos,
       currentWorldPos: currentWorldPos ?? this.currentWorldPos,
       selectedObjectIds: selectedObjectIds,
+      groupId: groupId,
     );
 }
