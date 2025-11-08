@@ -63,7 +63,7 @@ void main() {
       );
 
       final painter = SelectionOverlayPainter(
-        selection: Selection(objectIds: {'path-1'}),
+        selection: const Selection(objectIds: {'path-1'}),
         paths: {'path-1': path},
         shapes: {},
         viewportController: viewportController,
@@ -101,7 +101,7 @@ void main() {
       );
 
       final painter = SelectionOverlayPainter(
-        selection: Selection(objectIds: {'path-1'}),
+        selection: const Selection(objectIds: {'path-1'}),
         paths: {'path-1': path},
         shapes: {},
         viewportController: viewportController,
@@ -127,14 +127,14 @@ void main() {
     testWidgets('renders path with Bezier handles', (WidgetTester tester) async {
       // Arrange: Path with Bezier curve and handles
       final path = domain.Path(
-        anchors: [
+        anchors: const [
           AnchorPoint(
-            position: const Point(x: 0, y: 0),
-            handleOut: const Point(x: 25, y: 0),
+            position: Point(x: 0, y: 0),
+            handleOut: Point(x: 25, y: 0),
           ),
           AnchorPoint(
-            position: const Point(x: 100, y: 100),
-            handleIn: const Point(x: -25, y: 0),
+            position: Point(x: 100, y: 100),
+            handleIn: Point(x: -25, y: 0),
           ),
         ],
         segments: [
@@ -143,7 +143,7 @@ void main() {
       );
 
       final painter = SelectionOverlayPainter(
-        selection: Selection(objectIds: {'path-1'}),
+        selection: const Selection(objectIds: {'path-1'}),
         paths: {'path-1': path},
         shapes: {},
         viewportController: viewportController,
@@ -175,7 +175,7 @@ void main() {
       );
 
       final painter = SelectionOverlayPainter(
-        selection: Selection(objectIds: {'shape-1'}),
+        selection: const Selection(objectIds: {'shape-1'}),
         paths: {},
         shapes: {'shape-1': shape},
         viewportController: viewportController,
@@ -207,7 +207,7 @@ void main() {
       );
 
       final painter = SelectionOverlayPainter(
-        selection: Selection(objectIds: {'shape-1'}),
+        selection: const Selection(objectIds: {'shape-1'}),
         paths: {},
         shapes: {'shape-1': shape},
         viewportController: viewportController,
@@ -244,7 +244,7 @@ void main() {
       };
 
       final painter = SelectionOverlayPainter(
-        selection: Selection(objectIds: {'path-1', 'path-2'}),
+        selection: const Selection(objectIds: {'path-1', 'path-2'}),
         paths: paths,
         shapes: {},
         viewportController: viewportController,
@@ -280,7 +280,7 @@ void main() {
       );
 
       final painter = SelectionOverlayPainter(
-        selection: Selection(objectIds: {'path-1'}),
+        selection: const Selection(objectIds: {'path-1'}),
         paths: {'path-1': path},
         shapes: {},
         viewportController: viewportController,
@@ -316,7 +316,7 @@ void main() {
       );
 
       final painter = SelectionOverlayPainter(
-        selection: Selection(objectIds: {'path-1'}),
+        selection: const Selection(objectIds: {'path-1'}),
         paths: {'path-1': path},
         shapes: {},
         viewportController: viewportController,
@@ -352,7 +352,7 @@ void main() {
       );
 
       final painter1 = SelectionOverlayPainter(
-        selection: Selection(objectIds: {'path-1'}),
+        selection: const Selection(objectIds: {'path-1'}),
         paths: {'path-1': path},
         shapes: {},
         viewportController: viewportController,
@@ -497,9 +497,9 @@ void main() {
       // Arrange: Path with handle
       final path = domain.Path(
         anchors: [
-          AnchorPoint(
-            position: const Point(x: 0, y: 0),
-            handleOut: const Point(x: 20, y: 0),
+          const AnchorPoint(
+            position: Point(x: 0, y: 0),
+            handleOut: Point(x: 20, y: 0),
           ),
           AnchorPoint.corner(const Point(x: 100, y: 100)),
         ],

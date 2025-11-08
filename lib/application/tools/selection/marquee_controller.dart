@@ -48,6 +48,11 @@ import 'package:wiretuner/presentation/canvas/viewport/viewport_controller.dart'
 /// final selectedObjects = document.objectsInBounds(bounds);
 /// ```
 class MarqueeController {
+
+  MarqueeController({
+    required this.startScreenPos,
+    required this.startWorldPos,
+  });
   /// Start position in screen coordinates.
   final Offset startScreenPos;
 
@@ -71,11 +76,6 @@ class MarqueeController {
 
   /// Dash pattern for marquee border (line, gap).
   static const List<double> dashPattern = [4.0, 4.0];
-
-  MarqueeController({
-    required this.startScreenPos,
-    required this.startWorldPos,
-  });
 
   /// Updates the end position of the marquee rectangle.
   void updateEnd(Offset screenPos, Point worldPos) {

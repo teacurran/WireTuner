@@ -60,15 +60,6 @@ typedef SnapshotTelemetryCallback = void Function({
 /// }
 /// ```
 class SnapshotManager {
-  final SnapshotStore _snapshotStore;
-  final SnapshotSerializer _serializer;
-  final int snapshotFrequency;
-  final SnapshotTelemetryCallback? onSnapshotCreated;
-  final Logger _logger = Logger();
-
-  // Telemetry counters
-  int _totalSnapshotsCreated = 0;
-  int _eventsProcessedSinceLastSnapshot = 0;
 
   /// Creates a SnapshotManager.
   ///
@@ -84,6 +75,15 @@ class SnapshotManager {
     this.onSnapshotCreated,
   })  : _snapshotStore = snapshotStore,
         _serializer = SnapshotSerializer(enableCompression: enableCompression);
+  final SnapshotStore _snapshotStore;
+  final SnapshotSerializer _serializer;
+  final int snapshotFrequency;
+  final SnapshotTelemetryCallback? onSnapshotCreated;
+  final Logger _logger = Logger();
+
+  // Telemetry counters
+  int _totalSnapshotsCreated = 0;
+  int _eventsProcessedSinceLastSnapshot = 0;
 
   /// Determines if a snapshot should be created based on event count.
   ///

@@ -16,14 +16,14 @@ import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 /// All database operations use parameterized queries to prevent SQL injection
 /// and follow the dependency injection pattern (Database instance passed to constructor).
 class SnapshotStore {
-  final Database _db;
-  static final Logger _logger = Logger();
 
   /// Creates a SnapshotStore with the given database connection.
   ///
   /// The database must have the snapshots table schema already created.
   /// Use DatabaseProvider to manage database lifecycle.
   SnapshotStore(this._db);
+  final Database _db;
+  static final Logger _logger = Logger();
 
   /// Inserts a snapshot into the database and returns the snapshot_id.
   ///

@@ -59,9 +59,7 @@ void main() {
     }
 
     /// Helper to create test snapshot data
-    Uint8List createTestSnapshotData(String content) {
-      return Uint8List.fromList(content.codeUnits);
-    }
+    Uint8List createTestSnapshotData(String content) => Uint8List.fromList(content.codeUnits);
 
     group('insertSnapshot', () {
       test('stores BLOB with metadata correctly', () async {
@@ -139,7 +137,7 @@ void main() {
 
         // Create realistic snapshot using SnapshotSerializer
         final serializer = SnapshotSerializer(enableCompression: true);
-        final document = Document(
+        const document = Document(
           id: 'doc1',
           title: 'Test Document',
           layers: [

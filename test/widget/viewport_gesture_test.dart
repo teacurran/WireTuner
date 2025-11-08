@@ -75,10 +75,10 @@ void main() {
 
     test('syncs from domain viewport correctly', () {
       // Create domain viewport
-      final domainViewport = domain.Viewport(
-        pan: const Point(x: 100, y: 50),
+      const domainViewport = domain.Viewport(
+        pan: Point(x: 100, y: 50),
         zoom: 1.5,
-        canvasSize: const domain.Size(width: 1024, height: 768),
+        canvasSize: domain.Size(width: 1024, height: 768),
       );
 
       state.syncFromDomain(domainViewport);
@@ -592,7 +592,7 @@ void main() {
 
     test('world to screen conversion at default zoom', () {
       // At zoom 1.0, pan (0,0), world coordinates map directly to screen
-      final worldPoint = const Point(x: 100, y: 50);
+      const worldPoint = Point(x: 100, y: 50);
       final screenPoint = controller.worldToScreen(worldPoint);
 
       expect(screenPoint.dx, 100);
@@ -601,7 +601,7 @@ void main() {
 
     test('screen to world conversion at default zoom', () {
       // At zoom 1.0, pan (0,0), screen coordinates map directly to world
-      final screenPoint = const Offset(100, 50);
+      const screenPoint = Offset(100, 50);
       final worldPoint = controller.screenToWorld(screenPoint);
 
       expect(worldPoint.x, 100);
@@ -611,7 +611,7 @@ void main() {
     test('world to screen with zoom', () {
       controller.setZoom(2.0);
 
-      final worldPoint = const Point(x: 100, y: 50);
+      const worldPoint = Point(x: 100, y: 50);
       final screenPoint = controller.worldToScreen(worldPoint);
 
       // World coordinate should be scaled by zoom
@@ -622,7 +622,7 @@ void main() {
     test('screen to world with zoom', () {
       controller.setZoom(2.0);
 
-      final screenPoint = const Offset(200, 100);
+      const screenPoint = Offset(200, 100);
       final worldPoint = controller.screenToWorld(screenPoint);
 
       // Screen coordinate should be divided by zoom
@@ -633,7 +633,7 @@ void main() {
     test('world to screen with pan', () {
       controller.setPan(const Offset(50, 30));
 
-      final worldPoint = const Point(x: 100, y: 50);
+      const worldPoint = Point(x: 100, y: 50);
       final screenPoint = controller.worldToScreen(worldPoint);
 
       // World coordinate should be offset by pan
@@ -644,7 +644,7 @@ void main() {
     test('screen to world with pan', () {
       controller.setPan(const Offset(50, 30));
 
-      final screenPoint = const Offset(150, 80);
+      const screenPoint = Offset(150, 80);
       final worldPoint = controller.screenToWorld(screenPoint);
 
       // Screen coordinate should have pan subtracted
@@ -656,7 +656,7 @@ void main() {
       controller.setPan(const Offset(50, 30));
       controller.setZoom(2.0);
 
-      final worldPoint = const Point(x: 100, y: 50);
+      const worldPoint = Point(x: 100, y: 50);
       final screenPoint = controller.worldToScreen(worldPoint);
 
       // Apply zoom then pan: (100*2 + 50, 50*2 + 30) = (250, 130)
@@ -668,7 +668,7 @@ void main() {
       controller.setPan(const Offset(50, 30));
       controller.setZoom(2.0);
 
-      final screenPoint = const Offset(250, 130);
+      const screenPoint = Offset(250, 130);
       final worldPoint = controller.screenToWorld(screenPoint);
 
       // Reverse: ((250-50)/2, (130-30)/2) = (100, 50)

@@ -1,6 +1,5 @@
 import 'dart:ui' as ui;
 
-import 'package:wiretuner/domain/models/anchor_point.dart';
 import 'package:wiretuner/domain/models/geometry/point_extensions.dart';
 import 'package:wiretuner/domain/models/path.dart' as domain;
 import 'package:wiretuner/domain/models/segment.dart';
@@ -11,6 +10,12 @@ import 'package:wiretuner/domain/models/shape.dart';
 /// Contains the converted ui.Path along with metadata used for cache
 /// invalidation decisions.
 class _CachedPathData {
+
+  _CachedPathData({
+    required this.path,
+    required this.zoomLevel,
+    required this.domainHash,
+  });
   /// The converted dart:ui Path ready for rendering.
   final ui.Path path;
 
@@ -25,12 +30,6 @@ class _CachedPathData {
   /// Used to detect when the underlying domain object has changed
   /// and the cache needs invalidation.
   final int domainHash;
-
-  _CachedPathData({
-    required this.path,
-    required this.zoomLevel,
-    required this.domainHash,
-  });
 }
 
 /// Service responsible for converting domain paths and shapes to ui.Path.
@@ -82,14 +81,6 @@ class _CachedPathData {
 /// The returned ui.Path is in **world coordinates**. The viewport
 /// transformation should be applied to the canvas before rendering.
 class PathRenderer {
-  /// Cache of converted paths indexed by object ID.
-  final Map<String, _CachedPathData> _cache = {};
-
-  /// Threshold for zoom-based cache invalidation.
-  ///
-  /// If the zoom level changes by more than this ratio, the cache is
-  /// invalidated. Default is 0.1 (10% change).
-  final double zoomInvalidationThreshold;
 
   /// Creates a PathRenderer with optional configuration.
   ///
@@ -99,6 +90,14 @@ class PathRenderer {
   PathRenderer({
     this.zoomInvalidationThreshold = 0.1,
   });
+  /// Cache of converted paths indexed by object ID.
+  final Map<String, _CachedPathData> _cache = {};
+
+  /// Threshold for zoom-based cache invalidation.
+  ///
+  /// If the zoom level changes by more than this ratio, the cache is
+  /// invalidated. Default is 0.1 (10% change).
+  final double zoomInvalidationThreshold;
 
   /// Gets or creates a ui.Path from a domain Path.
   ///

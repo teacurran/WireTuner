@@ -3,10 +3,8 @@ import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:logger/logger.dart';
 import 'package:wiretuner/application/tools/shapes/shape_base.dart';
-import 'package:wiretuner/domain/document/document.dart';
 import 'package:wiretuner/domain/events/event_base.dart';
 import 'package:wiretuner/domain/models/shape.dart' as shape_model;
-import 'package:wiretuner/presentation/canvas/viewport/viewport_controller.dart';
 
 /// Tool for creating star shapes.
 ///
@@ -37,6 +35,12 @@ import 'package:wiretuner/presentation/canvas/viewport/viewport_controller.dart'
 ///
 /// Related: T028 (Star Tool), I4.T2
 class StarTool extends ShapeToolBase {
+
+  StarTool({
+    required super.document,
+    required super.viewportController,
+    required super.eventRecorder,
+  });
   final Logger _logger = Logger();
 
   /// Number of points for the star (minimum 3).
@@ -44,24 +48,14 @@ class StarTool extends ShapeToolBase {
   /// Future enhancement: Make this configurable via property panel.
   /// For MVP, use fixed value of 5 (classic 5-point star).
   static const int _defaultPointCount = 5;
-  int _pointCount = _defaultPointCount;
+  final int _pointCount = _defaultPointCount;
 
   /// Inner radius as a ratio of outer radius (0.0 to 1.0).
   ///
   /// Future enhancement: Make this adjustable via property panel.
   /// For MVP, use fixed value of 0.5 (pleasing star shape).
   static const double _defaultInnerRadiusRatio = 0.5;
-  double _innerRadiusRatio = _defaultInnerRadiusRatio;
-
-  StarTool({
-    required Document document,
-    required ViewportController viewportController,
-    required dynamic eventRecorder,
-  }) : super(
-          document: document,
-          viewportController: viewportController,
-          eventRecorder: eventRecorder,
-        );
+  final double _innerRadiusRatio = _defaultInnerRadiusRatio;
 
   @override
   String get toolId => 'star';
@@ -211,7 +205,7 @@ class StarTool extends ShapeToolBase {
   ) {
     final labels = <String>[];
     if (isAltPressed) labels.add('From Center');
-    labels.add('${_pointCount} points');
+    labels.add('$_pointCount points');
 
     if (labels.isEmpty) return;
 

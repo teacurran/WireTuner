@@ -44,22 +44,6 @@ import 'event_sampler.dart';
 /// - **ChangeNotifier**: Emits notifications after successful persistence for UI updates
 /// - **Backpressure Monitoring**: Warns when event buffer age exceeds threshold
 class EventRecorder with ChangeNotifier {
-  final EventStore _eventStore;
-  final String _documentId;
-  late final EventSampler _sampler;
-  bool _isPaused = false;
-  final Logger _logger = Logger();
-
-  /// Timestamp of when the current buffered event was first recorded.
-  /// Used to track how long an event has been waiting in the sampler buffer.
-  DateTime? _bufferedEventTimestamp;
-
-  /// Threshold in milliseconds for backpressure warning.
-  /// If a buffered event waits longer than this duration, a warning is logged.
-  final int _backpressureThresholdMs;
-
-  /// Count of events successfully persisted (for metrics/testing).
-  int _persistedEventCount = 0;
 
   /// Creates an [EventRecorder] for the specified document.
   ///
@@ -81,6 +65,22 @@ class EventRecorder with ChangeNotifier {
     );
     _logger.i('EventRecorder initialized for document: $_documentId');
   }
+  final EventStore _eventStore;
+  final String _documentId;
+  late final EventSampler _sampler;
+  bool _isPaused = false;
+  final Logger _logger = Logger();
+
+  /// Timestamp of when the current buffered event was first recorded.
+  /// Used to track how long an event has been waiting in the sampler buffer.
+  DateTime? _bufferedEventTimestamp;
+
+  /// Threshold in milliseconds for backpressure warning.
+  /// If a buffered event waits longer than this duration, a warning is logged.
+  final int _backpressureThresholdMs;
+
+  /// Count of events successfully persisted (for metrics/testing).
+  int _persistedEventCount = 0;
 
   @override
   void dispose() {

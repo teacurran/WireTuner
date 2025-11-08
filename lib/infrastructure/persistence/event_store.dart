@@ -9,10 +9,10 @@ import 'package:wiretuner/api/event_schema.dart';
 /// foundation of the event sourcing architecture. Events are never modified
 /// after insertion, only appended.
 class EventStore {
-  final Database _db;
-  static final Logger _logger = Logger();
 
   EventStore(this._db);
+  final Database _db;
+  static final Logger _logger = Logger();
 
   /// Inserts an event into the event log and returns the auto-incremented event_id.
   ///

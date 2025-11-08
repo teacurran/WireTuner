@@ -328,55 +328,55 @@ class Shape with _$Shape {
         position: _rotatePoint(Point(x: right - r, y: top)),
         handleOut: Point(x: handleDistance, y: 0),
         anchorType: ap.AnchorType.smooth,
-      ));
+      ),);
       anchors.add(ap.AnchorPoint(
         position: _rotatePoint(Point(x: right, y: top + r)),
         handleIn: Point(x: 0, y: -handleDistance),
         anchorType: ap.AnchorType.smooth,
-      ));
+      ),);
 
       // Bottom-right corner arc
       anchors.add(ap.AnchorPoint(
         position: _rotatePoint(Point(x: right, y: bottom - r)),
         handleOut: Point(x: 0, y: handleDistance),
         anchorType: ap.AnchorType.smooth,
-      ));
+      ),);
       anchors.add(ap.AnchorPoint(
         position: _rotatePoint(Point(x: right - r, y: bottom)),
         handleIn: Point(x: handleDistance, y: 0),
         anchorType: ap.AnchorType.smooth,
-      ));
+      ),);
 
       // Bottom-left corner arc
       anchors.add(ap.AnchorPoint(
         position: _rotatePoint(Point(x: left + r, y: bottom)),
         handleOut: Point(x: -handleDistance, y: 0),
         anchorType: ap.AnchorType.smooth,
-      ));
+      ),);
       anchors.add(ap.AnchorPoint(
         position: _rotatePoint(Point(x: left, y: bottom - r)),
         handleIn: Point(x: 0, y: handleDistance),
         anchorType: ap.AnchorType.smooth,
-      ));
+      ),);
 
       // Top-left corner arc
       anchors.add(ap.AnchorPoint(
         position: _rotatePoint(Point(x: left, y: top + r)),
         handleOut: Point(x: 0, y: -handleDistance),
         anchorType: ap.AnchorType.smooth,
-      ));
+      ),);
       anchors.add(ap.AnchorPoint(
         position: _rotatePoint(Point(x: left + r, y: top)),
         handleIn: Point(x: -handleDistance, y: 0),
         anchorType: ap.AnchorType.smooth,
-      ));
+      ),);
 
       // Create segments connecting anchors
       for (int i = 0; i < anchors.length; i++) {
         segments.add(Segment.bezier(
           startIndex: i,
           endIndex: (i + 1) % anchors.length,
-        ));
+        ),);
       }
 
       return Path(anchors: anchors, segments: segments, closed: true);

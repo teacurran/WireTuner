@@ -30,8 +30,6 @@ import 'package:wiretuner/domain/models/geometry/rectangle.dart';
 /// ```
 @immutable
 class Transform {
-  /// The underlying transformation matrix.
-  final Matrix4 matrix;
 
   /// Creates a transform from a Matrix4.
   ///
@@ -49,9 +47,7 @@ class Transform {
   /// final result = t.transformPoint(p);
   /// // result: Point(x: 5, y: 10) - unchanged
   /// ```
-  factory Transform.identity() {
-    return Transform(Matrix4.identity());
-  }
+  factory Transform.identity() => Transform(Matrix4.identity());
 
   /// Creates a translation transform.
   ///
@@ -64,9 +60,7 @@ class Transform {
   /// final result = t.transformPoint(p);
   /// // result: Point(x: 15, y: 25)
   /// ```
-  factory Transform.translate(double dx, double dy) {
-    return Transform(Matrix4.identity()..translate(dx, dy));
-  }
+  factory Transform.translate(double dx, double dy) => Transform(Matrix4.identity()..translate(dx, dy));
 
   /// Creates a rotation transform.
   ///
@@ -80,9 +74,7 @@ class Transform {
   /// final result = t.transformPoint(p);
   /// // result: Point(x: 0, y: 1) approximately
   /// ```
-  factory Transform.rotate(double angleInRadians) {
-    return Transform(Matrix4.identity()..rotateZ(angleInRadians));
-  }
+  factory Transform.rotate(double angleInRadians) => Transform(Matrix4.identity()..rotateZ(angleInRadians));
 
   /// Creates a rotation transform around a specific point.
   ///
@@ -117,9 +109,7 @@ class Transform {
   /// final result = t.transformPoint(p);
   /// // result: Point(x: 10, y: 30)
   /// ```
-  factory Transform.scale(double sx, double sy) {
-    return Transform(Matrix4.identity()..scale(sx, sy));
-  }
+  factory Transform.scale(double sx, double sy) => Transform(Matrix4.identity()..scale(sx, sy));
 
   /// Creates a uniform scale transform.
   ///
@@ -132,9 +122,7 @@ class Transform {
   /// final result = t.transformPoint(p);
   /// // result: Point(x: 6, y: 8)
   /// ```
-  factory Transform.uniformScale(double scale) {
-    return Transform.scale(scale, scale);
-  }
+  factory Transform.uniformScale(double scale) => Transform.scale(scale, scale);
 
   /// Creates a scale transform around a specific point.
   ///
@@ -174,6 +162,8 @@ class Transform {
     matrix[4] = math.tan(angleY); // Skew Y
     return Transform(matrix);
   }
+  /// The underlying transformation matrix.
+  final Matrix4 matrix;
 
   /// Composes this transform with another transform.
   ///
@@ -277,24 +267,18 @@ class Transform {
   }
 
   /// Whether this transform is the identity transform.
-  bool get isIdentity {
-    return matrix.isIdentity();
-  }
+  bool get isIdentity => matrix.isIdentity();
 
   /// Extracts the translation component of this transform.
   ///
   /// Returns the (dx, dy) translation as a Point.
-  Point get translation {
-    return Point(x: matrix.getTranslation().x, y: matrix.getTranslation().y);
-  }
+  Point get translation => Point(x: matrix.getTranslation().x, y: matrix.getTranslation().y);
 
   /// Extracts the rotation angle (in radians) from this transform.
   ///
   /// This assumes the transform only contains rotation (no skew).
   /// For complex transforms, this may not be accurate.
-  double get rotation {
-    return math.atan2(matrix.entry(1, 0), matrix.entry(0, 0));
-  }
+  double get rotation => math.atan2(matrix.entry(1, 0), matrix.entry(0, 0));
 
   /// Extracts the scale factors from this transform.
   ///
@@ -338,7 +322,5 @@ class Transform {
   }
 
   @override
-  String toString() {
-    return 'Transform(matrix: ${matrix.storage})';
-  }
+  String toString() => 'Transform(matrix: ${matrix.storage})';
 }

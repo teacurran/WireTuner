@@ -31,15 +31,13 @@ class MockEventRecorder {
 }
 
 /// Helper to verify if two points are close (within epsilon).
-Matcher closeToPoint(Point expected, {double epsilon = 0.01}) {
-  return _CloseToPoint(expected, epsilon);
-}
+Matcher closeToPoint(Point expected, {double epsilon = 0.01}) => _CloseToPoint(expected, epsilon);
 
 class _CloseToPoint extends Matcher {
-  final Point expected;
-  final double epsilon;
 
   _CloseToPoint(this.expected, this.epsilon);
+  final Point expected;
+  final double epsilon;
 
   @override
   bool matches(item, Map matchState) {
@@ -50,9 +48,7 @@ class _CloseToPoint extends Matcher {
   }
 
   @override
-  Description describe(Description description) {
-    return description.add('close to Point(x: ${expected.x}, y: ${expected.y}) within $epsilon');
-  }
+  Description describe(Description description) => description.add('close to Point(x: ${expected.x}, y: ${expected.y}) within $epsilon');
 }
 
 void main() {
@@ -73,17 +69,17 @@ void main() {
       eventRecorder = MockEventRecorder();
 
       // Create an empty test document
-      final layer = Layer(
+      const layer = Layer(
         id: 'layer-1',
         name: 'Test Layer',
         objects: [],
       );
 
-      document = Document(
+      document = const Document(
         id: 'doc-1',
         title: 'Test Document',
         layers: [layer],
-        selection: const Selection(),
+        selection: Selection(),
       );
 
       polygonTool = PolygonTool(
@@ -103,17 +99,17 @@ void main() {
     group('Basic Drag Interaction', () {
       test('should create polygon with correct parameters on drag', () {
         // Drag from (100, 100) to (200, 200)
-        polygonTool.onPointerDown(PointerDownEvent(
-          position: const ui.Offset(100, 100),
-        ));
+        polygonTool.onPointerDown(const PointerDownEvent(
+          position: ui.Offset(100, 100),
+        ),);
 
-        polygonTool.onPointerMove(PointerMoveEvent(
-          position: const ui.Offset(200, 200),
-        ));
+        polygonTool.onPointerMove(const PointerMoveEvent(
+          position: ui.Offset(200, 200),
+        ),);
 
-        polygonTool.onPointerUp(PointerUpEvent(
-          position: const ui.Offset(200, 200),
-        ));
+        polygonTool.onPointerUp(const PointerUpEvent(
+          position: ui.Offset(200, 200),
+        ),);
 
         // Should have emitted one CreateShapeEvent
         expect(eventRecorder.recordedEvents.length, equals(1));
@@ -138,13 +134,13 @@ void main() {
 
       test('should normalize dimensions when dragging in any direction', () {
         // Drag from bottom-right to top-left (reverse direction)
-        polygonTool.onPointerDown(PointerDownEvent(
-          position: const ui.Offset(200, 200),
-        ));
+        polygonTool.onPointerDown(const PointerDownEvent(
+          position: ui.Offset(200, 200),
+        ),);
 
-        polygonTool.onPointerUp(PointerUpEvent(
-          position: const ui.Offset(100, 100),
-        ));
+        polygonTool.onPointerUp(const PointerUpEvent(
+          position: ui.Offset(100, 100),
+        ),);
 
         final createShape =
             eventRecorder.recordedEvents[0] as CreateShapeEvent;
@@ -159,13 +155,13 @@ void main() {
 
       test('should use max dimension for non-square drag', () {
         // Drag rectangle: width > height
-        polygonTool.onPointerDown(PointerDownEvent(
-          position: const ui.Offset(100, 100),
-        ));
+        polygonTool.onPointerDown(const PointerDownEvent(
+          position: ui.Offset(100, 100),
+        ),);
 
-        polygonTool.onPointerUp(PointerUpEvent(
-          position: const ui.Offset(300, 150),
-        ));
+        polygonTool.onPointerUp(const PointerUpEvent(
+          position: ui.Offset(300, 150),
+        ),);
 
         final params =
             (eventRecorder.recordedEvents[0] as CreateShapeEvent).parameters;
@@ -176,13 +172,13 @@ void main() {
 
       test('should not create polygon if drag distance below threshold', () {
         // Very small drag (< 5px)
-        polygonTool.onPointerDown(PointerDownEvent(
-          position: const ui.Offset(100, 100),
-        ));
+        polygonTool.onPointerDown(const PointerDownEvent(
+          position: ui.Offset(100, 100),
+        ),);
 
-        polygonTool.onPointerUp(PointerUpEvent(
-          position: const ui.Offset(102, 101),
-        ));
+        polygonTool.onPointerUp(const PointerUpEvent(
+          position: ui.Offset(102, 101),
+        ),);
 
         // Should not emit any events
         expect(eventRecorder.recordedEvents.length, equals(0));
@@ -191,19 +187,19 @@ void main() {
 
     group('Parameter Validation', () {
       test('should enforce minimum 3 sides', () {
-        polygonTool.onPointerDown(PointerDownEvent(
-          position: const ui.Offset(100, 100),
-        ));
+        polygonTool.onPointerDown(const PointerDownEvent(
+          position: ui.Offset(100, 100),
+        ),);
 
-        polygonTool.onPointerUp(PointerUpEvent(
-          position: const ui.Offset(200, 200),
-        ));
+        polygonTool.onPointerUp(const PointerUpEvent(
+          position: ui.Offset(200, 200),
+        ),);
 
         final params =
             (eventRecorder.recordedEvents[0] as CreateShapeEvent).parameters;
 
         // Minimum 3 sides enforced
-        expect(params['sides']!, greaterThanOrEqualTo(3.0));
+        expect(params['sides'], greaterThanOrEqualTo(3.0));
       });
     });
 
@@ -212,13 +208,13 @@ void main() {
         // Simulate Option/Alt key press
         await simulateKeyDownEvent(LogicalKeyboardKey.altLeft);
 
-        polygonTool.onPointerDown(PointerDownEvent(
-          position: const ui.Offset(150, 150), // Center
-        ));
+        polygonTool.onPointerDown(const PointerDownEvent(
+          position: ui.Offset(150, 150), // Center
+        ),);
 
-        polygonTool.onPointerUp(PointerUpEvent(
-          position: const ui.Offset(200, 175), // 50px right, 25px down
-        ));
+        polygonTool.onPointerUp(const PointerUpEvent(
+          position: ui.Offset(200, 175), // 50px right, 25px down
+        ),);
 
         final params =
             (eventRecorder.recordedEvents[0] as CreateShapeEvent).parameters;
@@ -238,19 +234,19 @@ void main() {
     group('Event Replay', () {
       test('should reproduce identical geometry from event parameters', () {
         // Create polygon via tool
-        polygonTool.onPointerDown(PointerDownEvent(
-          position: const ui.Offset(100, 100),
-        ));
+        polygonTool.onPointerDown(const PointerDownEvent(
+          position: ui.Offset(100, 100),
+        ),);
 
-        polygonTool.onPointerUp(PointerUpEvent(
-          position: const ui.Offset(200, 200),
-        ));
+        polygonTool.onPointerUp(const PointerUpEvent(
+          position: ui.Offset(200, 200),
+        ),);
 
         final event = eventRecorder.recordedEvents[0] as CreateShapeEvent;
 
         // Create original shape (what tool created)
         final originalShape = shape_model.Shape.polygon(
-          center: Point(x: 150, y: 150),
+          center: const Point(x: 150, y: 150),
           radius: 50,
           sides: 5,
           rotation: 0,
@@ -287,29 +283,29 @@ void main() {
     group('Escape Key Cancellation', () {
       testWidgets('should cancel polygon creation on Escape',
           (tester) async {
-        polygonTool.onPointerDown(PointerDownEvent(
-          position: const ui.Offset(100, 100),
-        ));
+        polygonTool.onPointerDown(const PointerDownEvent(
+          position: ui.Offset(100, 100),
+        ),);
 
-        polygonTool.onPointerMove(PointerMoveEvent(
-          position: const ui.Offset(200, 200),
-        ));
+        polygonTool.onPointerMove(const PointerMoveEvent(
+          position: ui.Offset(200, 200),
+        ),);
 
         // Press Escape before pointer up
         await tester.sendKeyDownEvent(LogicalKeyboardKey.escape);
 
         // The escape key should trigger cancellation
         final handled = polygonTool.onKeyPress(
-          KeyDownEvent(
+          const KeyDownEvent(
             logicalKey: LogicalKeyboardKey.escape,
             physicalKey: PhysicalKeyboardKey.escape,
             timeStamp: Duration.zero,
           ),
         );
 
-        polygonTool.onPointerUp(PointerUpEvent(
-          position: const ui.Offset(200, 200),
-        ));
+        polygonTool.onPointerUp(const PointerUpEvent(
+          position: ui.Offset(200, 200),
+        ),);
 
         // Should not emit any events (cancelled)
         expect(eventRecorder.recordedEvents.length, equals(0));
@@ -321,18 +317,18 @@ void main() {
 
     group('Tool Lifecycle', () {
       test('should reset state on deactivation', () {
-        polygonTool.onPointerDown(PointerDownEvent(
-          position: const ui.Offset(100, 100),
-        ));
+        polygonTool.onPointerDown(const PointerDownEvent(
+          position: ui.Offset(100, 100),
+        ),);
 
         // Deactivate mid-drag
         polygonTool.onDeactivate();
 
         // Reactivate and try to finish drag
         polygonTool.onActivate();
-        polygonTool.onPointerUp(PointerUpEvent(
-          position: const ui.Offset(200, 200),
-        ));
+        polygonTool.onPointerUp(const PointerUpEvent(
+          position: ui.Offset(200, 200),
+        ),);
 
         // Should not emit events (state was reset)
         expect(eventRecorder.recordedEvents.length, equals(0));
@@ -353,17 +349,17 @@ void main() {
       );
       eventRecorder = MockEventRecorder();
 
-      final layer = Layer(
+      const layer = Layer(
         id: 'layer-1',
         name: 'Test Layer',
         objects: [],
       );
 
-      document = Document(
+      document = const Document(
         id: 'doc-1',
         title: 'Test Document',
         layers: [layer],
-        selection: const Selection(),
+        selection: Selection(),
       );
 
       starTool = StarTool(
@@ -383,17 +379,17 @@ void main() {
     group('Basic Drag Interaction', () {
       test('should create star with correct parameters on drag', () {
         // Drag from (100, 100) to (200, 200)
-        starTool.onPointerDown(PointerDownEvent(
-          position: const ui.Offset(100, 100),
-        ));
+        starTool.onPointerDown(const PointerDownEvent(
+          position: ui.Offset(100, 100),
+        ),);
 
-        starTool.onPointerMove(PointerMoveEvent(
-          position: const ui.Offset(200, 200),
-        ));
+        starTool.onPointerMove(const PointerMoveEvent(
+          position: ui.Offset(200, 200),
+        ),);
 
-        starTool.onPointerUp(PointerUpEvent(
-          position: const ui.Offset(200, 200),
-        ));
+        starTool.onPointerUp(const PointerUpEvent(
+          position: ui.Offset(200, 200),
+        ),);
 
         // Should have emitted one CreateShapeEvent
         expect(eventRecorder.recordedEvents.length, equals(1));
@@ -419,13 +415,13 @@ void main() {
 
       test('should normalize dimensions when dragging in any direction', () {
         // Drag from bottom-right to top-left (reverse direction)
-        starTool.onPointerDown(PointerDownEvent(
-          position: const ui.Offset(200, 200),
-        ));
+        starTool.onPointerDown(const PointerDownEvent(
+          position: ui.Offset(200, 200),
+        ),);
 
-        starTool.onPointerUp(PointerUpEvent(
-          position: const ui.Offset(100, 100),
-        ));
+        starTool.onPointerUp(const PointerUpEvent(
+          position: ui.Offset(100, 100),
+        ),);
 
         final createShape =
             eventRecorder.recordedEvents[0] as CreateShapeEvent;
@@ -441,13 +437,13 @@ void main() {
 
       test('should use max dimension for non-square drag', () {
         // Drag rectangle: width > height
-        starTool.onPointerDown(PointerDownEvent(
-          position: const ui.Offset(100, 100),
-        ));
+        starTool.onPointerDown(const PointerDownEvent(
+          position: ui.Offset(100, 100),
+        ),);
 
-        starTool.onPointerUp(PointerUpEvent(
-          position: const ui.Offset(300, 150),
-        ));
+        starTool.onPointerUp(const PointerUpEvent(
+          position: ui.Offset(300, 150),
+        ),);
 
         final params =
             (eventRecorder.recordedEvents[0] as CreateShapeEvent).parameters;
@@ -459,13 +455,13 @@ void main() {
 
       test('should not create star if drag distance below threshold', () {
         // Very small drag (< 5px)
-        starTool.onPointerDown(PointerDownEvent(
-          position: const ui.Offset(100, 100),
-        ));
+        starTool.onPointerDown(const PointerDownEvent(
+          position: ui.Offset(100, 100),
+        ),);
 
-        starTool.onPointerUp(PointerUpEvent(
-          position: const ui.Offset(102, 101),
-        ));
+        starTool.onPointerUp(const PointerUpEvent(
+          position: ui.Offset(102, 101),
+        ),);
 
         // Should not emit any events
         expect(eventRecorder.recordedEvents.length, equals(0));
@@ -474,37 +470,37 @@ void main() {
 
     group('Parameter Validation', () {
       test('should enforce innerRadius < outerRadius', () {
-        starTool.onPointerDown(PointerDownEvent(
-          position: const ui.Offset(100, 100),
-        ));
+        starTool.onPointerDown(const PointerDownEvent(
+          position: ui.Offset(100, 100),
+        ),);
 
-        starTool.onPointerUp(PointerUpEvent(
-          position: const ui.Offset(200, 200),
-        ));
+        starTool.onPointerUp(const PointerUpEvent(
+          position: ui.Offset(200, 200),
+        ),);
 
         final params =
             (eventRecorder.recordedEvents[0] as CreateShapeEvent).parameters;
 
         // Inner radius must be less than outer radius
-        expect(params['innerRadius']!, lessThan(params['radius']!));
+        expect(params['innerRadius'], lessThan(params['radius']!));
         // Inner radius must be positive
-        expect(params['innerRadius']!, greaterThan(0.0));
+        expect(params['innerRadius'], greaterThan(0.0));
       });
 
       test('should enforce minimum 3 points', () {
-        starTool.onPointerDown(PointerDownEvent(
-          position: const ui.Offset(100, 100),
-        ));
+        starTool.onPointerDown(const PointerDownEvent(
+          position: ui.Offset(100, 100),
+        ),);
 
-        starTool.onPointerUp(PointerUpEvent(
-          position: const ui.Offset(200, 200),
-        ));
+        starTool.onPointerUp(const PointerUpEvent(
+          position: ui.Offset(200, 200),
+        ),);
 
         final params =
             (eventRecorder.recordedEvents[0] as CreateShapeEvent).parameters;
 
         // Minimum 3 points enforced
-        expect(params['sides']!, greaterThanOrEqualTo(3.0));
+        expect(params['sides'], greaterThanOrEqualTo(3.0));
       });
     });
 
@@ -513,13 +509,13 @@ void main() {
         // Simulate Option/Alt key press
         await simulateKeyDownEvent(LogicalKeyboardKey.altLeft);
 
-        starTool.onPointerDown(PointerDownEvent(
-          position: const ui.Offset(150, 150), // Center
-        ));
+        starTool.onPointerDown(const PointerDownEvent(
+          position: ui.Offset(150, 150), // Center
+        ),);
 
-        starTool.onPointerUp(PointerUpEvent(
-          position: const ui.Offset(200, 175), // 50px right, 25px down
-        ));
+        starTool.onPointerUp(const PointerUpEvent(
+          position: ui.Offset(200, 175), // 50px right, 25px down
+        ),);
 
         final params =
             (eventRecorder.recordedEvents[0] as CreateShapeEvent).parameters;
@@ -540,19 +536,19 @@ void main() {
     group('Event Replay', () {
       test('should reproduce identical geometry from event parameters', () {
         // Create star via tool
-        starTool.onPointerDown(PointerDownEvent(
-          position: const ui.Offset(100, 100),
-        ));
+        starTool.onPointerDown(const PointerDownEvent(
+          position: ui.Offset(100, 100),
+        ),);
 
-        starTool.onPointerUp(PointerUpEvent(
-          position: const ui.Offset(200, 200),
-        ));
+        starTool.onPointerUp(const PointerUpEvent(
+          position: ui.Offset(200, 200),
+        ),);
 
         final event = eventRecorder.recordedEvents[0] as CreateShapeEvent;
 
         // Create original shape (what tool created)
         final originalShape = shape_model.Shape.star(
-          center: Point(x: 150, y: 150),
+          center: const Point(x: 150, y: 150),
           outerRadius: 50,
           innerRadius: 25,
           pointCount: 5,
@@ -590,29 +586,29 @@ void main() {
 
     group('Escape Key Cancellation', () {
       testWidgets('should cancel star creation on Escape', (tester) async {
-        starTool.onPointerDown(PointerDownEvent(
-          position: const ui.Offset(100, 100),
-        ));
+        starTool.onPointerDown(const PointerDownEvent(
+          position: ui.Offset(100, 100),
+        ),);
 
-        starTool.onPointerMove(PointerMoveEvent(
-          position: const ui.Offset(200, 200),
-        ));
+        starTool.onPointerMove(const PointerMoveEvent(
+          position: ui.Offset(200, 200),
+        ),);
 
         // Press Escape before pointer up
         await tester.sendKeyDownEvent(LogicalKeyboardKey.escape);
 
         // The escape key should trigger cancellation
         final handled = starTool.onKeyPress(
-          KeyDownEvent(
+          const KeyDownEvent(
             logicalKey: LogicalKeyboardKey.escape,
             physicalKey: PhysicalKeyboardKey.escape,
             timeStamp: Duration.zero,
           ),
         );
 
-        starTool.onPointerUp(PointerUpEvent(
-          position: const ui.Offset(200, 200),
-        ));
+        starTool.onPointerUp(const PointerUpEvent(
+          position: ui.Offset(200, 200),
+        ),);
 
         // Should not emit any events (cancelled)
         expect(eventRecorder.recordedEvents.length, equals(0));
@@ -624,18 +620,18 @@ void main() {
 
     group('Tool Lifecycle', () {
       test('should reset state on deactivation', () {
-        starTool.onPointerDown(PointerDownEvent(
-          position: const ui.Offset(100, 100),
-        ));
+        starTool.onPointerDown(const PointerDownEvent(
+          position: ui.Offset(100, 100),
+        ),);
 
         // Deactivate mid-drag
         starTool.onDeactivate();
 
         // Reactivate and try to finish drag
         starTool.onActivate();
-        starTool.onPointerUp(PointerUpEvent(
-          position: const ui.Offset(200, 200),
-        ));
+        starTool.onPointerUp(const PointerUpEvent(
+          position: ui.Offset(200, 200),
+        ),);
 
         // Should not emit events (state was reset)
         expect(eventRecorder.recordedEvents.length, equals(0));

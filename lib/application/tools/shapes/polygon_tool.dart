@@ -2,10 +2,8 @@ import 'dart:math';
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:wiretuner/application/tools/shapes/shape_base.dart';
-import 'package:wiretuner/domain/document/document.dart';
 import 'package:wiretuner/domain/events/event_base.dart';
 import 'package:wiretuner/domain/models/shape.dart' as shape_model;
-import 'package:wiretuner/presentation/canvas/viewport/viewport_controller.dart';
 
 /// Tool for creating regular polygon shapes.
 ///
@@ -35,22 +33,18 @@ import 'package:wiretuner/presentation/canvas/viewport/viewport_controller.dart'
 ///
 /// Related: T027 (Polygon Tool), I4.T2
 class PolygonTool extends ShapeToolBase {
+
+  PolygonTool({
+    required super.document,
+    required super.viewportController,
+    required super.eventRecorder,
+  });
   /// Number of sides for the polygon (minimum 3).
   ///
   /// Future enhancement: Make this configurable via property panel.
   /// For MVP, use fixed value of 5 (pentagon).
   static const int _defaultSideCount = 5;
-  int _sideCount = _defaultSideCount;
-
-  PolygonTool({
-    required Document document,
-    required ViewportController viewportController,
-    required dynamic eventRecorder,
-  }) : super(
-          document: document,
-          viewportController: viewportController,
-          eventRecorder: eventRecorder,
-        );
+  final int _sideCount = _defaultSideCount;
 
   @override
   String get toolId => 'polygon';
@@ -159,7 +153,7 @@ class PolygonTool extends ShapeToolBase {
   ) {
     final labels = <String>[];
     if (isAltPressed) labels.add('From Center');
-    labels.add('${_sideCount} sides');
+    labels.add('$_sideCount sides');
 
     if (labels.isEmpty) return;
 

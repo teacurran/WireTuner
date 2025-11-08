@@ -86,6 +86,20 @@ import 'dart:ui';
 ///
 /// Related: T018 (Tool Framework), Component Diagram (Tool System)
 class ToolManager extends ChangeNotifier {
+
+  /// Creates a tool manager with required services.
+  ///
+  /// The [cursorService] is required for cursor management.
+  /// The [eventRecorder] is optional but recommended for proper event coordination.
+  /// In production, this should be an [EventRecorder] instance. In tests, it can
+  /// be a mock object with pause/resume/flush methods.
+  ToolManager({
+    required CursorService cursorService,
+    dynamic eventRecorder,
+  })  : _cursorService = cursorService,
+        _eventRecorder = eventRecorder {
+    _logger.i('ToolManager initialized');
+  }
   /// Map of registered tools by toolId.
   final Map<String, ITool> _tools = {};
 
@@ -101,20 +115,6 @@ class ToolManager extends ChangeNotifier {
 
   /// Logger for debugging tool lifecycle and events.
   final Logger _logger = Logger();
-
-  /// Creates a tool manager with required services.
-  ///
-  /// The [cursorService] is required for cursor management.
-  /// The [eventRecorder] is optional but recommended for proper event coordination.
-  /// In production, this should be an [EventRecorder] instance. In tests, it can
-  /// be a mock object with pause/resume/flush methods.
-  ToolManager({
-    required CursorService cursorService,
-    dynamic eventRecorder,
-  })  : _cursorService = cursorService,
-        _eventRecorder = eventRecorder {
-    _logger.i('ToolManager initialized');
-  }
 
   /// Returns the currently active tool, or null if no tool is active.
   ITool? get activeTool => _activeTool;

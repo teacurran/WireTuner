@@ -245,11 +245,9 @@ void main() {
       final largeDocument = {
         'id': 'doc-1k',
         'title': 'Large Document with 1k Anchors',
-        'paths': List.generate(100, (pathIndex) {
-          return {
+        'paths': List.generate(100, (pathIndex) => {
             'id': 'path-$pathIndex',
-            'anchors': List.generate(10, (anchorIndex) {
-              return {
+            'anchors': List.generate(10, (anchorIndex) => {
                 'id': 'anchor-$pathIndex-$anchorIndex',
                 'x': pathIndex * 10.0 + anchorIndex,
                 'y': pathIndex * 20.0 + anchorIndex,
@@ -261,14 +259,12 @@ void main() {
                   'x': pathIndex * 10.0 + anchorIndex + 2,
                   'y': pathIndex * 20.0 + anchorIndex + 2,
                 },
-              };
-            }),
+              },),
             'fillColor': '#FF0000',
             'strokeColor': '#000000',
             'strokeWidth': 2.0,
             'opacity': 1.0,
-          };
-        }),
+          },),
         'metadata': {
           'created': DateTime.now().millisecondsSinceEpoch,
           'modified': DateTime.now().millisecondsSinceEpoch,
@@ -322,8 +318,8 @@ void main() {
                     'id': 'anchor-$i-$j',
                     'x': i * 10.0 + j,
                     'y': i * 20.0 + j,
-                  }),
-            }),
+                  },),
+            },),
       };
 
       final durations = <int>[];
@@ -420,8 +416,8 @@ void main() {
       expect(capturedDuration, greaterThanOrEqualTo(0));
 
       print('Compression ratio: ${capturedRatio!.toStringAsFixed(2)}x');
-      print('Uncompressed: ${capturedUncompressed} bytes');
-      print('Compressed: ${capturedCompressed} bytes');
+      print('Uncompressed: $capturedUncompressed bytes');
+      print('Compressed: $capturedCompressed bytes');
       print('Duration: ${capturedDuration}ms');
     });
 
@@ -467,8 +463,8 @@ void main() {
       );
 
       expect(actualRatio, isNotNull);
-      expect(actualRatio!, greaterThan(2.0),
-          reason: 'Compression ratio should be >2:1 for repetitive data');
+      expect(actualRatio, greaterThan(2.0),
+          reason: 'Compression ratio should be >2:1 for repetitive data',);
     });
 
     test('telemetry counters track snapshot creation', () async {

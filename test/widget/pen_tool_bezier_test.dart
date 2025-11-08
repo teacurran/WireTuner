@@ -8,7 +8,6 @@ import 'package:wiretuner/domain/document/document.dart';
 import 'package:wiretuner/domain/document/selection.dart';
 import 'package:wiretuner/domain/events/event_base.dart';
 import 'package:wiretuner/domain/events/path_events.dart';
-import 'package:wiretuner/domain/events/group_events.dart';
 import 'package:wiretuner/presentation/canvas/viewport/viewport_controller.dart';
 
 /// Mock EventRecorder for testing.
@@ -61,17 +60,17 @@ void main() {
       eventRecorder = MockEventRecorder();
 
       // Create an empty test document
-      final layer = Layer(
+      const layer = Layer(
         id: 'layer-1',
         name: 'Test Layer',
         objects: [],
       );
 
-      document = Document(
+      document = const Document(
         id: 'doc-1',
         title: 'Test Document',
         layers: [layer],
-        selection: const Selection(),
+        selection: Selection(),
       );
 
       penTool = PenTool(
@@ -91,30 +90,30 @@ void main() {
         eventRecorder.clear();
 
         // Start a path (first click)
-        penTool.onPointerDown(PointerDownEvent(
-          position: const ui.Offset(100, 100),
-        ));
-        penTool.onPointerUp(PointerUpEvent(
-          position: const ui.Offset(100, 100),
-        ));
+        penTool.onPointerDown(const PointerDownEvent(
+          position: ui.Offset(100, 100),
+        ),);
+        penTool.onPointerUp(const PointerUpEvent(
+          position: ui.Offset(100, 100),
+        ),);
         eventRecorder.clear();
       });
 
       test('should create Bezier anchor with handles when dragging', () {
         // Pointer down at anchor position
-        penTool.onPointerDown(PointerDownEvent(
-          position: const ui.Offset(200, 100),
-        ));
+        penTool.onPointerDown(const PointerDownEvent(
+          position: ui.Offset(200, 100),
+        ),);
 
         // Pointer move to drag position
-        penTool.onPointerMove(PointerMoveEvent(
-          position: const ui.Offset(250, 100),
-        ));
+        penTool.onPointerMove(const PointerMoveEvent(
+          position: ui.Offset(250, 100),
+        ),);
 
         // Pointer up to complete gesture
-        penTool.onPointerUp(PointerUpEvent(
-          position: const ui.Offset(250, 100),
-        ));
+        penTool.onPointerUp(const PointerUpEvent(
+          position: ui.Offset(250, 100),
+        ),);
 
         // Should have emitted one AddAnchorEvent
         expect(eventRecorder.recordedEvents.length, equals(1));
@@ -138,15 +137,15 @@ void main() {
 
       test('should scale handle magnitude with drag distance', () {
         // Test shorter drag (25px)
-        penTool.onPointerDown(PointerDownEvent(
-          position: const ui.Offset(200, 100),
-        ));
-        penTool.onPointerMove(PointerMoveEvent(
-          position: const ui.Offset(225, 100),
-        ));
-        penTool.onPointerUp(PointerUpEvent(
-          position: const ui.Offset(225, 100),
-        ));
+        penTool.onPointerDown(const PointerDownEvent(
+          position: ui.Offset(200, 100),
+        ),);
+        penTool.onPointerMove(const PointerMoveEvent(
+          position: ui.Offset(225, 100),
+        ),);
+        penTool.onPointerUp(const PointerUpEvent(
+          position: ui.Offset(225, 100),
+        ),);
 
         final addAnchor1 = eventRecorder.recordedEvents.last as AddAnchorEvent;
         final magnitude1 = math.sqrt(
@@ -157,15 +156,15 @@ void main() {
         eventRecorder.clear();
 
         // Test longer drag (100px)
-        penTool.onPointerDown(PointerDownEvent(
-          position: const ui.Offset(300, 100),
-        ));
-        penTool.onPointerMove(PointerMoveEvent(
-          position: const ui.Offset(400, 100),
-        ));
-        penTool.onPointerUp(PointerUpEvent(
-          position: const ui.Offset(400, 100),
-        ));
+        penTool.onPointerDown(const PointerDownEvent(
+          position: ui.Offset(300, 100),
+        ),);
+        penTool.onPointerMove(const PointerMoveEvent(
+          position: ui.Offset(400, 100),
+        ),);
+        penTool.onPointerUp(const PointerUpEvent(
+          position: ui.Offset(400, 100),
+        ),);
 
         final addAnchor2 = eventRecorder.recordedEvents.last as AddAnchorEvent;
         final magnitude2 = math.sqrt(
@@ -181,15 +180,15 @@ void main() {
 
       test('should create Bezier anchor with diagonal drag', () {
         // Drag at 45-degree angle
-        penTool.onPointerDown(PointerDownEvent(
-          position: const ui.Offset(200, 100),
-        ));
-        penTool.onPointerMove(PointerMoveEvent(
-          position: const ui.Offset(250, 150),
-        ));
-        penTool.onPointerUp(PointerUpEvent(
-          position: const ui.Offset(250, 150),
-        ));
+        penTool.onPointerDown(const PointerDownEvent(
+          position: ui.Offset(200, 100),
+        ),);
+        penTool.onPointerMove(const PointerMoveEvent(
+          position: ui.Offset(250, 150),
+        ),);
+        penTool.onPointerUp(const PointerUpEvent(
+          position: ui.Offset(250, 150),
+        ),);
 
         final addAnchor = eventRecorder.recordedEvents[0] as AddAnchorEvent;
 
@@ -205,15 +204,15 @@ void main() {
       test('should store handles as relative offsets, not absolute positions', () {
         // Anchor at (200, 150), drag to (250, 170)
         // Using coordinates different from path start to avoid double-click detection
-        penTool.onPointerDown(PointerDownEvent(
-          position: const ui.Offset(200, 150),
-        ));
-        penTool.onPointerMove(PointerMoveEvent(
-          position: const ui.Offset(250, 170),
-        ));
-        penTool.onPointerUp(PointerUpEvent(
-          position: const ui.Offset(250, 170),
-        ));
+        penTool.onPointerDown(const PointerDownEvent(
+          position: ui.Offset(200, 150),
+        ),);
+        penTool.onPointerMove(const PointerMoveEvent(
+          position: ui.Offset(250, 170),
+        ),);
+        penTool.onPointerUp(const PointerUpEvent(
+          position: ui.Offset(250, 170),
+        ),);
 
         final addAnchor = eventRecorder.recordedEvents[0] as AddAnchorEvent;
 
@@ -233,26 +232,26 @@ void main() {
         eventRecorder.clear();
 
         // Start a path
-        penTool.onPointerDown(PointerDownEvent(
-          position: const ui.Offset(100, 100),
-        ));
-        penTool.onPointerUp(PointerUpEvent(
-          position: const ui.Offset(100, 100),
-        ));
+        penTool.onPointerDown(const PointerDownEvent(
+          position: ui.Offset(100, 100),
+        ),);
+        penTool.onPointerUp(const PointerUpEvent(
+          position: ui.Offset(100, 100),
+        ),);
         eventRecorder.clear();
       });
 
       test('should treat short drag as click (straight line anchor)', () {
         // Very short drag (3px) - below 5px threshold
-        penTool.onPointerDown(PointerDownEvent(
-          position: const ui.Offset(200, 100),
-        ));
-        penTool.onPointerMove(PointerMoveEvent(
-          position: const ui.Offset(203, 100),
-        ));
-        penTool.onPointerUp(PointerUpEvent(
-          position: const ui.Offset(203, 100),
-        ));
+        penTool.onPointerDown(const PointerDownEvent(
+          position: ui.Offset(200, 100),
+        ),);
+        penTool.onPointerMove(const PointerMoveEvent(
+          position: ui.Offset(203, 100),
+        ),);
+        penTool.onPointerUp(const PointerUpEvent(
+          position: ui.Offset(203, 100),
+        ),);
 
         final addAnchor = eventRecorder.recordedEvents[0] as AddAnchorEvent;
 
@@ -264,15 +263,15 @@ void main() {
 
       test('should create Bezier anchor when drag exceeds threshold', () {
         // Drag just above threshold (6px)
-        penTool.onPointerDown(PointerDownEvent(
-          position: const ui.Offset(200, 100),
-        ));
-        penTool.onPointerMove(PointerMoveEvent(
-          position: const ui.Offset(206, 100),
-        ));
-        penTool.onPointerUp(PointerUpEvent(
-          position: const ui.Offset(206, 100),
-        ));
+        penTool.onPointerDown(const PointerDownEvent(
+          position: ui.Offset(200, 100),
+        ),);
+        penTool.onPointerMove(const PointerMoveEvent(
+          position: ui.Offset(206, 100),
+        ),);
+        penTool.onPointerUp(const PointerUpEvent(
+          position: ui.Offset(206, 100),
+        ),);
 
         final addAnchor = eventRecorder.recordedEvents[0] as AddAnchorEvent;
 
@@ -289,12 +288,12 @@ void main() {
         eventRecorder.clear();
 
         // Start a path
-        penTool.onPointerDown(PointerDownEvent(
-          position: const ui.Offset(100, 100),
-        ));
-        penTool.onPointerUp(PointerUpEvent(
-          position: const ui.Offset(100, 100),
-        ));
+        penTool.onPointerDown(const PointerDownEvent(
+          position: ui.Offset(100, 100),
+        ),);
+        penTool.onPointerUp(const PointerUpEvent(
+          position: ui.Offset(100, 100),
+        ),);
         eventRecorder.clear();
       });
 
@@ -303,15 +302,15 @@ void main() {
         await tester.sendKeyDownEvent(LogicalKeyboardKey.alt);
 
         // Drag to create Bezier anchor
-        penTool.onPointerDown(PointerDownEvent(
-          position: const ui.Offset(200, 100),
-        ));
-        penTool.onPointerMove(PointerMoveEvent(
-          position: const ui.Offset(250, 100),
-        ));
-        penTool.onPointerUp(PointerUpEvent(
-          position: const ui.Offset(250, 100),
-        ));
+        penTool.onPointerDown(const PointerDownEvent(
+          position: ui.Offset(200, 100),
+        ),);
+        penTool.onPointerMove(const PointerMoveEvent(
+          position: ui.Offset(250, 100),
+        ),);
+        penTool.onPointerUp(const PointerUpEvent(
+          position: ui.Offset(250, 100),
+        ),);
 
         final addAnchor = eventRecorder.recordedEvents[0] as AddAnchorEvent;
 
@@ -334,15 +333,15 @@ void main() {
         // No Alt key - should create smooth anchor
 
         // Drag to create Bezier anchor
-        penTool.onPointerDown(PointerDownEvent(
-          position: const ui.Offset(200, 100),
-        ));
-        penTool.onPointerMove(PointerMoveEvent(
-          position: const ui.Offset(250, 100),
-        ));
-        penTool.onPointerUp(PointerUpEvent(
-          position: const ui.Offset(250, 100),
-        ));
+        penTool.onPointerDown(const PointerDownEvent(
+          position: ui.Offset(200, 100),
+        ),);
+        penTool.onPointerMove(const PointerMoveEvent(
+          position: ui.Offset(250, 100),
+        ),);
+        penTool.onPointerUp(const PointerUpEvent(
+          position: ui.Offset(250, 100),
+        ),);
 
         final addAnchor = eventRecorder.recordedEvents[0] as AddAnchorEvent;
 
@@ -367,42 +366,42 @@ void main() {
 
       test('should create path with multiple Bezier anchors', () {
         // First anchor (click - creates path)
-        penTool.onPointerDown(PointerDownEvent(
-          position: const ui.Offset(100, 100),
-        ));
-        penTool.onPointerUp(PointerUpEvent(
-          position: const ui.Offset(100, 100),
-        ));
+        penTool.onPointerDown(const PointerDownEvent(
+          position: ui.Offset(100, 100),
+        ),);
+        penTool.onPointerUp(const PointerUpEvent(
+          position: ui.Offset(100, 100),
+        ),);
 
         // Clear start events
         eventRecorder.clear();
 
         // Second anchor (drag - Bezier)
-        penTool.onPointerDown(PointerDownEvent(
-          position: const ui.Offset(200, 100),
-        ));
-        penTool.onPointerMove(PointerMoveEvent(
-          position: const ui.Offset(250, 150),
-        ));
-        penTool.onPointerUp(PointerUpEvent(
-          position: const ui.Offset(250, 150),
-        ));
+        penTool.onPointerDown(const PointerDownEvent(
+          position: ui.Offset(200, 100),
+        ),);
+        penTool.onPointerMove(const PointerMoveEvent(
+          position: ui.Offset(250, 150),
+        ),);
+        penTool.onPointerUp(const PointerUpEvent(
+          position: ui.Offset(250, 150),
+        ),);
 
         // Third anchor (drag - Bezier)
-        penTool.onPointerDown(PointerDownEvent(
-          position: const ui.Offset(300, 200),
-        ));
-        penTool.onPointerMove(PointerMoveEvent(
-          position: const ui.Offset(350, 150),
-        ));
-        penTool.onPointerUp(PointerUpEvent(
-          position: const ui.Offset(350, 150),
-        ));
+        penTool.onPointerDown(const PointerDownEvent(
+          position: ui.Offset(300, 200),
+        ),);
+        penTool.onPointerMove(const PointerMoveEvent(
+          position: ui.Offset(350, 150),
+        ),);
+        penTool.onPointerUp(const PointerUpEvent(
+          position: ui.Offset(350, 150),
+        ),);
 
         // Should have 2 AddAnchorEvent events
         expect(eventRecorder.recordedEvents.length, equals(2));
         expect(eventRecorder.recordedEvents.every((e) => e is AddAnchorEvent),
-            isTrue);
+            isTrue,);
 
         // Both should be Bezier anchors
         final anchor1 = eventRecorder.recordedEvents[0] as AddAnchorEvent;
@@ -426,41 +425,41 @@ void main() {
 
       test('should create path with alternating line and Bezier anchors', () {
         // First anchor (click - creates path)
-        penTool.onPointerDown(PointerDownEvent(
-          position: const ui.Offset(100, 100),
-        ));
-        penTool.onPointerUp(PointerUpEvent(
-          position: const ui.Offset(100, 100),
-        ));
+        penTool.onPointerDown(const PointerDownEvent(
+          position: ui.Offset(100, 100),
+        ),);
+        penTool.onPointerUp(const PointerUpEvent(
+          position: ui.Offset(100, 100),
+        ),);
 
         eventRecorder.clear();
 
         // Second anchor (click - straight line)
-        penTool.onPointerDown(PointerDownEvent(
-          position: const ui.Offset(200, 100),
-        ));
-        penTool.onPointerUp(PointerUpEvent(
-          position: const ui.Offset(200, 100),
-        ));
+        penTool.onPointerDown(const PointerDownEvent(
+          position: ui.Offset(200, 100),
+        ),);
+        penTool.onPointerUp(const PointerUpEvent(
+          position: ui.Offset(200, 100),
+        ),);
 
         // Third anchor (drag - Bezier)
-        penTool.onPointerDown(PointerDownEvent(
-          position: const ui.Offset(300, 100),
-        ));
-        penTool.onPointerMove(PointerMoveEvent(
-          position: const ui.Offset(350, 150),
-        ));
-        penTool.onPointerUp(PointerUpEvent(
-          position: const ui.Offset(350, 150),
-        ));
+        penTool.onPointerDown(const PointerDownEvent(
+          position: ui.Offset(300, 100),
+        ),);
+        penTool.onPointerMove(const PointerMoveEvent(
+          position: ui.Offset(350, 150),
+        ),);
+        penTool.onPointerUp(const PointerUpEvent(
+          position: ui.Offset(350, 150),
+        ),);
 
         // Fourth anchor (click - straight line)
-        penTool.onPointerDown(PointerDownEvent(
-          position: const ui.Offset(400, 100),
-        ));
-        penTool.onPointerUp(PointerUpEvent(
-          position: const ui.Offset(400, 100),
-        ));
+        penTool.onPointerDown(const PointerDownEvent(
+          position: ui.Offset(400, 100),
+        ),);
+        penTool.onPointerUp(const PointerUpEvent(
+          position: ui.Offset(400, 100),
+        ),);
 
         // Should have 3 AddAnchorEvent events
         expect(eventRecorder.recordedEvents.length, equals(3));
@@ -489,22 +488,22 @@ void main() {
         eventRecorder.clear();
 
         // Start a path
-        penTool.onPointerDown(PointerDownEvent(
-          position: const ui.Offset(100, 100),
-        ));
-        penTool.onPointerUp(PointerUpEvent(
-          position: const ui.Offset(100, 100),
-        ));
+        penTool.onPointerDown(const PointerDownEvent(
+          position: ui.Offset(100, 100),
+        ),);
+        penTool.onPointerUp(const PointerUpEvent(
+          position: ui.Offset(100, 100),
+        ),);
 
         eventRecorder.clear();
 
         // Start dragging
-        penTool.onPointerDown(PointerDownEvent(
-          position: const ui.Offset(200, 100),
-        ));
-        penTool.onPointerMove(PointerMoveEvent(
-          position: const ui.Offset(250, 100),
-        ));
+        penTool.onPointerDown(const PointerDownEvent(
+          position: ui.Offset(200, 100),
+        ),);
+        penTool.onPointerMove(const PointerMoveEvent(
+          position: ui.Offset(250, 100),
+        ),);
 
         // Deactivate before pointer up
         penTool.onDeactivate();
@@ -523,23 +522,23 @@ void main() {
         eventRecorder.clear();
 
         // Create path
-        penTool.onPointerDown(PointerDownEvent(
-          position: const ui.Offset(100, 100),
-        ));
-        penTool.onPointerUp(PointerUpEvent(
-          position: const ui.Offset(100, 100),
-        ));
+        penTool.onPointerDown(const PointerDownEvent(
+          position: ui.Offset(100, 100),
+        ),);
+        penTool.onPointerUp(const PointerUpEvent(
+          position: ui.Offset(100, 100),
+        ),);
 
         // Add Bezier anchor
-        penTool.onPointerDown(PointerDownEvent(
-          position: const ui.Offset(200, 150),
-        ));
-        penTool.onPointerMove(PointerMoveEvent(
-          position: const ui.Offset(250, 100),
-        ));
-        penTool.onPointerUp(PointerUpEvent(
-          position: const ui.Offset(250, 100),
-        ));
+        penTool.onPointerDown(const PointerDownEvent(
+          position: ui.Offset(200, 150),
+        ),);
+        penTool.onPointerMove(const PointerMoveEvent(
+          position: ui.Offset(250, 100),
+        ),);
+        penTool.onPointerUp(const PointerUpEvent(
+          position: ui.Offset(250, 100),
+        ),);
 
         final events = List<EventBase>.from(eventRecorder.recordedEvents);
 

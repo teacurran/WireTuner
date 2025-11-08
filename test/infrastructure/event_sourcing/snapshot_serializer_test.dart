@@ -2,6 +2,7 @@
 /// ```
 /// flutter pub run build_runner build --delete-conflicting-outputs
 /// ```
+library;
 
 import 'dart:typed_data';
 import 'package:flutter_test/flutter_test.dart';
@@ -36,7 +37,7 @@ void main() {
 
   group('SnapshotSerializer - Basic Serialization', () {
     test('serialize produces Uint8List', () {
-      final document = const Document(id: 'doc-1', title: 'Test');
+      const document = Document(id: 'doc-1', title: 'Test');
       final bytes = serializer.serialize(document);
 
       expect(bytes, isA<Uint8List>());

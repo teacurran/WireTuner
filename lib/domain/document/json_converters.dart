@@ -12,20 +12,16 @@ class PointConverter implements JsonConverter<Point, Map<String, dynamic>> {
   const PointConverter();
 
   @override
-  Point fromJson(Map<String, dynamic> json) {
-    return Point(
+  Point fromJson(Map<String, dynamic> json) => Point(
       x: (json['x'] as num).toDouble(),
       y: (json['y'] as num).toDouble(),
     );
-  }
 
   @override
-  Map<String, dynamic> toJson(Point object) {
-    return {
+  Map<String, dynamic> toJson(Point object) => {
       'x': object.x,
       'y': object.y,
     };
-  }
 }
 
 /// JSON converter for Path objects.
@@ -55,16 +51,13 @@ class PathConverter implements JsonConverter<Path, Map<String, dynamic>> {
   }
 
   @override
-  Map<String, dynamic> toJson(Path object) {
-    return {
+  Map<String, dynamic> toJson(Path object) => {
       'anchors': object.anchors.map(_anchorPointToJson).toList(),
       'segments': object.segments.map(_segmentToJson).toList(),
       'closed': object.closed,
     };
-  }
 
-  ap.AnchorPoint _anchorPointFromJson(Map<String, dynamic> json) {
-    return ap.AnchorPoint(
+  ap.AnchorPoint _anchorPointFromJson(Map<String, dynamic> json) => ap.AnchorPoint(
       position: _pointFromJson(json['position'] as Map<String, dynamic>),
       handleIn: json['handleIn'] != null
           ? _pointFromJson(json['handleIn'] as Map<String, dynamic>)
@@ -75,48 +68,37 @@ class PathConverter implements JsonConverter<Path, Map<String, dynamic>> {
       anchorType: ap.AnchorType.values
           .byName(json['anchorType'] as String? ?? 'corner'),
     );
-  }
 
-  Map<String, dynamic> _anchorPointToJson(ap.AnchorPoint anchor) {
-    return {
+  Map<String, dynamic> _anchorPointToJson(ap.AnchorPoint anchor) => {
       'position': _pointToJson(anchor.position),
       if (anchor.handleIn != null) 'handleIn': _pointToJson(anchor.handleIn!),
       if (anchor.handleOut != null)
         'handleOut': _pointToJson(anchor.handleOut!),
       'anchorType': anchor.anchorType.name,
     };
-  }
 
-  Segment _segmentFromJson(Map<String, dynamic> json) {
-    return Segment(
+  Segment _segmentFromJson(Map<String, dynamic> json) => Segment(
       startAnchorIndex: json['startAnchorIndex'] as int,
       endAnchorIndex: json['endAnchorIndex'] as int,
       segmentType:
           SegmentType.values.byName(json['segmentType'] as String? ?? 'line'),
     );
-  }
 
-  Map<String, dynamic> _segmentToJson(Segment segment) {
-    return {
+  Map<String, dynamic> _segmentToJson(Segment segment) => {
       'startAnchorIndex': segment.startAnchorIndex,
       'endAnchorIndex': segment.endAnchorIndex,
       'segmentType': segment.segmentType.name,
     };
-  }
 
-  Point _pointFromJson(Map<String, dynamic> json) {
-    return Point(
+  Point _pointFromJson(Map<String, dynamic> json) => Point(
       x: (json['x'] as num).toDouble(),
       y: (json['y'] as num).toDouble(),
     );
-  }
 
-  Map<String, dynamic> _pointToJson(Point point) {
-    return {
+  Map<String, dynamic> _pointToJson(Point point) => {
       'x': point.x,
       'y': point.y,
     };
-  }
 }
 
 /// JSON converter for Shape objects.
@@ -128,12 +110,8 @@ class ShapeConverter implements JsonConverter<Shape, Map<String, dynamic>> {
   const ShapeConverter();
 
   @override
-  Shape fromJson(Map<String, dynamic> json) {
-    return Shape.fromJson(json);
-  }
+  Shape fromJson(Map<String, dynamic> json) => Shape.fromJson(json);
 
   @override
-  Map<String, dynamic> toJson(Shape object) {
-    return object.toJson();
-  }
+  Map<String, dynamic> toJson(Shape object) => object.toJson();
 }

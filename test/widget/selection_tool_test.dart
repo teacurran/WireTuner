@@ -9,11 +9,9 @@ import 'package:wiretuner/domain/document/selection.dart';
 import 'package:wiretuner/domain/events/event_base.dart';
 import 'package:wiretuner/domain/events/selection_events.dart' as events;
 import 'package:wiretuner/domain/events/object_events.dart';
-import 'package:wiretuner/domain/models/geometry/rectangle.dart' as geom;
 import 'package:wiretuner/domain/models/path.dart' as domain;
 import 'package:wiretuner/domain/models/anchor_point.dart';
 import 'package:wiretuner/domain/models/segment.dart';
-import 'package:wiretuner/infrastructure/event_sourcing/event_recorder.dart';
 import 'package:wiretuner/presentation/canvas/viewport/viewport_controller.dart';
 
 /// Mock EventRecorder for testing.
@@ -67,11 +65,11 @@ void main() {
 
       // Create a test document with some objects
       final path1 = domain.Path(
-        anchors: [
-          AnchorPoint(position: const Point(x: 100, y: 100)),
-          AnchorPoint(position: const Point(x: 200, y: 100)),
-          AnchorPoint(position: const Point(x: 200, y: 200)),
-          AnchorPoint(position: const Point(x: 100, y: 200)),
+        anchors: const [
+          AnchorPoint(position: Point(x: 100, y: 100)),
+          AnchorPoint(position: Point(x: 200, y: 100)),
+          AnchorPoint(position: Point(x: 200, y: 200)),
+          AnchorPoint(position: Point(x: 100, y: 200)),
         ],
         segments: [
           Segment.line(startIndex: 0, endIndex: 1),
@@ -83,10 +81,10 @@ void main() {
       );
 
       final path2 = domain.Path(
-        anchors: [
-          AnchorPoint(position: const Point(x: 300, y: 300)),
-          AnchorPoint(position: const Point(x: 400, y: 300)),
-          AnchorPoint(position: const Point(x: 400, y: 400)),
+        anchors: const [
+          AnchorPoint(position: Point(x: 300, y: 300)),
+          AnchorPoint(position: Point(x: 400, y: 300)),
+          AnchorPoint(position: Point(x: 400, y: 400)),
         ],
         segments: [
           Segment.line(startIndex: 0, endIndex: 1),
@@ -140,8 +138,8 @@ void main() {
         selectionTool.onActivate();
 
         // Start a drag operation
-        final downEvent = PointerDownEvent(
-          position: const Offset(150, 150),
+        const downEvent = PointerDownEvent(
+          position: Offset(150, 150),
         );
         selectionTool.onPointerDown(downEvent);
 
@@ -158,8 +156,8 @@ void main() {
       });
 
       test('should select object on click', () {
-        final event = PointerDownEvent(
-          position: const Offset(150, 150), // On path-1
+        const event = PointerDownEvent(
+          position: Offset(150, 150), // On path-1
         );
 
         final handled = selectionTool.onPointerDown(event);
@@ -174,8 +172,8 @@ void main() {
       });
 
       test('should clear selection on click in empty area', () {
-        final event = PointerDownEvent(
-          position: const Offset(50, 50), // Empty area
+        const event = PointerDownEvent(
+          position: Offset(50, 50), // Empty area
         );
 
         final handled = selectionTool.onPointerDown(event);
@@ -192,8 +190,8 @@ void main() {
       test('should handle multiple objects at same point (top-most wins)', () {
         // This test verifies that when multiple objects overlap,
         // the top-most object is selected
-        final event = PointerDownEvent(
-          position: const Offset(150, 150),
+        const event = PointerDownEvent(
+          position: Offset(150, 150),
         );
 
         selectionTool.onPointerDown(event);
@@ -216,8 +214,8 @@ void main() {
 
       test('should support shift-click for multi-select', () {
         // First select path-1
-        final event1 = PointerDownEvent(
-          position: const Offset(150, 150),
+        const event1 = PointerDownEvent(
+          position: Offset(150, 150),
         );
         selectionTool.onPointerDown(event1);
 
@@ -236,8 +234,8 @@ void main() {
         eventRecorder.clear();
 
         // Select an object first
-        final downEvent = PointerDownEvent(
-          position: const Offset(150, 150),
+        const downEvent = PointerDownEvent(
+          position: Offset(150, 150),
         );
         selectionTool.onPointerDown(downEvent);
         eventRecorder.clear();
@@ -245,8 +243,8 @@ void main() {
 
       test('should start drag on selected object', () {
         // Pointer is already down on path-1, now move it
-        final moveEvent = PointerMoveEvent(
-          position: const Offset(160, 160),
+        const moveEvent = PointerMoveEvent(
+          position: Offset(160, 160),
         );
 
         final handled = selectionTool.onPointerMove(moveEvent);
@@ -257,8 +255,8 @@ void main() {
 
       test('should emit MoveObjectEvent on drag', () {
         // Move the pointer
-        final moveEvent = PointerMoveEvent(
-          position: const Offset(160, 160),
+        const moveEvent = PointerMoveEvent(
+          position: Offset(160, 160),
         );
         selectionTool.onPointerMove(moveEvent);
 
@@ -275,16 +273,16 @@ void main() {
 
       test('should flush events on pointer up', () {
         // Move the pointer
-        final moveEvent = PointerMoveEvent(
-          position: const Offset(160, 160),
+        const moveEvent = PointerMoveEvent(
+          position: Offset(160, 160),
         );
         selectionTool.onPointerMove(moveEvent);
 
         eventRecorder.flushCallCount = 0;
 
         // Release pointer
-        final upEvent = PointerUpEvent(
-          position: const Offset(160, 160),
+        const upEvent = PointerUpEvent(
+          position: Offset(160, 160),
         );
         final handled = selectionTool.onPointerUp(upEvent);
 
@@ -295,13 +293,13 @@ void main() {
 
       test('should cancel drag on Escape key', () {
         // Move the pointer
-        final moveEvent = PointerMoveEvent(
-          position: const Offset(160, 160),
+        const moveEvent = PointerMoveEvent(
+          position: Offset(160, 160),
         );
         selectionTool.onPointerMove(moveEvent);
 
         // Press Escape
-        final keyEvent = KeyDownEvent(
+        const keyEvent = KeyDownEvent(
           logicalKey: LogicalKeyboardKey.escape,
           physicalKey: PhysicalKeyboardKey.escape,
           timeStamp: Duration.zero,
@@ -322,16 +320,16 @@ void main() {
 
       test('should start marquee on drag in empty area', () {
         // Click in empty area
-        final downEvent = PointerDownEvent(
-          position: const Offset(50, 50),
+        const downEvent = PointerDownEvent(
+          position: Offset(50, 50),
         );
         selectionTool.onPointerDown(downEvent);
 
         eventRecorder.clear();
 
         // Drag to create marquee
-        final moveEvent = PointerMoveEvent(
-          position: const Offset(250, 250),
+        const moveEvent = PointerMoveEvent(
+          position: Offset(250, 250),
         );
         final handled = selectionTool.onPointerMove(moveEvent);
 
@@ -340,22 +338,22 @@ void main() {
 
       test('should select objects within marquee bounds on pointer up', () {
         // Start marquee in empty area
-        final downEvent = PointerDownEvent(
-          position: const Offset(50, 50),
+        const downEvent = PointerDownEvent(
+          position: Offset(50, 50),
         );
         selectionTool.onPointerDown(downEvent);
 
         // Drag to cover path-1
-        final moveEvent = PointerMoveEvent(
-          position: const Offset(250, 250),
+        const moveEvent = PointerMoveEvent(
+          position: Offset(250, 250),
         );
         selectionTool.onPointerMove(moveEvent);
 
         eventRecorder.clear();
 
         // Release to finish marquee
-        final upEvent = PointerUpEvent(
-          position: const Offset(250, 250),
+        const upEvent = PointerUpEvent(
+          position: Offset(250, 250),
         );
         selectionTool.onPointerUp(upEvent);
 
@@ -370,14 +368,14 @@ void main() {
 
       test('should render marquee rectangle during drag', () {
         // Start marquee
-        final downEvent = PointerDownEvent(
-          position: const Offset(50, 50),
+        const downEvent = PointerDownEvent(
+          position: Offset(50, 50),
         );
         selectionTool.onPointerDown(downEvent);
 
         // Drag marquee
-        final moveEvent = PointerMoveEvent(
-          position: const Offset(250, 250),
+        const moveEvent = PointerMoveEvent(
+          position: Offset(250, 250),
         );
         selectionTool.onPointerMove(moveEvent);
 
@@ -393,19 +391,19 @@ void main() {
 
       test('should cancel marquee on Escape key', () {
         // Start marquee
-        final downEvent = PointerDownEvent(
-          position: const Offset(50, 50),
+        const downEvent = PointerDownEvent(
+          position: Offset(50, 50),
         );
         selectionTool.onPointerDown(downEvent);
 
         // Drag marquee
-        final moveEvent = PointerMoveEvent(
-          position: const Offset(250, 250),
+        const moveEvent = PointerMoveEvent(
+          position: Offset(250, 250),
         );
         selectionTool.onPointerMove(moveEvent);
 
         // Press Escape
-        final keyEvent = KeyDownEvent(
+        const keyEvent = KeyDownEvent(
           logicalKey: LogicalKeyboardKey.escape,
           physicalKey: PhysicalKeyboardKey.escape,
           timeStamp: Duration.zero,
@@ -417,8 +415,8 @@ void main() {
 
         // Marquee should be cancelled, pointer up should not select
         eventRecorder.clear();
-        final upEvent = PointerUpEvent(
-          position: const Offset(250, 250),
+        const upEvent = PointerUpEvent(
+          position: Offset(250, 250),
         );
         selectionTool.onPointerUp(upEvent);
 
@@ -439,8 +437,8 @@ void main() {
       test('should respect viewport pan and zoom for hit-testing', () {
         // With 2x zoom and 100,100 pan, clicking at screen 400,400
         // should hit world coordinates 150,150 (path-1)
-        final event = PointerDownEvent(
-          position: const Offset(400, 400),
+        const event = PointerDownEvent(
+          position: Offset(400, 400),
         );
 
         selectionTool.onPointerDown(event);
@@ -455,14 +453,14 @@ void main() {
 
       test('should transform marquee bounds correctly', () {
         // Start marquee
-        final downEvent = PointerDownEvent(
-          position: const Offset(100, 100),
+        const downEvent = PointerDownEvent(
+          position: Offset(100, 100),
         );
         selectionTool.onPointerDown(downEvent);
 
         // Drag marquee
-        final moveEvent = PointerMoveEvent(
-          position: const Offset(500, 500),
+        const moveEvent = PointerMoveEvent(
+          position: Offset(500, 500),
         );
         selectionTool.onPointerMove(moveEvent);
 
@@ -470,8 +468,8 @@ void main() {
         // and select objects within those bounds
         eventRecorder.clear();
 
-        final upEvent = PointerUpEvent(
-          position: const Offset(500, 500),
+        const upEvent = PointerUpEvent(
+          position: Offset(500, 500),
         );
         selectionTool.onPointerUp(upEvent);
 

@@ -48,9 +48,7 @@ class MockEventStore implements EventStore {
   }
 
   @override
-  Future<int> getMaxSequence(String documentId) async {
-    return _maxSequence;
-  }
+  Future<int> getMaxSequence(String documentId) async => _maxSequence;
 
   @override
   Future<int> insertEvent(String documentId, EventBase event) async {
@@ -152,17 +150,17 @@ void main() {
     test('initializes with document at latest state', () async {
       // Arrange
       final events = [
-        CreatePathEvent(
+        const CreatePathEvent(
           eventId: 'e0',
           timestamp: 1000,
           pathId: 'path1',
-          startAnchor: const Point(x: 10, y: 20),
+          startAnchor: Point(x: 10, y: 20),
         ),
-        CreatePathEvent(
+        const CreatePathEvent(
           eventId: 'e1',
           timestamp: 2000,
           pathId: 'path2',
-          startAnchor: const Point(x: 30, y: 40),
+          startAnchor: Point(x: 30, y: 40),
         ),
       ];
       eventStore.addEventsAtSequence(events, 0);
@@ -716,11 +714,11 @@ void main() {
 
     test('handles document with single event', () async {
       // Arrange
-      final event = CreatePathEvent(
+      const event = CreatePathEvent(
         eventId: 'e0',
         timestamp: 1000,
         pathId: 'path0',
-        startAnchor: const Point(x: 0, y: 0),
+        startAnchor: Point(x: 0, y: 0),
       );
       eventStore.addEventsAtSequence([event], 0);
 

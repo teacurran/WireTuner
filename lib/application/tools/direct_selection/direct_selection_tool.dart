@@ -1,18 +1,20 @@
 import 'dart:math' as math;
 import 'dart:ui' as ui;
 
-import 'package:flutter/gestures.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:logger/logger.dart';
 import 'package:uuid/uuid.dart';
+import 'package:wiretuner/application/tools/direct_selection/anchor_drag_controller.dart';
+import 'package:wiretuner/application/tools/direct_selection/drag_controller.dart';
+import 'package:wiretuner/application/tools/direct_selection/handle_drag_controller.dart';
+import 'package:wiretuner/application/tools/direct_selection/snapping_service.dart';
 import 'package:wiretuner/application/tools/framework/tool_interface.dart';
 import 'package:wiretuner/domain/document/document.dart';
 import 'package:wiretuner/domain/events/event_base.dart';
 import 'package:wiretuner/domain/events/path_events.dart';
 import 'package:wiretuner/domain/models/anchor_point.dart' as domain_anchor;
 import 'package:wiretuner/domain/models/geometry/point_extensions.dart';
-import 'package:wiretuner/domain/models/path.dart' as domain_path;
 import 'package:wiretuner/infrastructure/event_sourcing/event_recorder.dart';
 import 'package:wiretuner/infrastructure/telemetry/telemetry_service.dart';
 import 'package:wiretuner/presentation/canvas/overlays/hit_tester.dart'
@@ -76,25 +78,6 @@ import 'package:wiretuner/presentation/canvas/viewport/viewport_controller.dart'
 /// toolManager.activateTool('direct_selection');
 /// ```
 class DirectSelectionTool implements ITool {
-  final Document _document;
-  final ViewportController _viewportController;
-  final EventRecorder _eventRecorder;
-  final PathRenderer _pathRenderer;
-  final TelemetryService? _telemetryService;
-  final Logger _logger = Logger();
-  final Uuid _uuid = const Uuid();
-
-  /// Hit tester for anchor and handle detection.
-  late final CanvasHitTester _hitTester;
-
-  /// Current drag operation state (null when not dragging).
-  _DragContext? _dragContext;
-
-  /// Currently hovered anchor (for cursor and visual feedback).
-  HoveredAnchor? _hoveredAnchor;
-
-  /// Current cursor based on hover state.
-  MouseCursor _currentCursor = SystemMouseCursors.precise;
 
   DirectSelectionTool({
     required Document document,
@@ -113,8 +96,55 @@ class DirectSelectionTool implements ITool {
       pathRenderer: _pathRenderer,
       hitThresholdScreenPx: 8.0,
     );
+
+    // Initialize snapping service (disabled by default, Shift to enable)
+    _snappingService = SnappingService(
+      snapEnabled: false,
+      gridSize: 10.0,
+      angleIncrement: 15.0,
+    );
+
+    // Initialize drag controllers
+    final baseDragController = DragController();
+    _anchorDragController = AnchorDragController(
+      baseDragController: baseDragController,
+      snappingService: _snappingService,
+    );
+    _handleDragController = HandleDragController(
+      baseDragController: baseDragController,
+      snappingService: _snappingService,
+    );
+
     _logger.i('DirectSelectionTool initialized');
   }
+  final Document _document;
+  final ViewportController _viewportController;
+  final EventRecorder _eventRecorder;
+  final PathRenderer _pathRenderer;
+  final TelemetryService? _telemetryService;
+  final Logger _logger = Logger();
+  final Uuid _uuid = const Uuid();
+
+  /// Hit tester for anchor and handle detection.
+  late final CanvasHitTester _hitTester;
+
+  /// Snapping service for grid and angle snapping.
+  late final SnappingService _snappingService;
+
+  /// Anchor drag controller for grid snapping.
+  late final AnchorDragController _anchorDragController;
+
+  /// Handle drag controller for angle snapping.
+  late final HandleDragController _handleDragController;
+
+  /// Current drag operation state (null when not dragging).
+  _DragContext? _dragContext;
+
+  /// Currently hovered anchor (for cursor and visual feedback).
+  HoveredAnchor? _hoveredAnchor;
+
+  /// Current cursor based on hover state.
+  MouseCursor _currentCursor = SystemMouseCursors.precise;
 
   @override
   String get toolId => 'direct_selection';
@@ -222,6 +252,23 @@ class DirectSelectionTool implements ITool {
 
   @override
   bool onKeyPress(KeyEvent event) {
+    // Handle Shift key for snap toggle
+    if (event is KeyDownEvent &&
+        (event.logicalKey == LogicalKeyboardKey.shiftLeft ||
+            event.logicalKey == LogicalKeyboardKey.shiftRight)) {
+      _snappingService.setSnapEnabled(true);
+      _logger.d('Snapping enabled (Shift pressed)');
+      return true;
+    }
+
+    if (event is KeyUpEvent &&
+        (event.logicalKey == LogicalKeyboardKey.shiftLeft ||
+            event.logicalKey == LogicalKeyboardKey.shiftRight)) {
+      _snappingService.setSnapEnabled(false);
+      _logger.d('Snapping disabled (Shift released)');
+      return true;
+    }
+
     // Handle Alt/Option key for anchor type conversion
     // This would be implemented in a future iteration
     return false;
@@ -325,102 +372,41 @@ class DirectSelectionTool implements ITool {
       return;
     }
 
-    final currentAnchor = domainPath.anchors[context.anchorIndex];
+    // Use appropriate drag controller based on component
+    DragResult result;
+    Map<String, dynamic>? feedbackMetrics;
 
-    // Calculate new position and handles based on component and anchor type
-    Point? newPosition;
-    Point? newHandleIn;
-    Point? newHandleOut;
+    if (context.component == AnchorComponent.anchor) {
+      // Anchor drag with grid snapping
+      result = _anchorDragController.calculateDragUpdate(
+        anchor: context.originalAnchor,
+        delta: delta,
+      );
 
-    switch (context.component) {
-      case AnchorComponent.anchor:
-        // Moving entire anchor (position + handles stay relative)
-        newPosition = Point(
-          x: context.originalAnchor.position.x + delta.x,
-          y: context.originalAnchor.position.y + delta.y,
+      // Calculate feedback metrics for on-canvas display
+      if (result.position != null) {
+        feedbackMetrics = _anchorDragController.calculateFeedbackMetrics(
+          position: result.position!,
+          originalPosition: context.originalAnchor.position,
         );
-        // Handles remain unchanged (relative offsets)
-        newHandleIn = currentAnchor.handleIn;
-        newHandleOut = currentAnchor.handleOut;
-        break;
+      }
+    } else {
+      // Handle drag with angle snapping
+      result = _handleDragController.calculateDragUpdate(
+        anchor: context.originalAnchor,
+        delta: delta,
+        component: context.component,
+      );
 
-      case AnchorComponent.handleIn:
-        // Moving handleIn
-        final absoluteHandlePos = Point(
-          x: context.startPosition.x + delta.x,
-          y: context.startPosition.y + delta.y,
+      // Calculate feedback metrics for on-canvas display
+      final handleVector = context.component == AnchorComponent.handleIn
+          ? result.handleIn
+          : result.handleOut;
+      if (handleVector != null) {
+        feedbackMetrics = _handleDragController.calculateFeedbackMetrics(
+          handleVector: handleVector,
         );
-        newHandleIn = Point(
-          x: absoluteHandlePos.x - currentAnchor.position.x,
-          y: absoluteHandlePos.y - currentAnchor.position.y,
-        );
-
-        // Apply anchor type constraints
-        if (currentAnchor.anchorType == domain_anchor.AnchorType.smooth) {
-          // Smooth: mirror handleOut = -handleIn
-          newHandleOut = Point(x: -newHandleIn.x, y: -newHandleIn.y);
-        } else if (currentAnchor.anchorType == domain_anchor.AnchorType.symmetric) {
-          // Symmetric: collinear but preserve handleOut length
-          final handleInLength = _vectorLength(newHandleIn);
-          final handleOutLength = currentAnchor.handleOut != null
-              ? _vectorLength(currentAnchor.handleOut!)
-              : handleInLength;
-
-          if (handleInLength > 0.001) {
-            // Opposite direction with preserved length
-            final normalizedX = -newHandleIn.x / handleInLength;
-            final normalizedY = -newHandleIn.y / handleInLength;
-            newHandleOut = Point(
-              x: normalizedX * handleOutLength,
-              y: normalizedY * handleOutLength,
-            );
-          } else {
-            newHandleOut = currentAnchor.handleOut;
-          }
-        } else {
-          // Corner: independent handles
-          newHandleOut = currentAnchor.handleOut;
-        }
-        break;
-
-      case AnchorComponent.handleOut:
-        // Moving handleOut
-        final absoluteHandlePos = Point(
-          x: context.startPosition.x + delta.x,
-          y: context.startPosition.y + delta.y,
-        );
-        newHandleOut = Point(
-          x: absoluteHandlePos.x - currentAnchor.position.x,
-          y: absoluteHandlePos.y - currentAnchor.position.y,
-        );
-
-        // Apply anchor type constraints
-        if (currentAnchor.anchorType == domain_anchor.AnchorType.smooth) {
-          // Smooth: mirror handleIn = -handleOut
-          newHandleIn = Point(x: -newHandleOut.x, y: -newHandleOut.y);
-        } else if (currentAnchor.anchorType == domain_anchor.AnchorType.symmetric) {
-          // Symmetric: collinear but preserve handleIn length
-          final handleOutLength = _vectorLength(newHandleOut);
-          final handleInLength = currentAnchor.handleIn != null
-              ? _vectorLength(currentAnchor.handleIn!)
-              : handleOutLength;
-
-          if (handleOutLength > 0.001) {
-            // Opposite direction with preserved length
-            final normalizedX = -newHandleOut.x / handleOutLength;
-            final normalizedY = -newHandleOut.y / handleOutLength;
-            newHandleIn = Point(
-              x: normalizedX * handleInLength,
-              y: normalizedY * handleInLength,
-            );
-          } else {
-            newHandleIn = currentAnchor.handleIn;
-          }
-        } else {
-          // Corner: independent handles
-          newHandleIn = currentAnchor.handleIn;
-        }
-        break;
+      }
     }
 
     // Emit ModifyAnchorEvent (will be auto-sampled)
@@ -429,15 +415,16 @@ class DirectSelectionTool implements ITool {
       timestamp: DateTime.now().millisecondsSinceEpoch,
       pathId: context.objectId,
       anchorIndex: context.anchorIndex,
-      position: newPosition,
-      handleIn: newHandleIn,
-      handleOut: newHandleOut,
-    ));
+      position: result.position,
+      handleIn: result.handleIn,
+      handleOut: result.handleOut,
+    ),);
 
-    // Update drag context
+    // Update drag context with feedback metrics
     _dragContext = context.copyWith(
       currentPosition: worldPos,
       eventCount: context.eventCount + 1,
+      feedbackMetrics: feedbackMetrics,
     );
   }
 
@@ -534,11 +521,74 @@ class DirectSelectionTool implements ITool {
     }
   }
 
-  /// Renders drag preview overlay.
+  /// Renders drag preview overlay with feedback metrics.
   void _renderDragPreview(ui.Canvas canvas) {
-    // This would show a ghost/preview of the anchor/handle being dragged
-    // For now, we rely on the document state updates for visual feedback
-    // Future: could draw semi-transparent preview position
+    if (_dragContext == null || _dragContext!.feedbackMetrics == null) return;
+
+    final context = _dragContext!;
+    final metrics = context.feedbackMetrics!;
+
+    // Determine feedback text based on component
+    String feedbackText;
+    if (context.component == AnchorComponent.anchor) {
+      // Anchor drag: show position (x, y)
+      final x = metrics['x'] as double;
+      final y = metrics['y'] as double;
+      feedbackText = 'x: ${x.toStringAsFixed(1)}, y: ${y.toStringAsFixed(1)}';
+    } else {
+      // Handle drag: show angle and length
+      final angle = metrics['angle'] as double;
+      final length = metrics['length'] as double;
+      feedbackText =
+          'Angle: ${angle.toStringAsFixed(0)}°\nLength: ${length.toStringAsFixed(1)}';
+    }
+
+    // Calculate feedback position in screen space
+    // Position text offset from current drag position
+    final screenPos = _viewportController.worldToScreen(context.currentPosition);
+    const feedbackOffset = Offset(10, 15); // px offset from cursor
+
+    // Create text painter
+    final textSpan = TextSpan(
+      text: feedbackText,
+      style: const TextStyle(
+        color: ui.Color(0xFFFFFFFF), // White text
+        fontSize: 12,
+        fontFamily: 'monospace',
+      ),
+    );
+
+    final textPainter = TextPainter(
+      text: textSpan,
+      textDirection: TextDirection.ltr,
+    );
+    textPainter.layout();
+
+    // Draw background rectangle
+    final bgRect = ui.Rect.fromLTWH(
+      screenPos.dx + feedbackOffset.dx,
+      screenPos.dy + feedbackOffset.dy,
+      textPainter.width + 8,
+      textPainter.height + 8,
+    );
+
+    final bgPaint = ui.Paint()
+      ..color = const ui.Color(0xCC000000) // Semi-transparent black
+      ..style = ui.PaintingStyle.fill;
+
+    canvas.drawRRect(
+      ui.RRect.fromRectAndRadius(bgRect, const ui.Radius.circular(4)),
+      bgPaint,
+    );
+
+    // Draw text
+    textPainter.paint(
+      canvas,
+      Offset(
+        screenPos.dx + feedbackOffset.dx + 4,
+        screenPos.dy + feedbackOffset.dy + 4,
+      ),
+    );
   }
 
   /// Records an event via the event recorder.
@@ -547,13 +597,23 @@ class DirectSelectionTool implements ITool {
   }
 
   /// Calculates the length of a vector.
-  double _vectorLength(Point vector) {
-    return math.sqrt(vector.x * vector.x + vector.y * vector.y);
-  }
+  double _vectorLength(Point vector) => math.sqrt(vector.x * vector.x + vector.y * vector.y);
 }
 
 /// Internal state for drag operations.
 class _DragContext {
+
+  _DragContext({
+    required this.objectId,
+    required this.anchorIndex,
+    required this.component,
+    required this.startPosition,
+    required this.currentPosition,
+    required this.startTime,
+    required this.eventCount,
+    required this.originalAnchor,
+    this.feedbackMetrics,
+  });
   /// The object ID being dragged.
   final String objectId;
 
@@ -578,22 +638,14 @@ class _DragContext {
   /// The original anchor state at drag start.
   final domain_anchor.AnchorPoint originalAnchor;
 
-  _DragContext({
-    required this.objectId,
-    required this.anchorIndex,
-    required this.component,
-    required this.startPosition,
-    required this.currentPosition,
-    required this.startTime,
-    required this.eventCount,
-    required this.originalAnchor,
-  });
+  /// Feedback metrics for on-canvas display (angle, length, position, etc.).
+  final Map<String, dynamic>? feedbackMetrics;
 
   _DragContext copyWith({
     Point? currentPosition,
     int? eventCount,
-  }) {
-    return _DragContext(
+    Map<String, dynamic>? feedbackMetrics,
+  }) => _DragContext(
       objectId: objectId,
       anchorIndex: anchorIndex,
       component: component,
@@ -602,6 +654,6 @@ class _DragContext {
       startTime: startTime,
       eventCount: eventCount ?? this.eventCount,
       originalAnchor: originalAnchor,
+      feedbackMetrics: feedbackMetrics ?? this.feedbackMetrics,
     );
-  }
 }

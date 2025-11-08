@@ -1,6 +1,5 @@
 import 'dart:typed_data';
 import 'package:logger/logger.dart';
-import '../../domain/events/event_base.dart';
 import '../persistence/event_store.dart';
 import '../persistence/snapshot_store.dart';
 import 'event_dispatcher.dart';
@@ -8,6 +7,12 @@ import 'snapshot_serializer.dart';
 
 /// Result of a replay operation, including the final state and metadata about issues encountered.
 class ReplayResult {
+
+  ReplayResult({
+    required this.state,
+    this.skippedSequences = const [],
+    this.warnings = const [],
+  });
   /// The reconstructed document state
   final dynamic state;
 
@@ -16,12 +21,6 @@ class ReplayResult {
 
   /// Warnings generated during replay
   final List<String> warnings;
-
-  ReplayResult({
-    required this.state,
-    this.skippedSequences = const [],
-    this.warnings = const [],
-  });
 
   /// Whether the replay encountered any issues
   bool get hasIssues => skippedSequences.isNotEmpty || warnings.isNotEmpty;
@@ -76,11 +75,6 @@ class ReplayResult {
 /// **Thread Safety**: Designed for single-threaded use on main isolate.
 /// All replay operations are async to avoid blocking the UI.
 class EventReplayer {
-  final EventStore _eventStore;
-  final SnapshotStore _snapshotStore;
-  final EventDispatcher _dispatcher;
-  final SnapshotSerializer _serializer;
-  final Logger _logger = Logger();
 
   /// Creates an [EventReplayer] with the specified dependencies.
   ///
@@ -108,6 +102,11 @@ class EventReplayer {
         _snapshotStore = snapshotStore,
         _dispatcher = dispatcher,
         _serializer = SnapshotSerializer(enableCompression: enableCompression);
+  final EventStore _eventStore;
+  final SnapshotStore _snapshotStore;
+  final EventDispatcher _dispatcher;
+  final SnapshotSerializer _serializer;
+  final Logger _logger = Logger();
 
   /// Reconstructs document state from events in the specified range.
   ///

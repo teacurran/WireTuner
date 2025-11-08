@@ -1,6 +1,4 @@
-import 'dart:ui';
 import 'package:flutter/foundation.dart';
-import 'package:flutter/gestures.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -12,6 +10,11 @@ import 'package:wiretuner/application/tools/framework/tool_manager.dart';
 ///
 /// Records all lifecycle and event handling calls for verification.
 class FakeTool implements ITool {
+
+  FakeTool(
+    this._toolId, {
+    MouseCursor cursor = SystemMouseCursors.basic,
+  }) : _cursor = cursor;
   final String _toolId;
   final MouseCursor _cursor;
 
@@ -25,11 +28,6 @@ class FakeTool implements ITool {
   bool pointerMoveHandled = false;
   bool pointerUpHandled = true;
   bool keyPressHandled = false;
-
-  FakeTool(
-    this._toolId, {
-    MouseCursor cursor = SystemMouseCursors.basic,
-  }) : _cursor = cursor;
 
   @override
   String get toolId => _toolId;
@@ -108,10 +106,6 @@ class MockEventRecorder with ChangeNotifier {
 
   bool get isPaused => _isPaused;
 
-  @override
-  void dispose() {
-    super.dispose();
-  }
 }
 
 void main() {
@@ -270,8 +264,8 @@ void main() {
       });
 
       test('should route pointer down event to active tool', () {
-        final event = PointerDownEvent(
-          position: const Offset(100, 100),
+        const event = PointerDownEvent(
+          position: Offset(100, 100),
         );
 
         final handled = toolManager.handlePointerDown(event);
@@ -281,8 +275,8 @@ void main() {
       });
 
       test('should route pointer move event to active tool', () {
-        final event = PointerMoveEvent(
-          position: const Offset(150, 150),
+        const event = PointerMoveEvent(
+          position: Offset(150, 150),
         );
 
         final handled = toolManager.handlePointerMove(event);
@@ -292,8 +286,8 @@ void main() {
       });
 
       test('should route pointer up event to active tool', () {
-        final event = PointerUpEvent(
-          position: const Offset(200, 200),
+        const event = PointerUpEvent(
+          position: Offset(200, 200),
         );
 
         final handled = toolManager.handlePointerUp(event);
@@ -303,7 +297,7 @@ void main() {
       });
 
       test('should route keyboard event to active tool', () {
-        final event = KeyDownEvent(
+        const event = KeyDownEvent(
           logicalKey: LogicalKeyboardKey.enter,
           physicalKey: PhysicalKeyboardKey.enter,
           timeStamp: Duration.zero,
@@ -318,16 +312,16 @@ void main() {
       test('should return false for events when no tool is active', () {
         toolManager.deactivateCurrentTool();
 
-        final pointerEvent = PointerDownEvent(position: const Offset(0, 0));
-        final keyEvent = KeyDownEvent(
+        const pointerEvent = PointerDownEvent(position: Offset(0, 0));
+        const keyEvent = KeyDownEvent(
           logicalKey: LogicalKeyboardKey.keyA,
           physicalKey: PhysicalKeyboardKey.keyA,
           timeStamp: Duration.zero,
         );
 
         expect(toolManager.handlePointerDown(pointerEvent), isFalse);
-        expect(toolManager.handlePointerMove(PointerMoveEvent()), isFalse);
-        expect(toolManager.handlePointerUp(PointerUpEvent()), isFalse);
+        expect(toolManager.handlePointerMove(const PointerMoveEvent()), isFalse);
+        expect(toolManager.handlePointerUp(const PointerUpEvent()), isFalse);
         expect(toolManager.handleKeyPress(keyEvent), isFalse);
       });
     });
@@ -391,7 +385,7 @@ void main() {
         toolManagerWithRecorder.activateTool('pen');
         eventRecorder.flushCallCount = 0;
 
-        final event = PointerUpEvent(position: const Offset(100, 100));
+        const event = PointerUpEvent(position: Offset(100, 100));
         toolManagerWithRecorder.handlePointerUp(event);
 
         expect(eventRecorder.flushCallCount, equals(1));

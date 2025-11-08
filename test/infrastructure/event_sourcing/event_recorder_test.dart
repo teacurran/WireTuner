@@ -61,10 +61,8 @@ class MockEventStore implements EventStore {
   }
 
   /// Verifies that insertEvent was called with the specified parameters.
-  bool wasCalledWith(String documentId, EventBase event) {
-    return calls.any((call) =>
-        call.documentId == documentId && call.event.eventId == event.eventId);
-  }
+  bool wasCalledWith(String documentId, EventBase event) => calls.any((call) =>
+        call.documentId == documentId && call.event.eventId == event.eventId,);
 
   /// Returns the number of times insertEvent was called.
   int get callCount => calls.length;
@@ -81,10 +79,10 @@ class MockEventStore implements EventStore {
 
 /// Records a call to insertEvent for verification.
 class CallRecord {
-  final String documentId;
-  final EventBase event;
 
   CallRecord(this.documentId, this.event);
+  final String documentId;
+  final EventBase event;
 }
 
 void main() {
@@ -519,7 +517,7 @@ void main() {
           timestamp: DateTime.now().millisecondsSinceEpoch + i,
           pathId: 'path-$i',
           startAnchor: Point(x: 100.0 + i * 10, y: 200.0),
-        ));
+        ),);
         await Future.delayed(const Duration(milliseconds: 60));
       }
 

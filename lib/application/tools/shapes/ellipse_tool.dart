@@ -1,9 +1,7 @@
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:wiretuner/application/tools/shapes/shape_base.dart';
-import 'package:wiretuner/domain/document/document.dart';
 import 'package:wiretuner/domain/events/event_base.dart';
-import 'package:wiretuner/presentation/canvas/viewport/viewport_controller.dart';
 
 /// Tool for creating ellipse shapes.
 ///
@@ -29,14 +27,10 @@ import 'package:wiretuner/presentation/canvas/viewport/viewport_controller.dart'
 /// Related: T026 (Ellipse Tool), I4.T1
 class EllipseTool extends ShapeToolBase {
   EllipseTool({
-    required Document document,
-    required ViewportController viewportController,
-    required dynamic eventRecorder,
-  }) : super(
-          document: document,
-          viewportController: viewportController,
-          eventRecorder: eventRecorder,
-        );
+    required super.document,
+    required super.viewportController,
+    required super.eventRecorder,
+  });
 
   @override
   String get toolId => 'ellipse';
@@ -71,15 +65,13 @@ class EllipseTool extends ShapeToolBase {
   }
 
   @override
-  Map<String, double> createShapeParameters(Rect boundingBox) {
-    return {
+  Map<String, double> createShapeParameters(Rect boundingBox) => {
       'centerX': boundingBox.center.dx,
       'centerY': boundingBox.center.dy,
       'width': boundingBox.width,
       'height': boundingBox.height,
       // Note: Ellipse doesn't have cornerRadius parameter
     };
-  }
 
   @override
   ShapeType getShapeType() => ShapeType.ellipse;

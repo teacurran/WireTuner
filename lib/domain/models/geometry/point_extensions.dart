@@ -33,9 +33,7 @@ extension PointGeometry on Point {
   /// final p2 = Point(x: 3, y: 4);
   /// final result = p1 + p2; // Point(x: 4, y: 6)
   /// ```
-  Point operator +(Point other) {
-    return Point(x: x + other.x, y: y + other.y);
-  }
+  Point operator +(Point other) => Point(x: x + other.x, y: y + other.y);
 
   /// Subtracts two points using vector subtraction.
   ///
@@ -47,9 +45,7 @@ extension PointGeometry on Point {
   /// final p2 = Point(x: 2, y: 3);
   /// final result = p1 - p2; // Point(x: 3, y: 4)
   /// ```
-  Point operator -(Point other) {
-    return Point(x: x - other.x, y: y - other.y);
-  }
+  Point operator -(Point other) => Point(x: x - other.x, y: y - other.y);
 
   /// Multiplies point by a scalar value.
   ///
@@ -60,9 +56,7 @@ extension PointGeometry on Point {
   /// final p = Point(x: 2, y: 3);
   /// final scaled = p * 2.5; // Point(x: 5, y: 7.5)
   /// ```
-  Point operator *(double scalar) {
-    return Point(x: x * scalar, y: y * scalar);
-  }
+  Point operator *(double scalar) => Point(x: x * scalar, y: y * scalar);
 
   /// Divides point by a scalar value.
   ///
@@ -73,9 +67,7 @@ extension PointGeometry on Point {
   /// final p = Point(x: 10, y: 20);
   /// final divided = p / 2; // Point(x: 5, y: 10)
   /// ```
-  Point operator /(double scalar) {
-    return Point(x: x / scalar, y: y / scalar);
-  }
+  Point operator /(double scalar) => Point(x: x / scalar, y: y / scalar);
 
   /// Returns the negation of this point.
   ///
@@ -86,9 +78,7 @@ extension PointGeometry on Point {
   /// final p = Point(x: 3, y: -4);
   /// final negated = -p; // Point(x: -3, y: 4)
   /// ```
-  Point operator -() {
-    return Point(x: -x, y: -y);
-  }
+  Point operator -() => Point(x: -x, y: -y);
 
   /// Calculates the magnitude (length) of this point as a vector.
   ///
@@ -126,9 +116,7 @@ extension PointGeometry on Point {
   /// final p2 = Point(x: 4, y: 5);
   /// print(p1.dot(p2)); // 23.0 (2*4 + 3*5)
   /// ```
-  double dot(Point other) {
-    return x * other.x + y * other.y;
-  }
+  double dot(Point other) => x * other.x + y * other.y;
 
   /// Calculates the cross product magnitude with another point (2D).
   ///
@@ -141,7 +129,5 @@ extension PointGeometry on Point {
   /// final p2 = Point(x: 4, y: 5);
   /// print(p1.cross(p2)); // -2.0 (2*5 - 3*4)
   /// ```
-  double cross(Point other) {
-    return x * other.y - y * other.x;
-  }
+  double cross(Point other) => x * other.y - y * other.x;
 }

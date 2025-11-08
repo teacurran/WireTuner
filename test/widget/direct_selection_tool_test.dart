@@ -1,4 +1,3 @@
-import 'dart:math' as math;
 
 import 'package:flutter/gestures.dart';
 import 'package:flutter/services.dart';
@@ -12,21 +11,20 @@ import 'package:wiretuner/domain/models/path.dart' as domain;
 import 'package:wiretuner/domain/models/anchor_point.dart';
 import 'package:wiretuner/domain/models/segment.dart';
 import 'package:wiretuner/infrastructure/event_sourcing/event_recorder.dart';
-import 'package:wiretuner/infrastructure/telemetry/telemetry_service.dart';
 import 'package:wiretuner/presentation/canvas/painter/path_renderer.dart';
 import 'package:wiretuner/presentation/canvas/viewport/viewport_controller.dart';
 import 'package:wiretuner/infrastructure/persistence/event_store.dart';
 
 /// Mock EventRecorder for testing.
 class MockEventRecorder extends EventRecorder {
-  final List<EventBase> recordedEvents = [];
-  int flushCallCount = 0;
 
   MockEventRecorder()
       : super(
           eventStore: _MockEventStore(),
           documentId: 'test-doc',
         );
+  final List<EventBase> recordedEvents = [];
+  int flushCallCount = 0;
 
   @override
   void recordEvent(EventBase event) {
@@ -81,7 +79,7 @@ void main() {
 
       final path1 = domain.Path(
         anchors: [
-          AnchorPoint(position: const Point(x: 100, y: 200)),
+          const AnchorPoint(position: Point(x: 100, y: 200)),
           smoothAnchor,
         ],
         segments: [
@@ -102,7 +100,7 @@ void main() {
         id: 'doc-1',
         title: 'Test Document',
         layers: [layer],
-        selection: Selection(
+        selection: const Selection(
           objectIds: {'path-1'},
         ),
       );
@@ -136,15 +134,15 @@ void main() {
       });
 
       test('should emit ModifyAnchorEvent on drag move', () {
-        final downEvent = PointerDownEvent(
-          position: const Offset(100, 200),
+        const downEvent = PointerDownEvent(
+          position: Offset(100, 200),
         );
         directSelectionTool.onPointerDown(downEvent);
 
         eventRecorder.clear();
 
-        final moveEvent = PointerMoveEvent(
-          position: const Offset(110, 210),
+        const moveEvent = PointerMoveEvent(
+          position: Offset(110, 210),
         );
         directSelectionTool.onPointerMove(moveEvent);
 
@@ -158,15 +156,15 @@ void main() {
       });
 
       test('should call flush on drag finish', () {
-        final downEvent = PointerDownEvent(
-          position: const Offset(100, 200),
+        const downEvent = PointerDownEvent(
+          position: Offset(100, 200),
         );
         directSelectionTool.onPointerDown(downEvent);
 
         final initialFlushCount = eventRecorder.flushCallCount;
 
-        final upEvent = PointerUpEvent(
-          position: const Offset(110, 210),
+        const upEvent = PointerUpEvent(
+          position: Offset(110, 210),
         );
         directSelectionTool.onPointerUp(upEvent);
 
@@ -181,15 +179,15 @@ void main() {
       });
 
       test('should mirror handleIn when dragging handleOut', () {
-        final downEvent = PointerDownEvent(
-          position: const Offset(250, 200), // HandleOut position
+        const downEvent = PointerDownEvent(
+          position: Offset(250, 200), // HandleOut position
         );
         directSelectionTool.onPointerDown(downEvent);
 
         eventRecorder.clear();
 
-        final moveEvent = PointerMoveEvent(
-          position: const Offset(260, 220),
+        const moveEvent = PointerMoveEvent(
+          position: Offset(260, 220),
         );
         directSelectionTool.onPointerMove(moveEvent);
 

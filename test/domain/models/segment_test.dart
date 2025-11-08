@@ -5,7 +5,7 @@ void main() {
   group('Segment', () {
     group('Construction', () {
       test('default constructor creates segment with all required fields', () {
-        final segment = Segment(
+        const segment = Segment(
           startAnchorIndex: 0,
           endAnchorIndex: 1,
           segmentType: SegmentType.line,
@@ -17,7 +17,7 @@ void main() {
       });
 
       test('constructor accepts different anchor indices', () {
-        final segment = Segment(
+        const segment = Segment(
           startAnchorIndex: 5,
           endAnchorIndex: 10,
           segmentType: SegmentType.bezier,
@@ -39,7 +39,7 @@ void main() {
       });
 
       test('constructor accepts zero indices', () {
-        final segment = Segment(
+        const segment = Segment(
           startAnchorIndex: 0,
           endAnchorIndex: 0,
           segmentType: SegmentType.line,
@@ -118,7 +118,7 @@ void main() {
       });
 
       test('isLine returns false for arc segments', () {
-        final segment = Segment(
+        const segment = Segment(
           startAnchorIndex: 0,
           endAnchorIndex: 1,
           segmentType: SegmentType.arc,
@@ -149,7 +149,7 @@ void main() {
       });
 
       test('isBezier returns false for arc segments', () {
-        final segment = Segment(
+        const segment = Segment(
           startAnchorIndex: 0,
           endAnchorIndex: 1,
           segmentType: SegmentType.arc,
@@ -207,7 +207,7 @@ void main() {
       });
 
       test('copyWith leaves unchanged fields intact', () {
-        final original = Segment(
+        const original = Segment(
           startAnchorIndex: 2,
           endAnchorIndex: 5,
           segmentType: SegmentType.bezier,
@@ -223,7 +223,7 @@ void main() {
       });
 
       test('copyWith with no parameters returns equal instance', () {
-        final original = Segment(
+        const original = Segment(
           startAnchorIndex: 2,
           endAnchorIndex: 5,
           segmentType: SegmentType.bezier,
@@ -282,13 +282,13 @@ void main() {
       });
 
       test('instances with same values are equal', () {
-        final segment1 = Segment(
+        const segment1 = Segment(
           startAnchorIndex: 2,
           endAnchorIndex: 5,
           segmentType: SegmentType.bezier,
         );
 
-        final segment2 = Segment(
+        const segment2 = Segment(
           startAnchorIndex: 2,
           endAnchorIndex: 5,
           segmentType: SegmentType.bezier,
@@ -320,13 +320,13 @@ void main() {
       });
 
       test('hashCode is consistent with equality', () {
-        final segment1 = Segment(
+        const segment1 = Segment(
           startAnchorIndex: 2,
           endAnchorIndex: 5,
           segmentType: SegmentType.bezier,
         );
 
-        final segment2 = Segment(
+        const segment2 = Segment(
           startAnchorIndex: 2,
           endAnchorIndex: 5,
           segmentType: SegmentType.bezier,
@@ -375,7 +375,7 @@ void main() {
       });
 
       test('toString includes all fields for arc segment', () {
-        final segment = Segment(
+        const segment = Segment(
           startAnchorIndex: 2,
           endAnchorIndex: 3,
           segmentType: SegmentType.arc,
@@ -431,7 +431,7 @@ void main() {
 
     group('Immutability', () {
       test('segment fields are final', () {
-        final segment = Segment(
+        const segment = Segment(
           startAnchorIndex: 0,
           endAnchorIndex: 1,
           segmentType: SegmentType.bezier,
@@ -448,7 +448,7 @@ void main() {
     group('Factory consistency', () {
       test('line factory is equivalent to manual construction', () {
         final factory = Segment.line(startIndex: 0, endIndex: 1);
-        final manual = Segment(
+        const manual = Segment(
           startAnchorIndex: 0,
           endAnchorIndex: 1,
           segmentType: SegmentType.line,
@@ -459,7 +459,7 @@ void main() {
 
       test('bezier factory is equivalent to manual construction', () {
         final factory = Segment.bezier(startIndex: 2, endIndex: 3);
-        final manual = Segment(
+        const manual = Segment(
           startAnchorIndex: 2,
           endAnchorIndex: 3,
           segmentType: SegmentType.bezier,

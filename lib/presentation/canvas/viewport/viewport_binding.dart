@@ -43,6 +43,15 @@ import 'package:wiretuner/presentation/canvas/viewport/viewport_state.dart';
 /// All gestures are routed through ViewportState for consistent
 /// coordinate handling and telemetry.
 class ViewportBinding extends StatefulWidget {
+
+  const ViewportBinding({
+    super.key,
+    required this.controller,
+    required this.child,
+    this.onViewportChanged,
+    this.onTelemetry,
+    this.debugMode = false,
+  });
   /// The viewport controller managing transformations.
   final ViewportController controller;
 
@@ -66,15 +75,6 @@ class ViewportBinding extends StatefulWidget {
   /// Typically a CustomPaint with DocumentPainter.
   final Widget child;
 
-  const ViewportBinding({
-    super.key,
-    required this.controller,
-    required this.child,
-    this.onViewportChanged,
-    this.onTelemetry,
-    this.debugMode = false,
-  });
-
   @override
   State<ViewportBinding> createState() => _ViewportBindingState();
 
@@ -84,11 +84,9 @@ class ViewportBinding extends StatefulWidget {
   ///
   /// Returns null if no ViewportBinding is found in the tree.
   /// Use this to access viewport state from descendant widgets.
-  static ViewportState? maybeOf(BuildContext context) {
-    return context
+  static ViewportState? maybeOf(BuildContext context) => context
         .dependOnInheritedWidgetOfExactType<_InheritedViewportState>()
         ?.state;
-  }
 
   /// Retrieves the ViewportState from the widget tree.
   ///
@@ -146,8 +144,7 @@ class _ViewportBindingState extends State<ViewportBinding> {
   }
 
   @override
-  Widget build(BuildContext context) {
-    return _InheritedViewportState(
+  Widget build(BuildContext context) => _InheritedViewportState(
       state: _state,
       child: LayoutBuilder(
         builder: (context, constraints) {
@@ -167,7 +164,7 @@ class _ViewportBindingState extends State<ViewportBinding> {
                 // Convert ScaleStartDetails to pan-like handling
                 _state.onPanStart(DragStartDetails(
                   globalPosition: details.focalPoint,
-                ));
+                ),);
               },
               onScaleUpdate: (details) {
                 // Handle both pan and zoom through scale gesture
@@ -179,14 +176,14 @@ class _ViewportBindingState extends State<ViewportBinding> {
                   _state.onPanUpdate(DragUpdateDetails(
                     globalPosition: details.focalPoint,
                     delta: details.focalPointDelta,
-                  ));
+                  ),);
                 }
               },
               onScaleEnd: (details) {
                 // End both pan and zoom
                 _state.onPanEnd(DragEndDetails(
                   velocity: details.velocity,
-                ));
+                ),);
               },
               // Use eager gesture recognition for responsive pan
               behavior: HitTestBehavior.opaque,
@@ -203,14 +200,11 @@ class _ViewportBindingState extends State<ViewportBinding> {
         },
       ),
     );
-  }
 
   /// Builds debug overlay showing FPS and viewport state.
-  Widget _buildDebugOverlay() {
-    return ListenableBuilder(
+  Widget _buildDebugOverlay() => ListenableBuilder(
       listenable: _state,
-      builder: (context, _) {
-        return Positioned(
+      builder: (context, _) => Positioned(
           top: 8,
           left: 8,
           child: Container(
@@ -266,10 +260,8 @@ class _ViewportBindingState extends State<ViewportBinding> {
               ],
             ),
           ),
-        );
-      },
+        ),
     );
-  }
 
   /// Returns color for FPS display based on performance.
   Color _getFpsColor(double fps) {
@@ -282,15 +274,13 @@ class _ViewportBindingState extends State<ViewportBinding> {
 
 /// InheritedWidget that provides ViewportState down the widget tree.
 class _InheritedViewportState extends InheritedWidget {
-  final ViewportState state;
 
   const _InheritedViewportState({
     required this.state,
     required super.child,
   });
+  final ViewportState state;
 
   @override
-  bool updateShouldNotify(_InheritedViewportState oldWidget) {
-    return state != oldWidget.state;
-  }
+  bool updateShouldNotify(_InheritedViewportState oldWidget) => state != oldWidget.state;
 }

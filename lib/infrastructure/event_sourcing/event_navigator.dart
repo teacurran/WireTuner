@@ -58,23 +58,6 @@ import 'event_replayer.dart';
 ///
 /// **Thread Safety**: Designed for single-threaded use on main isolate.
 class EventNavigator {
-  final String _documentId;
-  final EventReplayer _replayer;
-  final EventStore _eventStore;
-  final Logger _logger = Logger();
-
-  /// Current sequence number the navigator is positioned at
-  int _currentSequence = -1;
-
-  /// Maximum sequence number available in the document
-  int _maxSequence = -1;
-
-  /// LRU cache of recently visited states (sequence -> state)
-  /// Uses LinkedHashMap for insertion-order preservation
-  final LinkedHashMap<int, dynamic> _stateCache = LinkedHashMap();
-
-  /// Maximum number of states to keep in cache
-  static const int _maxCacheSize = 10;
 
   /// Creates an [EventNavigator] for the specified document.
   ///
@@ -102,6 +85,23 @@ class EventNavigator {
         _replayer = replayer,
         _eventStore = eventStore,
         _currentSequence = initialSequence ?? -1;
+  final String _documentId;
+  final EventReplayer _replayer;
+  final EventStore _eventStore;
+  final Logger _logger = Logger();
+
+  /// Current sequence number the navigator is positioned at
+  int _currentSequence = -1;
+
+  /// Maximum sequence number available in the document
+  int _maxSequence = -1;
+
+  /// LRU cache of recently visited states (sequence -> state)
+  /// Uses LinkedHashMap for insertion-order preservation
+  final LinkedHashMap<int, dynamic> _stateCache = LinkedHashMap();
+
+  /// Maximum number of states to keep in cache
+  static const int _maxCacheSize = 10;
 
   /// Returns the current sequence number the navigator is positioned at.
   int get currentSequence => _currentSequence;
@@ -156,9 +156,7 @@ class EventNavigator {
   /// Undo is possible if current sequence > 0.
   ///
   /// **Returns:** true if undo is possible, false otherwise
-  Future<bool> canUndo() async {
-    return _currentSequence > 0;
-  }
+  Future<bool> canUndo() async => _currentSequence > 0;
 
   /// Checks if redo operation is possible.
   ///
@@ -370,13 +368,11 @@ class EventNavigator {
   }
 
   /// Returns cache statistics for debugging.
-  Map<String, dynamic> getCacheStats() {
-    return {
+  Map<String, dynamic> getCacheStats() => {
       'size': _stateCache.length,
       'capacity': _maxCacheSize,
       'sequences': _stateCache.keys.toList(),
       'currentSequence': _currentSequence,
       'maxSequence': _maxSequence,
     };
-  }
 }

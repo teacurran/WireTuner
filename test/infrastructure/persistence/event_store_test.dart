@@ -219,11 +219,11 @@ void main() {
     test('event deserialization round-trip preserves data', () async {
       await createTestDocument('doc1');
 
-      final originalEvent = CreatePathEvent(
+      const originalEvent = CreatePathEvent(
         eventId: 'test-event-123',
         timestamp: 1234567890,
         pathId: 'path-456',
-        startAnchor: const Point(x: 100, y: 200),
+        startAnchor: Point(x: 100, y: 200),
         fillColor: '#FF0000',
         strokeColor: '#0000FF',
         strokeWidth: 3.5,

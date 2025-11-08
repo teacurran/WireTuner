@@ -1,6 +1,5 @@
 import 'dart:math';
 import 'dart:ui' as ui;
-import 'package:flutter/gestures.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:logger/logger.dart';
@@ -45,6 +44,14 @@ enum ShapeState {
 /// - [createShapeParameters]: Convert bounding box to parameter map
 /// - [getShapeType]: Return appropriate ShapeType enum value
 abstract class ShapeToolBase implements ITool {
+
+  ShapeToolBase({
+    required Document document,
+    required ViewportController viewportController,
+    required dynamic eventRecorder,
+  })  : _document = document,
+        _viewportController = viewportController,
+        _eventRecorder = eventRecorder;
   final Document _document;
   final ViewportController _viewportController;
   final dynamic _eventRecorder;
@@ -63,14 +70,6 @@ abstract class ShapeToolBase implements ITool {
   /// Minimum drag distance to create a shape (in world units).
   /// Prevents accidental tiny shapes from jittery input.
   static const double _minDragDistance = 5.0;
-
-  ShapeToolBase({
-    required Document document,
-    required ViewportController viewportController,
-    required dynamic eventRecorder,
-  })  : _document = document,
-        _viewportController = viewportController,
-        _eventRecorder = eventRecorder;
 
   // Abstract methods that subclasses must implement
 

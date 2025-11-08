@@ -43,12 +43,10 @@ class MockSnapshotStore implements SnapshotStore {
     throw UnimplementedError();
   }
 
-  bool wasCalledWith(String documentId, int eventSequence) {
-    return insertCalls.any(
+  bool wasCalledWith(String documentId, int eventSequence) => insertCalls.any(
       (call) =>
           call.documentId == documentId && call.eventSequence == eventSequence,
     );
-  }
 
   int get callCount => insertCalls.length;
 
@@ -61,10 +59,6 @@ class MockSnapshotStore implements SnapshotStore {
 }
 
 class InsertCall {
-  final String documentId;
-  final int eventSequence;
-  final Uint8List snapshotData;
-  final String compression;
 
   InsertCall(
     this.documentId,
@@ -72,6 +66,10 @@ class InsertCall {
     this.snapshotData,
     this.compression,
   );
+  final String documentId;
+  final int eventSequence;
+  final Uint8List snapshotData;
+  final String compression;
 }
 
 void main() {
@@ -245,7 +243,7 @@ void main() {
   group('SnapshotManager - Integration Scenarios', () {
     test('workflow: check shouldSnapshot, then create snapshot', () async {
       final document = {'id': 'doc-1', 'title': 'Test'};
-      final eventCount = 1000;
+      const eventCount = 1000;
 
       if (manager.shouldSnapshot(eventCount)) {
         await manager.createSnapshot(
@@ -306,8 +304,8 @@ void main() {
                     'type': 'rectangle',
                     'x': i * 10,
                     'y': j * 10,
-                  }),
-            }),
+                  },),
+            },),
       };
 
       await manager.createSnapshot(

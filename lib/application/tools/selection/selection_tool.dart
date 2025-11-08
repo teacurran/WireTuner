@@ -8,7 +8,6 @@ import 'package:wiretuner/domain/document/document.dart';
 import 'package:wiretuner/domain/events/event_base.dart';
 import 'package:wiretuner/domain/events/selection_events.dart' as events;
 import 'package:wiretuner/domain/events/object_events.dart';
-import 'package:wiretuner/infrastructure/event_sourcing/event_recorder.dart';
 import 'package:wiretuner/presentation/canvas/viewport/viewport_controller.dart';
 import 'marquee_controller.dart';
 import 'dart:ui' as ui;
@@ -63,6 +62,16 @@ import 'dart:ui' as ui;
 /// toolManager.activateTool('selection');
 /// ```
 class SelectionTool implements ITool {
+
+  SelectionTool({
+    required Document document,
+    required ViewportController viewportController,
+    required dynamic eventRecorder,
+  })  : _document = document,
+        _viewportController = viewportController,
+        _eventRecorder = eventRecorder {
+    _logger.i('SelectionTool initialized');
+  }
   final Document _document;
   final ViewportController _viewportController;
   final dynamic _eventRecorder;
@@ -77,16 +86,6 @@ class SelectionTool implements ITool {
 
   /// Current cursor based on hover state.
   MouseCursor _currentCursor = SystemMouseCursors.click;
-
-  SelectionTool({
-    required Document document,
-    required ViewportController viewportController,
-    required dynamic eventRecorder,
-  })  : _document = document,
-        _viewportController = viewportController,
-        _eventRecorder = eventRecorder {
-    _logger.i('SelectionTool initialized');
-  }
 
   @override
   String get toolId => 'selection';
@@ -379,11 +378,6 @@ class SelectionTool implements ITool {
 
 /// Internal state for drag operations.
 class _DragState {
-  final Offset startScreenPos;
-  final Point startWorldPos;
-  final Offset? currentScreenPos;
-  final Point currentWorldPos;
-  final List<String> selectedObjectIds;
 
   _DragState({
     required this.startScreenPos,
@@ -392,17 +386,20 @@ class _DragState {
     required this.currentWorldPos,
     required this.selectedObjectIds,
   });
+  final Offset startScreenPos;
+  final Point startWorldPos;
+  final Offset? currentScreenPos;
+  final Point currentWorldPos;
+  final List<String> selectedObjectIds;
 
   _DragState copyWith({
     Offset? currentScreenPos,
     Point? currentWorldPos,
-  }) {
-    return _DragState(
+  }) => _DragState(
       startScreenPos: startScreenPos,
       startWorldPos: startWorldPos,
       currentScreenPos: currentScreenPos ?? this.currentScreenPos,
       currentWorldPos: currentWorldPos ?? this.currentWorldPos,
       selectedObjectIds: selectedObjectIds,
     );
-  }
 }

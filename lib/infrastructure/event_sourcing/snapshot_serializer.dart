@@ -24,10 +24,10 @@ import 'package:wiretuner/domain/document/document.dart';
 /// (< 1MB), this is acceptable. If performance becomes an issue, consider
 /// async serialization or chunking.
 class SnapshotSerializer {
-  final Logger _logger = Logger();
-  final bool enableCompression;
 
   SnapshotSerializer({this.enableCompression = true});
+  final Logger _logger = Logger();
+  final bool enableCompression;
 
   /// Serializes a document to uncompressed JSON bytes (UTF-8).
   ///

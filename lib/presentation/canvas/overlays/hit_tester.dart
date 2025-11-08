@@ -1,4 +1,3 @@
-import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
 import 'package:wiretuner/domain/events/event_base.dart' as event_base;
@@ -12,6 +11,18 @@ import 'package:wiretuner/presentation/canvas/viewport/viewport_controller.dart'
 
 /// Result of a hit test operation.
 class HitTestResult {
+
+  const HitTestResult({
+    this.objectId,
+    this.anchorIndex,
+    this.component,
+    required this.distance,
+  });
+
+  /// Creates a result representing no hit.
+  factory HitTestResult.miss() => const HitTestResult(
+        distance: double.infinity,
+      );
   /// The ID of the object that was hit (if any).
   final String? objectId;
 
@@ -24,23 +35,11 @@ class HitTestResult {
   /// Distance from the hit test point to the hit object (in world space).
   final double distance;
 
-  const HitTestResult({
-    this.objectId,
-    this.anchorIndex,
-    this.component,
-    required this.distance,
-  });
-
   /// Returns true if this result represents a hit.
   bool get isHit => objectId != null;
 
   /// Returns true if this is an anchor hit (not just an object).
   bool get isAnchorHit => anchorIndex != null;
-
-  /// Creates a result representing no hit.
-  factory HitTestResult.miss() => const HitTestResult(
-        distance: double.infinity,
-      );
 
   @override
   String toString() => 'HitTestResult(objectId: $objectId, '
@@ -89,16 +88,6 @@ class HitTestResult {
 /// );
 /// ```
 class CanvasHitTester {
-  /// Viewport controller for coordinate transformations.
-  final ViewportController viewportController;
-
-  /// Path renderer for accessing cached geometry.
-  final PathRenderer pathRenderer;
-
-  /// Hit test threshold in screen pixels.
-  ///
-  /// Objects/anchors within this distance are considered "hit".
-  final double hitThresholdScreenPx;
 
   /// Creates a hit tester with the specified configuration.
   ///
@@ -110,6 +99,16 @@ class CanvasHitTester {
     required this.pathRenderer,
     this.hitThresholdScreenPx = 8.0,
   });
+  /// Viewport controller for coordinate transformations.
+  final ViewportController viewportController;
+
+  /// Path renderer for accessing cached geometry.
+  final PathRenderer pathRenderer;
+
+  /// Hit test threshold in screen pixels.
+  ///
+  /// Objects/anchors within this distance are considered "hit".
+  final double hitThresholdScreenPx;
 
   /// Hit tests objects at the specified screen point.
   ///

@@ -21,17 +21,6 @@ import 'package:wiretuner/domain/events/event_base.dart';
 /// ```
 @immutable
 class Rectangle {
-  /// The x-coordinate of the rectangle's top-left corner.
-  final double x;
-
-  /// The y-coordinate of the rectangle's top-left corner.
-  final double y;
-
-  /// The width of the rectangle.
-  final double width;
-
-  /// The height of the rectangle.
-  final double height;
 
   /// Creates a rectangle with the specified position and size.
   ///
@@ -55,14 +44,12 @@ class Rectangle {
     double top,
     double right,
     double bottom,
-  ) {
-    return Rectangle(
+  ) => Rectangle(
       x: left,
       y: top,
       width: right - left,
       height: bottom - top,
     );
-  }
 
   /// Creates a rectangle from a center point and size.
   ///
@@ -79,14 +66,12 @@ class Rectangle {
     required Point center,
     required double width,
     required double height,
-  }) {
-    return Rectangle(
+  }) => Rectangle(
       x: center.x - width / 2,
       y: center.y - height / 2,
       width: width,
       height: height,
     );
-  }
 
   /// Creates a rectangle from two corner points.
   ///
@@ -106,6 +91,17 @@ class Rectangle {
     final bottom = math.max(p1.y, p2.y);
     return Rectangle.fromLTRB(left, top, right, bottom);
   }
+  /// The x-coordinate of the rectangle's top-left corner.
+  final double x;
+
+  /// The y-coordinate of the rectangle's top-left corner.
+  final double y;
+
+  /// The width of the rectangle.
+  final double width;
+
+  /// The height of the rectangle.
+  final double height;
 
   /// The x-coordinate of the left edge (same as [x]).
   double get left => x;
@@ -154,12 +150,10 @@ class Rectangle {
   /// print(rect.containsPoint(Point(x: 15, y: 5))); // false
   /// print(rect.containsPoint(Point(x: 10, y: 10))); // true (on edge)
   /// ```
-  bool containsPoint(Point point) {
-    return point.x >= left &&
+  bool containsPoint(Point point) => point.x >= left &&
         point.x <= right &&
         point.y >= top &&
         point.y <= bottom;
-  }
 
   /// Tests whether another rectangle is completely inside this rectangle.
   ///
@@ -169,12 +163,10 @@ class Rectangle {
   /// final inner = Rectangle(x: 10, y: 10, width: 20, height: 20);
   /// print(outer.containsRectangle(inner)); // true
   /// ```
-  bool containsRectangle(Rectangle other) {
-    return other.left >= left &&
+  bool containsRectangle(Rectangle other) => other.left >= left &&
         other.right <= right &&
         other.top >= top &&
         other.bottom <= bottom;
-  }
 
   /// Returns the intersection of this rectangle with another.
   ///
@@ -229,12 +221,10 @@ class Rectangle {
   /// final r2 = Rectangle(x: 5, y: 5, width: 10, height: 10);
   /// print(r1.overlaps(r2)); // true
   /// ```
-  bool overlaps(Rectangle other) {
-    return left < other.right &&
+  bool overlaps(Rectangle other) => left < other.right &&
         right > other.left &&
         top < other.bottom &&
         bottom > other.top;
-  }
 
   /// Returns a new rectangle expanded by the specified amount.
   ///
@@ -249,14 +239,12 @@ class Rectangle {
   /// final shrunk = rect.inflate(-5);
   /// // result: Rectangle(x: 15, y: 15, width: 10, height: 10)
   /// ```
-  Rectangle inflate(double delta) {
-    return Rectangle(
+  Rectangle inflate(double delta) => Rectangle(
       x: x - delta,
       y: y - delta,
       width: width + delta * 2,
       height: height + delta * 2,
     );
-  }
 
   /// Returns a new rectangle expanded by different amounts on each axis.
   ///
@@ -266,14 +254,12 @@ class Rectangle {
   /// final expanded = rect.inflateXY(5, 3);
   /// // result: Rectangle(x: 5, y: 7, width: 30, height: 26)
   /// ```
-  Rectangle inflateXY(double dx, double dy) {
-    return Rectangle(
+  Rectangle inflateXY(double dx, double dy) => Rectangle(
       x: x - dx,
       y: y - dy,
       width: width + dx * 2,
       height: height + dy * 2,
     );
-  }
 
   /// Returns a new rectangle with the specified offsets applied.
   ///
@@ -283,14 +269,12 @@ class Rectangle {
   /// final shifted = rect.translate(5, 3);
   /// // result: Rectangle(x: 15, y: 13, width: 20, height: 20)
   /// ```
-  Rectangle translate(double dx, double dy) {
-    return Rectangle(
+  Rectangle translate(double dx, double dy) => Rectangle(
       x: x + dx,
       y: y + dy,
       width: width,
       height: height,
     );
-  }
 
   @override
   bool operator ==(Object other) {

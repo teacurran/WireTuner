@@ -1,5 +1,4 @@
 import 'dart:math' as math;
-import 'package:flutter/gestures.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/rendering.dart';
 import 'package:logger/logger.dart';
@@ -9,7 +8,6 @@ import 'package:wiretuner/domain/document/document.dart';
 import 'package:wiretuner/domain/events/event_base.dart';
 import 'package:wiretuner/domain/events/path_events.dart';
 import 'package:wiretuner/domain/events/group_events.dart';
-import 'package:wiretuner/infrastructure/event_sourcing/event_recorder.dart';
 import 'package:wiretuner/presentation/canvas/viewport/viewport_controller.dart';
 import 'dart:ui' as ui;
 
@@ -90,6 +88,16 @@ enum PathState {
 /// toolManager.activateTool('pen');
 /// ```
 class PenTool implements ITool {
+
+  PenTool({
+    required Document document,
+    required ViewportController viewportController,
+    required dynamic eventRecorder,
+  })  : _document = document,
+        _viewportController = viewportController,
+        _eventRecorder = eventRecorder {
+    _logger.i('PenTool initialized');
+  }
   final Document _document;
   final ViewportController _viewportController;
   final dynamic _eventRecorder;
@@ -137,16 +145,6 @@ class PenTool implements ITool {
   /// Current drag position during pointer move (world coordinates).
   /// Used to calculate handle direction and magnitude.
   Point? _currentDragPosition;
-
-  PenTool({
-    required Document document,
-    required ViewportController viewportController,
-    required dynamic eventRecorder,
-  })  : _document = document,
-        _viewportController = viewportController,
-        _eventRecorder = eventRecorder {
-    _logger.i('PenTool initialized');
-  }
 
   @override
   String get toolId => 'pen';
@@ -423,7 +421,7 @@ class PenTool implements ITool {
       timestamp: now,
       groupId: groupId,
       description: 'Create path',
-    ));
+    ),);
 
     // Emit CreatePathEvent
     _eventRecorder.recordEvent(CreatePathEvent(
@@ -433,7 +431,7 @@ class PenTool implements ITool {
       startAnchor: startAnchor,
       strokeColor: '#000000',
       strokeWidth: 2.0,
-    ));
+    ),);
 
     // Update state
     _state = PathState.creatingPath;
@@ -467,7 +465,7 @@ class PenTool implements ITool {
       pathId: _currentPathId!,
       position: anchorPosition,
       anchorType: AnchorType.line,
-    ));
+    ),);
 
     _lastAnchorPosition = anchorPosition;
 
@@ -513,7 +511,7 @@ class PenTool implements ITool {
       anchorType: anchorType,
       handleIn: handleIn,
       handleOut: handleOut,
-    ));
+    ),);
 
     _lastAnchorPosition = anchorPosition;
 
@@ -539,14 +537,14 @@ class PenTool implements ITool {
       timestamp: now,
       pathId: _currentPathId!,
       closed: closed,
-    ));
+    ),);
 
     // Emit EndGroupEvent
     _eventRecorder.recordEvent(EndGroupEvent(
       eventId: _uuid.v4(),
       timestamp: now,
       groupId: _currentGroupId!,
-    ));
+    ),);
 
     // Flush events to ensure they're persisted
     _eventRecorder.flush();
@@ -572,7 +570,7 @@ class PenTool implements ITool {
       eventId: _uuid.v4(),
       timestamp: now,
       groupId: _currentGroupId!,
-    ));
+    ),);
 
     _logger.i('Path canceled: groupId=$_currentGroupId');
 
@@ -590,7 +588,7 @@ class PenTool implements ITool {
     final distance = math.sqrt(dx * dx + dy * dy);
 
     // Snap to nearest 45° (pi/4 radians)
-    final increment = math.pi / 4;
+    const increment = math.pi / 4;
     final snappedAngle = (angle / increment).round() * increment;
 
     // Calculate constrained position

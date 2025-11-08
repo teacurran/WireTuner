@@ -27,6 +27,17 @@ import 'package:flutter/foundation.dart';
 /// telemetryService.recordToolMetric(metric);
 /// ```
 class ToolTelemetry {
+
+  /// Creates a tool telemetry metric.
+  ToolTelemetry({
+    required this.toolId,
+    required this.operationType,
+    required this.duration,
+    required this.eventCount,
+    required this.eventsPerSecond,
+    this.backlogOccurred = false,
+    DateTime? timestamp,
+  }) : timestamp = timestamp ?? DateTime.now();
   /// Unique identifier for the tool that generated this metric.
   final String toolId;
 
@@ -48,32 +59,18 @@ class ToolTelemetry {
   /// Timestamp when the metric was recorded.
   final DateTime timestamp;
 
-  /// Creates a tool telemetry metric.
-  ToolTelemetry({
-    required this.toolId,
-    required this.operationType,
-    required this.duration,
-    required this.eventCount,
-    required this.eventsPerSecond,
-    this.backlogOccurred = false,
-    DateTime? timestamp,
-  }) : timestamp = timestamp ?? DateTime.now();
-
   /// Returns true if this operation exceeded performance thresholds.
   ///
   /// Performance is considered poor if:
   /// - Duration > 2000ms (2 seconds)
   /// - Events per second < 15 (expected ~20 for 50ms sampling)
   /// - Backlog occurred (event sampler buffer overflow)
-  bool get hasPerformanceIssue {
-    return duration.inMilliseconds > 2000 ||
+  bool get hasPerformanceIssue => duration.inMilliseconds > 2000 ||
         eventsPerSecond < 15.0 ||
         backlogOccurred;
-  }
 
   @override
-  String toString() {
-    return 'ToolTelemetry('
+  String toString() => 'ToolTelemetry('
         'tool: $toolId, '
         'operation: $operationType, '
         'duration: ${duration.inMilliseconds}ms, '
@@ -81,7 +78,6 @@ class ToolTelemetry {
         'events/sec: ${eventsPerSecond.toStringAsFixed(1)}, '
         'backlog: $backlogOccurred'
         ')';
-  }
 }
 
 /// Extension to TelemetryService for tool-specific metrics.

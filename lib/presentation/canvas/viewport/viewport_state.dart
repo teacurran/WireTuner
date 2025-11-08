@@ -48,6 +48,22 @@ import 'package:wiretuner/presentation/canvas/viewport/viewport_controller.dart'
 /// onPanEnd: state.onPanEnd,
 /// ```
 class ViewportState extends ChangeNotifier {
+
+  /// Creates a viewport state manager.
+  ///
+  /// The [controller] is required and manages the actual transformations.
+  /// The [onViewportChanged] callback is optional but recommended to sync
+  /// state back to the document model.
+  /// The [onTelemetry] callback is optional and used for performance monitoring.
+  ViewportState({
+    required this.controller,
+    this.onViewportChanged,
+    this.onTelemetry,
+    Size canvasSize = const Size(800, 600),
+  }) : _canvasSize = canvasSize {
+    // Listen to controller changes to notify our listeners
+    controller.addListener(_onControllerChanged);
+  }
   /// The viewport controller managing transformations.
   final ViewportController controller;
 
@@ -85,22 +101,6 @@ class ViewportState extends ChangeNotifier {
 
   /// Accumulated pan delta during the current gesture.
   Offset _accumulatedPanDelta = Offset.zero;
-
-  /// Creates a viewport state manager.
-  ///
-  /// The [controller] is required and manages the actual transformations.
-  /// The [onViewportChanged] callback is optional but recommended to sync
-  /// state back to the document model.
-  /// The [onTelemetry] callback is optional and used for performance monitoring.
-  ViewportState({
-    required this.controller,
-    this.onViewportChanged,
-    this.onTelemetry,
-    Size canvasSize = const Size(800, 600),
-  }) : _canvasSize = canvasSize {
-    // Listen to controller changes to notify our listeners
-    controller.addListener(_onControllerChanged);
-  }
 
   /// Gets the current canvas size.
   Size get canvasSize => _canvasSize;
@@ -373,7 +373,7 @@ class ViewportState extends ChangeNotifier {
       zoomFactor: zoomFactor,
       focalPoint: focalPoint,
       velocity: velocity,
-    ));
+    ),);
   }
 
   /// Syncs the current controller state back to the domain model.
@@ -404,6 +404,19 @@ class ViewportState extends ChangeNotifier {
 /// - [TelemetryService] for collecting and analyzing telemetry data
 /// - [ViewportState.onTelemetry] for receiving telemetry callbacks
 class ViewportTelemetry {
+
+  /// Creates a telemetry data record.
+  const ViewportTelemetry({
+    required this.timestamp,
+    required this.eventType,
+    required this.fps,
+    required this.panOffset,
+    this.panDelta,
+    required this.zoomLevel,
+    this.zoomFactor,
+    this.focalPoint,
+    this.velocity,
+  });
   /// Timestamp when the telemetry was recorded.
   final DateTime timestamp;
 
@@ -430,19 +443,6 @@ class ViewportTelemetry {
 
   /// Gesture velocity in pixels per second (null except for pan_end).
   final Offset? velocity;
-
-  /// Creates a telemetry data record.
-  const ViewportTelemetry({
-    required this.timestamp,
-    required this.eventType,
-    required this.fps,
-    required this.panOffset,
-    this.panDelta,
-    required this.zoomLevel,
-    this.zoomFactor,
-    this.focalPoint,
-    this.velocity,
-  });
 
   @override
   String toString() {

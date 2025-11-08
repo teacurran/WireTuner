@@ -40,9 +40,6 @@ import 'package:wiretuner/infrastructure/persistence/event_store.dart';
 /// await repo.createSnapshot('doc-1', 1000, snapshotData);
 /// ```
 class SqliteRepository {
-  final DatabaseProvider _provider;
-  late final EventStore _eventStore;
-  final Logger _logger = Logger();
 
   /// Creates a repository instance wrapping the given [DatabaseProvider].
   ///
@@ -51,6 +48,9 @@ class SqliteRepository {
   SqliteRepository(this._provider) {
     _eventStore = EventStore(_provider.getDatabase());
   }
+  final DatabaseProvider _provider;
+  late final EventStore _eventStore;
+  final Logger _logger = Logger();
 
   /// Returns the underlying [EventStore] for direct event operations.
   ///
@@ -229,9 +229,7 @@ class SqliteRepository {
   /// Returns the auto-incremented event_id.
   ///
   /// Throws [StateError] if the document doesn't exist.
-  Future<int> insertEvent(String documentId, EventBase event) async {
-    return _eventStore.insertEvent(documentId, event);
-  }
+  Future<int> insertEvent(String documentId, EventBase event) async => _eventStore.insertEvent(documentId, event);
 
   /// Retrieves events for a document in the specified sequence range.
   ///
@@ -242,20 +240,16 @@ class SqliteRepository {
     String documentId, {
     required int fromSeq,
     int? toSeq,
-  }) async {
-    return _eventStore.getEvents(
+  }) async => _eventStore.getEvents(
       documentId,
       fromSeq: fromSeq,
       toSeq: toSeq,
     );
-  }
 
   /// Returns the maximum event sequence for a document, or -1 if none exist.
   ///
   /// This is a convenience wrapper around [EventStore.getMaxSequence].
-  Future<int> getMaxSequence(String documentId) async {
-    return _eventStore.getMaxSequence(documentId);
-  }
+  Future<int> getMaxSequence(String documentId) async => _eventStore.getMaxSequence(documentId);
 
   // ========================================================================
   // Snapshot Operations
@@ -461,9 +455,7 @@ class SqliteRepository {
     _logger.d('Starting transaction');
 
     final db = _provider.getDatabase();
-    return db.transaction((txn) async {
-      return action(txn);
-    });
+    return db.transaction((txn) async => action(txn));
   }
 
   // ========================================================================

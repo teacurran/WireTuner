@@ -48,9 +48,7 @@ class MockEventStore implements EventStore {
   }
 
   @override
-  Future<int> getMaxSequence(String documentId) async {
-    return _maxSequence;
-  }
+  Future<int> getMaxSequence(String documentId) async => _maxSequence;
 
   @override
   Future<int> insertEvent(String documentId, EventBase event) async {
@@ -178,7 +176,7 @@ void main() {
             'type': 'path',
             'id': 'path$i',
             'anchors': [
-              {'x': i.toDouble(), 'y': i.toDouble()}
+              {'x': i.toDouble(), 'y': i.toDouble()},
             ],
           },
         ),
@@ -315,7 +313,7 @@ void main() {
               'type': 'path',
               'id': 'path$i',
               'anchors': [
-                {'x': i.toDouble(), 'y': i.toDouble()}
+                {'x': i.toDouble(), 'y': i.toDouble()},
               ],
             },
           ),

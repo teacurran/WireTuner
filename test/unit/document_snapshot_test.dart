@@ -18,7 +18,7 @@ void main() {
 
     test('Round-trip serialization preserves empty document', () {
       // Arrange
-      final original = Document(
+      const original = Document(
         id: 'doc-1',
         title: 'Empty Document',
       );
@@ -59,12 +59,12 @@ void main() {
         ],
       );
 
-      final layer2 = Layer(
+      const layer2 = Layer(
         id: 'layer-2',
         name: 'Foreground',
         visible: false,
         locked: true,
-        objects: const [],
+        objects: [],
       );
 
       final original = Document(
@@ -118,7 +118,7 @@ void main() {
         ],
       );
 
-      final selection = Selection(
+      const selection = Selection(
         objectIds: {'path-1', 'path-2'},
         anchorIndices: {
           'path-1': {0, 1},
@@ -152,13 +152,13 @@ void main() {
 
     test('Round-trip preserves viewport state', () {
       // Arrange: Document with custom viewport
-      final viewport = Viewport(
-        pan: const Point(x: 100, y: 200),
+      const viewport = Viewport(
+        pan: Point(x: 100, y: 200),
         zoom: 1.5,
-        canvasSize: const Size(width: 1920, height: 1080),
+        canvasSize: Size(width: 1920, height: 1080),
       );
 
-      final original = Document(
+      const original = Document(
         id: 'doc-4',
         viewport: viewport,
       );
@@ -177,20 +177,20 @@ void main() {
     test('Round-trip preserves complex path geometry', () {
       // Arrange: Path with bezier curves
       final anchors = [
-        ap.AnchorPoint(
-          position: const Point(x: 0, y: 0),
-          handleOut: const Point(x: 50, y: 0),
+        const ap.AnchorPoint(
+          position: Point(x: 0, y: 0),
+          handleOut: Point(x: 50, y: 0),
           anchorType: ap.AnchorType.smooth,
         ),
-        ap.AnchorPoint(
-          position: const Point(x: 100, y: 100),
-          handleIn: const Point(x: -50, y: 0),
-          handleOut: const Point(x: 50, y: 0),
+        const ap.AnchorPoint(
+          position: Point(x: 100, y: 100),
+          handleIn: Point(x: -50, y: 0),
+          handleOut: Point(x: 50, y: 0),
           anchorType: ap.AnchorType.symmetric,
         ),
-        ap.AnchorPoint(
-          position: const Point(x: 200, y: 0),
-          handleIn: const Point(x: -50, y: 0),
+        const ap.AnchorPoint(
+          position: Point(x: 200, y: 0),
+          handleIn: Point(x: -50, y: 0),
           anchorType: ap.AnchorType.corner,
         ),
       ];
@@ -279,7 +279,7 @@ void main() {
             .map((e) => VectorObject.shape(
                   id: 'shape-${e.key}',
                   shape: e.value,
-                ))
+                ),)
             .toList(),
       );
 
@@ -326,7 +326,7 @@ void main() {
 
     test('Serialization handles version field', () {
       // Arrange
-      final original = Document(
+      const original = Document(
         id: 'doc-7',
         title: 'Versioned Document',
         schemaVersion: kDocumentSchemaVersion,
@@ -361,7 +361,7 @@ void main() {
       final document = Document(
         id: 'doc-8',
         layers: [layer],
-        selection: Selection(objectIds: {'path-1', 'path-2'}),
+        selection: const Selection(objectIds: {'path-1', 'path-2'}),
       );
 
       // Act: Serialize multiple times
@@ -446,7 +446,7 @@ void main() {
       final original = Document(
         id: 'doc-10',
         layers: [layer1, layer2],
-        selection: Selection(objectIds: {'path-1', 'path-3'}),
+        selection: const Selection(objectIds: {'path-1', 'path-3'}),
       );
 
       // Act

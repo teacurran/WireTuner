@@ -109,9 +109,7 @@ class EventHandlerRegistry {
   /// - [eventType]: The event type string to look up
   ///
   /// **Returns:** The handler function, or null if not registered
-  EventHandler? getHandler(String eventType) {
-    return _handlers[eventType];
-  }
+  EventHandler? getHandler(String eventType) => _handlers[eventType];
 
   /// Checks whether a handler is registered for the specified event type.
   ///
@@ -132,9 +130,7 @@ class EventHandlerRegistry {
   /// - [eventType]: The event type string to check
   ///
   /// **Returns:** true if a handler is registered, false otherwise
-  bool hasHandler(String eventType) {
-    return _handlers.containsKey(eventType);
-  }
+  bool hasHandler(String eventType) => _handlers.containsKey(eventType);
 
   /// Returns the number of registered handlers.
   ///
@@ -159,9 +155,7 @@ class EventHandlerRegistry {
   /// - [eventType]: The event type string to remove
   ///
   /// **Returns:** true if handler was removed, false otherwise
-  bool removeHandler(String eventType) {
-    return _handlers.remove(eventType) != null;
-  }
+  bool removeHandler(String eventType) => _handlers.remove(eventType) != null;
 
   /// Clears all registered handlers.
   ///

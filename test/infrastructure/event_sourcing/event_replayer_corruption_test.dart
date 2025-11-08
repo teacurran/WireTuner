@@ -50,9 +50,7 @@ class MockEventStore implements EventStore {
   }
 
   @override
-  Future<int> getMaxSequence(String documentId) async {
-    return _maxSequence;
-  }
+  Future<int> getMaxSequence(String documentId) async => _maxSequence;
 
   @override
   Future<int> insertEvent(String documentId, EventBase event) async {
@@ -136,14 +134,14 @@ Uint8List _createSnapshotBytes(Map<String, dynamic> data) {
 // Custom event type for corruption testing
 // This is a simple concrete implementation for testing purposes
 class _CorruptTestEvent extends EventBase {
-  final String _eventId;
-  final int _timestamp;
 
   const _CorruptTestEvent({
     required String eventId,
     required int timestamp,
   })  : _eventId = eventId,
         _timestamp = timestamp;
+  final String _eventId;
+  final int _timestamp;
 
   @override
   String get eventId => _eventId;
@@ -155,13 +153,11 @@ class _CorruptTestEvent extends EventBase {
   String get eventType => 'CorruptEvent';
 
   @override
-  Map<String, dynamic> toJson() {
-    return {
+  Map<String, dynamic> toJson() => {
       'eventId': eventId,
       'timestamp': timestamp,
       'eventType': eventType,
     };
-  }
 }
 
 void main() {
@@ -224,23 +220,23 @@ void main() {
     test('replays to specific sequence without issues', () async {
       // Arrange
       final events = [
-        CreatePathEvent(
+        const CreatePathEvent(
           eventId: 'e0',
           timestamp: 1000,
           pathId: 'path1',
-          startAnchor: const Point(x: 10, y: 20),
+          startAnchor: Point(x: 10, y: 20),
         ),
-        CreatePathEvent(
+        const CreatePathEvent(
           eventId: 'e1',
           timestamp: 2000,
           pathId: 'path2',
-          startAnchor: const Point(x: 30, y: 40),
+          startAnchor: Point(x: 30, y: 40),
         ),
-        CreatePathEvent(
+        const CreatePathEvent(
           eventId: 'e2',
           timestamp: 3000,
           pathId: 'path3',
-          startAnchor: const Point(x: 50, y: 60),
+          startAnchor: Point(x: 50, y: 60),
         ),
       ];
       eventStore.addEventsAtSequence(events, 0);
@@ -264,24 +260,24 @@ void main() {
     test('skips corrupt event and continues with warning', () async {
       // Arrange - create event that will throw error
       // Use a custom event class that extends EventBase
-      final corruptEvent = _CorruptTestEvent(
+      const corruptEvent = _CorruptTestEvent(
         eventId: 'corrupt',
         timestamp: 2000,
       );
 
       final events = [
-        CreatePathEvent(
+        const CreatePathEvent(
           eventId: 'e0',
           timestamp: 1000,
           pathId: 'path1',
-          startAnchor: const Point(x: 10, y: 20),
+          startAnchor: Point(x: 10, y: 20),
         ),
         corruptEvent, // This will throw
-        CreatePathEvent(
+        const CreatePathEvent(
           eventId: 'e2',
           timestamp: 3000,
           pathId: 'path2',
-          startAnchor: const Point(x: 30, y: 40),
+          startAnchor: Point(x: 30, y: 40),
         ),
       ];
       eventStore.addEventsAtSequence(events, 0);
@@ -311,11 +307,11 @@ void main() {
       snapshotStore.setCorruptedSnapshotAtSequence(50);
 
       final events = [
-        CreatePathEvent(
+        const CreatePathEvent(
           eventId: 'e0',
           timestamp: 1000,
           pathId: 'path1',
-          startAnchor: const Point(x: 10, y: 20),
+          startAnchor: Point(x: 10, y: 20),
         ),
       ];
       eventStore.addEventsAtSequence(events, 51);
@@ -356,11 +352,11 @@ void main() {
       snapshotStore.setCorruptedSnapshotAtSequence(50);
 
       // Add event at sequence 51
-      final event = CreatePathEvent(
+      const event = CreatePathEvent(
         eventId: 'e51',
         timestamp: 1000,
         pathId: 'path51',
-        startAnchor: const Point(x: 10, y: 20),
+        startAnchor: Point(x: 10, y: 20),
       );
       eventStore.addEventsAtSequence([event], 51);
 
@@ -385,7 +381,7 @@ void main() {
 
     test('throws error when continueOnError is false', () async {
       // Arrange
-      final corruptEvent = _CorruptTestEvent(
+      const corruptEvent = _CorruptTestEvent(
         eventId: 'corrupt',
         timestamp: 2000,
       );
@@ -431,11 +427,11 @@ void main() {
       });
 
       // Add delta event after snapshot
-      final deltaEvent = CreatePathEvent(
+      const deltaEvent = CreatePathEvent(
         eventId: 'e1001',
         timestamp: 2000,
         pathId: 'path1001',
-        startAnchor: const Point(x: 10, y: 20),
+        startAnchor: Point(x: 10, y: 20),
       );
       eventStore.addEventsAtSequence([deltaEvent], 1001);
 

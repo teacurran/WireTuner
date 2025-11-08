@@ -61,17 +61,17 @@ void main() {
       eventRecorder = MockEventRecorder();
 
       // Create an empty test document
-      final layer = Layer(
+      const layer = Layer(
         id: 'layer-1',
         name: 'Test Layer',
         objects: [],
       );
 
-      document = Document(
+      document = const Document(
         id: 'doc-1',
         title: 'Test Document',
         layers: [layer],
-        selection: const Selection(),
+        selection: Selection(),
       );
 
       penTool = PenTool(
@@ -105,8 +105,8 @@ void main() {
         eventRecorder.clear();
 
         // Start a path
-        final event1 = PointerDownEvent(
-          position: const ui.Offset(100, 100),
+        const event1 = PointerDownEvent(
+          position: ui.Offset(100, 100),
         );
         penTool.onPointerDown(event1);
 
@@ -116,13 +116,13 @@ void main() {
         // Should have emitted: StartGroup, CreatePath, FinishPath, EndGroup
         expect(eventRecorder.recordedEvents.length, equals(4));
         expect(
-            eventRecorder.recordedEvents[0], isA<StartGroupEvent>());
+            eventRecorder.recordedEvents[0], isA<StartGroupEvent>(),);
         expect(
-            eventRecorder.recordedEvents[1], isA<CreatePathEvent>());
+            eventRecorder.recordedEvents[1], isA<CreatePathEvent>(),);
         expect(
-            eventRecorder.recordedEvents[2], isA<FinishPathEvent>());
+            eventRecorder.recordedEvents[2], isA<FinishPathEvent>(),);
         expect(
-            eventRecorder.recordedEvents[3], isA<EndGroupEvent>());
+            eventRecorder.recordedEvents[3], isA<EndGroupEvent>(),);
         expect(eventRecorder.flushCallCount, greaterThan(0));
       });
     });
@@ -134,8 +134,8 @@ void main() {
       });
 
       test('should start path on first click', () {
-        final event = PointerDownEvent(
-          position: const ui.Offset(100, 100),
+        const event = PointerDownEvent(
+          position: ui.Offset(100, 100),
         );
 
         final handled = penTool.onPointerDown(event);
@@ -161,15 +161,15 @@ void main() {
 
       test('should add anchors on subsequent clicks', () {
         // First click - start path
-        penTool.onPointerDown(PointerDownEvent(
-          position: const ui.Offset(100, 100),
-        ));
+        penTool.onPointerDown(const PointerDownEvent(
+          position: ui.Offset(100, 100),
+        ),);
         eventRecorder.clear();
 
         // Second click - add anchor
-        penTool.onPointerDown(PointerDownEvent(
-          position: const ui.Offset(200, 100),
-        ));
+        penTool.onPointerDown(const PointerDownEvent(
+          position: ui.Offset(200, 100),
+        ),);
 
         expect(eventRecorder.recordedEvents.length, equals(1));
 
@@ -202,7 +202,7 @@ void main() {
         // Should have 3 AddAnchorEvent events (after the first CreatePathEvent)
         expect(eventRecorder.recordedEvents.length, equals(3));
         expect(eventRecorder.recordedEvents.every((e) => e is AddAnchorEvent),
-            isTrue);
+            isTrue,);
       });
     });
 
@@ -212,14 +212,14 @@ void main() {
         eventRecorder.clear();
 
         // Start a path
-        penTool.onPointerDown(PointerDownEvent(
-          position: const ui.Offset(100, 100),
-        ));
+        penTool.onPointerDown(const PointerDownEvent(
+          position: ui.Offset(100, 100),
+        ),);
         eventRecorder.clear();
       });
 
       test('should finish path on Enter key', () {
-        final keyEvent = KeyDownEvent(
+        const keyEvent = KeyDownEvent(
           logicalKey: LogicalKeyboardKey.enter,
           physicalKey: PhysicalKeyboardKey.enter,
           timeStamp: Duration.zero,
@@ -244,7 +244,7 @@ void main() {
       });
 
       test('should cancel path on Escape key', () {
-        final keyEvent = KeyDownEvent(
+        const keyEvent = KeyDownEvent(
           logicalKey: LogicalKeyboardKey.escape,
           physicalKey: PhysicalKeyboardKey.escape,
           timeStamp: Duration.zero,
@@ -263,16 +263,16 @@ void main() {
       test('should finish path on double-click', () async {
         // First click to add anchor
         final now = DateTime.now().millisecondsSinceEpoch;
-        penTool.onPointerDown(PointerDownEvent(
-          position: const ui.Offset(200, 100),
-        ));
+        penTool.onPointerDown(const PointerDownEvent(
+          position: ui.Offset(200, 100),
+        ),);
         eventRecorder.clear();
 
         // Simulate double-click (within time and distance threshold)
         await Future.delayed(const Duration(milliseconds: 100));
-        penTool.onPointerDown(PointerDownEvent(
-          position: const ui.Offset(202, 102), // Very close position
-        ));
+        penTool.onPointerDown(const PointerDownEvent(
+          position: ui.Offset(202, 102), // Very close position
+        ),);
 
         // Should finish path (FinishPath + EndGroup)
         // Note: May also include AddAnchor if double-click detection fails
@@ -280,10 +280,10 @@ void main() {
             eventRecorder.recordedEvents
                 .whereType<FinishPathEvent>()
                 .isNotEmpty,
-            isTrue);
+            isTrue,);
         expect(
             eventRecorder.recordedEvents.whereType<EndGroupEvent>().isNotEmpty,
-            isTrue);
+            isTrue,);
       });
     });
 
@@ -293,16 +293,16 @@ void main() {
         eventRecorder.clear();
 
         // Start a path at origin
-        penTool.onPointerDown(PointerDownEvent(
-          position: const ui.Offset(100, 100),
-        ));
+        penTool.onPointerDown(const PointerDownEvent(
+          position: ui.Offset(100, 100),
+        ),);
         eventRecorder.clear();
       });
 
       test('should constrain to 0° (horizontal right)', () {
         // Simulate Shift key press
         HardwareKeyboard.instance.handleKeyEvent(
-          KeyDownEvent(
+          const KeyDownEvent(
             logicalKey: LogicalKeyboardKey.shiftLeft,
             physicalKey: PhysicalKeyboardKey.shiftLeft,
             timeStamp: Duration.zero,
@@ -310,13 +310,13 @@ void main() {
         );
 
         // Click at roughly 10° (should snap to 0°)
-        penTool.onPointerDown(PointerDownEvent(
-          position: const ui.Offset(200, 110),
-        ));
+        penTool.onPointerDown(const PointerDownEvent(
+          position: ui.Offset(200, 110),
+        ),);
 
         // Release Shift
         HardwareKeyboard.instance.handleKeyEvent(
-          KeyUpEvent(
+          const KeyUpEvent(
             logicalKey: LogicalKeyboardKey.shiftLeft,
             physicalKey: PhysicalKeyboardKey.shiftLeft,
             timeStamp: Duration.zero,
@@ -332,7 +332,7 @@ void main() {
 
       test('should constrain to 45° (diagonal)', () {
         HardwareKeyboard.instance.handleKeyEvent(
-          KeyDownEvent(
+          const KeyDownEvent(
             logicalKey: LogicalKeyboardKey.shiftLeft,
             physicalKey: PhysicalKeyboardKey.shiftLeft,
             timeStamp: Duration.zero,
@@ -340,12 +340,12 @@ void main() {
         );
 
         // Click at roughly 50° (should snap to 45°)
-        penTool.onPointerDown(PointerDownEvent(
-          position: const ui.Offset(200, 200),
-        ));
+        penTool.onPointerDown(const PointerDownEvent(
+          position: ui.Offset(200, 200),
+        ),);
 
         HardwareKeyboard.instance.handleKeyEvent(
-          KeyUpEvent(
+          const KeyUpEvent(
             logicalKey: LogicalKeyboardKey.shiftLeft,
             physicalKey: PhysicalKeyboardKey.shiftLeft,
             timeStamp: Duration.zero,
@@ -365,7 +365,7 @@ void main() {
 
       test('should constrain to 90° (vertical down)', () {
         HardwareKeyboard.instance.handleKeyEvent(
-          KeyDownEvent(
+          const KeyDownEvent(
             logicalKey: LogicalKeyboardKey.shiftLeft,
             physicalKey: PhysicalKeyboardKey.shiftLeft,
             timeStamp: Duration.zero,
@@ -373,12 +373,12 @@ void main() {
         );
 
         // Click at roughly 85° (should snap to 90°)
-        penTool.onPointerDown(PointerDownEvent(
-          position: const ui.Offset(105, 200),
-        ));
+        penTool.onPointerDown(const PointerDownEvent(
+          position: ui.Offset(105, 200),
+        ),);
 
         HardwareKeyboard.instance.handleKeyEvent(
-          KeyUpEvent(
+          const KeyUpEvent(
             logicalKey: LogicalKeyboardKey.shiftLeft,
             physicalKey: PhysicalKeyboardKey.shiftLeft,
             timeStamp: Duration.zero,
@@ -412,11 +412,11 @@ void main() {
         }
 
         // Finish path
-        penTool.onKeyPress(KeyDownEvent(
+        penTool.onKeyPress(const KeyDownEvent(
           logicalKey: LogicalKeyboardKey.enter,
           physicalKey: PhysicalKeyboardKey.enter,
           timeStamp: Duration.zero,
-        ));
+        ),);
 
         // Verify event sequence:
         // StartGroup, CreatePath, AddAnchor, AddAnchor, FinishPath, EndGroup
@@ -441,45 +441,45 @@ void main() {
 
       test('should have sequential timestamps', () {
         // Create path with multiple anchors
-        penTool.onPointerDown(PointerDownEvent(
-          position: const ui.Offset(100, 100),
-        ));
+        penTool.onPointerDown(const PointerDownEvent(
+          position: ui.Offset(100, 100),
+        ),);
 
-        penTool.onPointerDown(PointerDownEvent(
-          position: const ui.Offset(200, 100),
-        ));
+        penTool.onPointerDown(const PointerDownEvent(
+          position: ui.Offset(200, 100),
+        ),);
 
-        penTool.onKeyPress(KeyDownEvent(
+        penTool.onKeyPress(const KeyDownEvent(
           logicalKey: LogicalKeyboardKey.enter,
           physicalKey: PhysicalKeyboardKey.enter,
           timeStamp: Duration.zero,
-        ));
+        ),);
 
         // Verify timestamps are monotonically increasing
         for (int i = 1; i < eventRecorder.recordedEvents.length; i++) {
           expect(
             eventRecorder.recordedEvents[i].timestamp,
             greaterThanOrEqualTo(
-                eventRecorder.recordedEvents[i - 1].timestamp),
+                eventRecorder.recordedEvents[i - 1].timestamp,),
           );
         }
       });
 
       test('should have unique event IDs', () {
         // Create path with multiple anchors
-        penTool.onPointerDown(PointerDownEvent(
-          position: const ui.Offset(100, 100),
-        ));
+        penTool.onPointerDown(const PointerDownEvent(
+          position: ui.Offset(100, 100),
+        ),);
 
-        penTool.onPointerDown(PointerDownEvent(
-          position: const ui.Offset(200, 100),
-        ));
+        penTool.onPointerDown(const PointerDownEvent(
+          position: ui.Offset(200, 100),
+        ),);
 
-        penTool.onKeyPress(KeyDownEvent(
+        penTool.onKeyPress(const KeyDownEvent(
           logicalKey: LogicalKeyboardKey.enter,
           physicalKey: PhysicalKeyboardKey.enter,
           timeStamp: Duration.zero,
-        ));
+        ),);
 
         // Collect all event IDs
         final eventIds =
@@ -496,15 +496,15 @@ void main() {
         eventRecorder.clear();
 
         // Start a path
-        penTool.onPointerDown(PointerDownEvent(
-          position: const ui.Offset(100, 100),
-        ));
+        penTool.onPointerDown(const PointerDownEvent(
+          position: ui.Offset(100, 100),
+        ),);
         eventRecorder.clear();
       });
 
       test('should track hover position without emitting events', () {
-        final moveEvent = PointerMoveEvent(
-          position: const ui.Offset(150, 150),
+        const moveEvent = PointerMoveEvent(
+          position: ui.Offset(150, 150),
         );
 
         final handled = penTool.onPointerMove(moveEvent);
@@ -535,14 +535,14 @@ void main() {
 
       test('should render without errors during path creation', () {
         // Start a path
-        penTool.onPointerDown(PointerDownEvent(
-          position: const ui.Offset(100, 100),
-        ));
+        penTool.onPointerDown(const PointerDownEvent(
+          position: ui.Offset(100, 100),
+        ),);
 
         // Update hover position
-        penTool.onPointerMove(PointerMoveEvent(
-          position: const ui.Offset(150, 150),
-        ));
+        penTool.onPointerMove(const PointerMoveEvent(
+          position: ui.Offset(150, 150),
+        ),);
 
         final canvas = MockCanvas();
         const size = ui.Size(800, 600);

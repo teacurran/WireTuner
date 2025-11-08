@@ -43,6 +43,20 @@ import 'package:wiretuner/domain/events/event_base.dart' as event_base;
 /// The controller extends [ChangeNotifier] to support reactive UI updates.
 /// Widgets should listen to changes and rebuild when transformations change.
 class ViewportController extends ChangeNotifier {
+
+  /// Creates a viewport controller with optional initial state.
+  ///
+  /// [initialPan] defaults to zero offset (world origin at screen origin).
+  /// [initialZoom] defaults to 1.0 (100% scale) and is clamped to valid range.
+  ViewportController({
+    Offset initialPan = Offset.zero,
+    double initialZoom = 1.0,
+  })  : _panOffset = initialPan,
+        _zoom = initialZoom.clamp(minZoom, maxZoom),
+        _worldToScreenMatrix = Matrix4.identity(),
+        _screenToWorldMatrix = Matrix4.identity() {
+    _updateMatrices();
+  }
   /// Minimum allowed zoom level (5%).
   static const double minZoom = 0.05;
 
@@ -65,20 +79,6 @@ class ViewportController extends ChangeNotifier {
   /// Recomputed when [_zoom] or [_panOffset] changes.
   /// This is the inverse of [_worldToScreenMatrix].
   Matrix4 _screenToWorldMatrix;
-
-  /// Creates a viewport controller with optional initial state.
-  ///
-  /// [initialPan] defaults to zero offset (world origin at screen origin).
-  /// [initialZoom] defaults to 1.0 (100% scale) and is clamped to valid range.
-  ViewportController({
-    Offset initialPan = Offset.zero,
-    double initialZoom = 1.0,
-  })  : _panOffset = initialPan,
-        _zoom = initialZoom.clamp(minZoom, maxZoom),
-        _worldToScreenMatrix = Matrix4.identity(),
-        _screenToWorldMatrix = Matrix4.identity() {
-    _updateMatrices();
-  }
 
   /// The current pan offset in screen pixels.
   Offset get panOffset => _panOffset;
@@ -235,9 +235,7 @@ class ViewportController extends ChangeNotifier {
   /// final worldDistance = controller.screenDistanceToWorld(50.0);
   /// // If zoom is 2.0, worldDistance will be 25.0
   /// ```
-  double screenDistanceToWorld(double screenDistance) {
-    return screenDistance / _zoom;
-  }
+  double screenDistanceToWorld(double screenDistance) => screenDistance / _zoom;
 
   /// Converts a world distance to screen distance.
   ///
@@ -249,9 +247,7 @@ class ViewportController extends ChangeNotifier {
   /// final screenDistance = controller.worldDistanceToScreen(100.0);
   /// // If zoom is 2.0, screenDistance will be 200.0
   /// ```
-  double worldDistanceToScreen(double worldDistance) {
-    return worldDistance * _zoom;
-  }
+  double worldDistanceToScreen(double worldDistance) => worldDistance * _zoom;
 
   /// Resets the viewport to default state.
   ///

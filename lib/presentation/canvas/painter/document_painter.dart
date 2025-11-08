@@ -48,6 +48,18 @@ import 'package:wiretuner/presentation/canvas/viewport/viewport_controller.dart'
 /// )
 /// ```
 class DocumentPainter extends CustomPainter {
+
+  /// Creates a document painter with the specified paths and viewport.
+  ///
+  /// The [paths] list should contain the paths to render.
+  /// The [viewportController] provides the pan/zoom transformation state.
+  /// The [strokeWidth] and [strokeColor] are placeholder style properties.
+  DocumentPainter({
+    required this.paths,
+    required this.viewportController,
+    this.strokeWidth = 1.0,
+    this.strokeColor = Colors.black,
+  }) : super(repaint: viewportController);
   /// The list of paths to render.
   ///
   /// These are domain [Path] objects that will be converted to
@@ -71,18 +83,6 @@ class DocumentPainter extends CustomPainter {
   /// Defaults to black. This is a placeholder style; future iterations
   /// will integrate with a proper style system.
   final Color strokeColor;
-
-  /// Creates a document painter with the specified paths and viewport.
-  ///
-  /// The [paths] list should contain the paths to render.
-  /// The [viewportController] provides the pan/zoom transformation state.
-  /// The [strokeWidth] and [strokeColor] are placeholder style properties.
-  DocumentPainter({
-    required this.paths,
-    required this.viewportController,
-    this.strokeWidth = 1.0,
-    this.strokeColor = Colors.black,
-  }) : super(repaint: viewportController);
 
   @override
   void paint(Canvas canvas, Size size) {

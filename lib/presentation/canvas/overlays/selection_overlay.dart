@@ -77,6 +77,16 @@ class SelectionOverlayConstants {
 /// )
 /// ```
 class SelectionOverlayPainter extends CustomPainter {
+
+  /// Creates a selection overlay painter.
+  SelectionOverlayPainter({
+    required this.selection,
+    required this.paths,
+    required this.shapes,
+    required this.viewportController,
+    required this.pathRenderer,
+    this.hoveredAnchor,
+  }) : super(repaint: viewportController);
   /// The current selection state.
   final Selection selection;
 
@@ -94,16 +104,6 @@ class SelectionOverlayPainter extends CustomPainter {
 
   /// Currently hovered anchor point (if any).
   final HoveredAnchor? hoveredAnchor;
-
-  /// Creates a selection overlay painter.
-  SelectionOverlayPainter({
-    required this.selection,
-    required this.paths,
-    required this.shapes,
-    required this.viewportController,
-    required this.pathRenderer,
-    this.hoveredAnchor,
-  }) : super(repaint: viewportController);
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -427,6 +427,12 @@ class SelectionOverlayPainter extends CustomPainter {
 
 /// Represents a hovered anchor point or handle component.
 class HoveredAnchor {
+
+  const HoveredAnchor({
+    required this.objectId,
+    required this.anchorIndex,
+    this.component,
+  });
   /// The object ID containing the anchor.
   final String objectId;
 
@@ -435,12 +441,6 @@ class HoveredAnchor {
 
   /// The specific component being hovered (anchor, handleIn, or handleOut).
   final AnchorComponent? component;
-
-  const HoveredAnchor({
-    required this.objectId,
-    required this.anchorIndex,
-    this.component,
-  });
 
   @override
   bool operator ==(Object other) {

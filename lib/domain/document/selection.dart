@@ -129,11 +129,9 @@ class Selection with _$Selection {
   }
 
   /// Creates a new selection with the given objects added.
-  Selection addObjects(Iterable<String> ids) {
-    return copyWith(
+  Selection addObjects(Iterable<String> ids) => copyWith(
       objectIds: {...objectIds, ...ids},
     );
-  }
 
   /// Creates a new selection with the given object removed.
   ///
@@ -166,16 +164,12 @@ class Selection with _$Selection {
   /// Creates a new selection with only the given object selected.
   ///
   /// Clears all other selections.
-  Selection selectOnly(String objectId) {
-    return Selection(objectIds: {objectId});
-  }
+  Selection selectOnly(String objectId) => Selection(objectIds: {objectId});
 
   /// Creates a new selection with only the given objects selected.
   ///
   /// Clears all other selections.
-  Selection selectOnlyMultiple(Iterable<String> ids) {
-    return Selection(objectIds: ids.toSet());
-  }
+  Selection selectOnlyMultiple(Iterable<String> ids) => Selection(objectIds: ids.toSet());
 
   /// Creates a new selection with all selections cleared.
   Selection clear() => Selection.empty();
@@ -236,9 +230,7 @@ class Selection with _$Selection {
   }
 
   /// Creates a new selection with all anchor selections cleared for all objects.
-  Selection clearAnchors() {
-    return copyWith(anchorIndices: {});
-  }
+  Selection clearAnchors() => copyWith(anchorIndices: {});
 
   /// Creates a new selection with anchor selections cleared for a specific object.
   Selection clearAnchorsForObject(String objectId) {

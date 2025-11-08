@@ -41,8 +41,7 @@ class ShapeOptionsPanel extends StatelessWidget {
   const ShapeOptionsPanel({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    return Container(
+  Widget build(BuildContext context) => Container(
       padding: const EdgeInsets.all(16.0),
       decoration: BoxDecoration(
         color: Colors.grey[100],
@@ -87,5 +86,4 @@ class ShapeOptionsPanel extends StatelessWidget {
         ],
       ),
     );
-  }
 }

@@ -10,35 +10,35 @@ void main() {
   group('Point Extensions', () {
     group('distanceTo', () {
       test('calculates correct distance for 3-4-5 triangle', () {
-        final p1 = const Point(x: 0, y: 0);
-        final p2 = const Point(x: 3, y: 4);
+        const p1 = Point(x: 0, y: 0);
+        const p2 = Point(x: 3, y: 4);
         expect(p1.distanceTo(p2), equals(5.0));
       });
 
       test('returns 0 for same point', () {
-        final p1 = const Point(x: 5, y: 10);
+        const p1 = Point(x: 5, y: 10);
         expect(p1.distanceTo(p1), equals(0.0));
       });
 
       test('handles negative coordinates', () {
-        final p1 = const Point(x: -3, y: -4);
-        final p2 = const Point(x: 0, y: 0);
+        const p1 = Point(x: -3, y: -4);
+        const p2 = Point(x: 0, y: 0);
         expect(p1.distanceTo(p2), equals(5.0));
       });
     });
 
     group('operator +', () {
       test('adds points correctly', () {
-        final p1 = const Point(x: 1, y: 2);
-        final p2 = const Point(x: 3, y: 4);
+        const p1 = Point(x: 1, y: 2);
+        const p2 = Point(x: 3, y: 4);
         final result = p1 + p2;
         expect(result.x, equals(4));
         expect(result.y, equals(6));
       });
 
       test('handles negative values', () {
-        final p1 = const Point(x: 5, y: 10);
-        final p2 = const Point(x: -2, y: -3);
+        const p1 = Point(x: 5, y: 10);
+        const p2 = Point(x: -2, y: -3);
         final result = p1 + p2;
         expect(result.x, equals(3));
         expect(result.y, equals(7));
@@ -47,16 +47,16 @@ void main() {
 
     group('operator -', () {
       test('subtracts points correctly', () {
-        final p1 = const Point(x: 5, y: 7);
-        final p2 = const Point(x: 2, y: 3);
+        const p1 = Point(x: 5, y: 7);
+        const p2 = Point(x: 2, y: 3);
         final result = p1 - p2;
         expect(result.x, equals(3));
         expect(result.y, equals(4));
       });
 
       test('handles negative results', () {
-        final p1 = const Point(x: 2, y: 3);
-        final p2 = const Point(x: 5, y: 7);
+        const p1 = Point(x: 2, y: 3);
+        const p2 = Point(x: 5, y: 7);
         final result = p1 - p2;
         expect(result.x, equals(-3));
         expect(result.y, equals(-4));
@@ -65,21 +65,21 @@ void main() {
 
     group('operator *', () {
       test('scales point correctly', () {
-        final p = const Point(x: 2, y: 3);
+        const p = Point(x: 2, y: 3);
         final result = p * 2.5;
         expect(result.x, equals(5.0));
         expect(result.y, equals(7.5));
       });
 
       test('handles negative scalar', () {
-        final p = const Point(x: 2, y: 3);
+        const p = Point(x: 2, y: 3);
         final result = p * -2;
         expect(result.x, equals(-4));
         expect(result.y, equals(-6));
       });
 
       test('handles zero scalar', () {
-        final p = const Point(x: 5, y: 10);
+        const p = Point(x: 5, y: 10);
         final result = p * 0;
         expect(result.x, equals(0));
         expect(result.y, equals(0));
@@ -88,14 +88,14 @@ void main() {
 
     group('operator /', () {
       test('divides point correctly', () {
-        final p = const Point(x: 10, y: 20);
+        const p = Point(x: 10, y: 20);
         final result = p / 2;
         expect(result.x, equals(5));
         expect(result.y, equals(10));
       });
 
       test('handles fractional division', () {
-        final p = const Point(x: 5, y: 10);
+        const p = Point(x: 5, y: 10);
         final result = p / 2.5;
         expect(result.x, equals(2));
         expect(result.y, equals(4));
@@ -104,7 +104,7 @@ void main() {
 
     group('operator - (unary)', () {
       test('negates point correctly', () {
-        final p = const Point(x: 3, y: -4);
+        const p = Point(x: 3, y: -4);
         final result = -p;
         expect(result.x, equals(-3));
         expect(result.y, equals(4));
@@ -113,19 +113,19 @@ void main() {
 
     group('magnitude', () {
       test('calculates magnitude correctly', () {
-        final p = const Point(x: 3, y: 4);
+        const p = Point(x: 3, y: 4);
         expect(p.magnitude, equals(5.0));
       });
 
       test('returns 0 for origin', () {
-        final p = const Point(x: 0, y: 0);
+        const p = Point(x: 0, y: 0);
         expect(p.magnitude, equals(0.0));
       });
     });
 
     group('normalized', () {
       test('returns unit vector', () {
-        final p = const Point(x: 3, y: 4);
+        const p = Point(x: 3, y: 4);
         final normalized = p.normalized;
         expect(normalized.x, closeTo(0.6, 0.0001));
         expect(normalized.y, closeTo(0.8, 0.0001));
@@ -133,7 +133,7 @@ void main() {
       });
 
       test('returns same point for zero vector', () {
-        final p = const Point(x: 0, y: 0);
+        const p = Point(x: 0, y: 0);
         final normalized = p.normalized;
         expect(normalized.x, equals(0));
         expect(normalized.y, equals(0));
@@ -142,16 +142,16 @@ void main() {
 
     group('dot', () {
       test('calculates dot product correctly', () {
-        final p1 = const Point(x: 2, y: 3);
-        final p2 = const Point(x: 4, y: 5);
+        const p1 = Point(x: 2, y: 3);
+        const p2 = Point(x: 4, y: 5);
         expect(p1.dot(p2), equals(23.0)); // 2*4 + 3*5 = 23
       });
     });
 
     group('cross', () {
       test('calculates cross product correctly', () {
-        final p1 = const Point(x: 2, y: 3);
-        final p2 = const Point(x: 4, y: 5);
+        const p1 = Point(x: 2, y: 3);
+        const p2 = Point(x: 4, y: 5);
         expect(p1.cross(p2), equals(-2.0)); // 2*5 - 3*4 = -2
       });
     });

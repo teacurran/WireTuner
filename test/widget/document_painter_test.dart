@@ -118,14 +118,14 @@ void main() {
       // Arrange: Bezier curve with handles
       final paths = [
         domain.Path(
-          anchors: [
+          anchors: const [
             AnchorPoint(
-              position: const Point(x: 0, y: 0),
-              handleOut: const Point(x: 50, y: 0),
+              position: Point(x: 0, y: 0),
+              handleOut: Point(x: 50, y: 0),
             ),
             AnchorPoint(
-              position: const Point(x: 100, y: 100),
-              handleIn: const Point(x: -50, y: 0),
+              position: Point(x: 100, y: 100),
+              handleIn: Point(x: -50, y: 0),
             ),
           ],
           segments: [
