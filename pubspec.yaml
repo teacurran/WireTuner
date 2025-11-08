@@ -30,6 +30,7 @@ dependencies:
 
   # Export/Import
   pdf: ^3.10.0
+  xml: ^6.5.0
 
   # UI Components
   cupertino_icons: ^1.0.8
