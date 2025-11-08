@@ -13,6 +13,13 @@
 migrate_working_dir/
 node_modules/
 
+# Codemachine artifacts
+.codemachine/memory/
+.codemachine/logs/
+.codemachine/prompts/
+.codemachine/agents/
+.codemachine/template.json
+
 # IntelliJ related
 *.iml
 *.ipr

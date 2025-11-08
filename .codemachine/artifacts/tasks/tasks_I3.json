@@ -97,7 +97,7 @@
       "I3.T3"
     ],
     "parallelizable": false,
-    "done": false
+    "done": true
   },
   {
     "task_id": "I3.T5",
