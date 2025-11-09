@@ -315,6 +315,21 @@ The diagram includes Decision 1 KPIs and logging touchpoints:
 - Snapshot creation: <25ms latency, every 500 events
 - Replay section latency: <100ms
 
+**Data and Snapshot ERD** ([Mermaid source](docs/diagrams/data_snapshot_erd.mmd) | [PNG](docs/diagrams/data_snapshot_erd.png) | [SVG](docs/diagrams/data_snapshot_erd.svg) | [Documentation](docs/diagrams/data_snapshot_erd.md))
+
+This Entity-Relationship Diagram documents the persistent SQLite schema for WireTuner's event-sourced architecture:
+
+- **metadata** table: Document-level properties (title, version, timestamps)
+- **events** table: Append-only event log with 50ms sampling (Decision 5)
+- **snapshots** table: Periodic document state captures every 1000 events (Decision 6)
+
+The diagram shows table relationships, foreign key constraints, and includes annotations for:
+- Snapshot cadence and compression methods (gzip)
+- Performance indexes (`idx_events_document_sequence`, `idx_snapshots_document`)
+- Future cache tables (rendered paths, spatial index, thumbnails)
+
+See [Data and Snapshot ERD Documentation](docs/diagrams/data_snapshot_erd.md) for complete schema rationale, validation checklist, and architectural decision references.
+
 **Diagram Validation:**
 ```bash
 # Component Overview (PlantUML)
@@ -326,6 +341,10 @@ bash tools/scripts/render_diagram.sh docs/diagrams/component_overview.puml png
 # Requires: npm install -g @mermaid-js/mermaid-cli
 mmdc -i docs/diagrams/event_flow_sequence.mmd -o docs/diagrams/event_flow_sequence.svg
 mmdc -i docs/diagrams/event_flow_sequence.mmd -o docs/diagrams/event_flow_sequence.png
+
+# Data and Snapshot ERD (Mermaid)
+mmdc -i docs/diagrams/data_snapshot_erd.mmd -o docs/diagrams/data_snapshot_erd.svg
+mmdc -i docs/diagrams/data_snapshot_erd.mmd -o docs/diagrams/data_snapshot_erd.png
 ```
 
 ## Project Status
