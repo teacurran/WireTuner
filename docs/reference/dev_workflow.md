@@ -11,10 +11,12 @@ This document provides a comprehensive guide to setting up your development envi
 4. [Editor Integration](#editor-integration)
 5. [Atomic Write Expectations](#atomic-write-expectations)
 6. [Diagram Development](#diagram-development)
-7. [Testing Strategy](#testing-strategy)
-8. [CI/CD Integration](#cicd-integration)
-9. [Verification](#verification)
-10. [Troubleshooting](#troubleshooting)
+7. [Viewport Keyboard Shortcuts](#viewport-keyboard-shortcuts)
+8. [Testing Strategy](#testing-strategy)
+9. [Mock Events & Demo Data](#mock-events--demo-data)
+10. [CI/CD Integration](#cicd-integration)
+11. [Verification](#verification)
+12. [Troubleshooting](#troubleshooting)
 
 ---
 
@@ -356,6 +358,7 @@ test/
 ├── unit/           # Unit tests mirroring package structure
 ├── widget/         # Flutter widget tests for UI components
 └── integration/    # End-to-end workflow tests
+    └── fixtures/   # Sample event data for testing
 ```
 
 ### Writing Tests
@@ -383,6 +386,270 @@ group('EventStore', () {
   });
 });
 ```
+
+---
+
+## Mock Events & Demo Data
+
+### Using Sample Event Fixtures
+
+WireTuner provides pre-built event fixtures for testing tool workflows and
+event replay without manual interaction.
+
+**Fixture Location:** `test/integration/test/integration/fixtures/sample_events.json`
+
+**Contents:**
+- Rectangle shape creation event
+- Path creation with line anchors
+- Selection event
+- Realistic timestamps and UUIDs
+
+**Loading Fixtures in Tests:**
+
+```dart
+import 'dart:convert';
+import 'package:flutter/services.dart';
+
+// Load fixture JSON
+final fixtureJson = await rootBundle.loadString(
+  'test/integration/test/integration/fixtures/sample_events.json'
+);
+final events = jsonDecode(fixtureJson) as List;
+
+// Iterate and process events
+for (final eventData in events) {
+  final eventType = eventData['eventType'] as String;
+  // ... handle event
+}
+```
+
+**Use Cases:**
+- Automated integration tests (see `tool_pen_selection_test.dart`)
+- Manual QA with pre-populated documents
+- Demo scenarios for presentations
+- Event replay performance benchmarking
+
+---
+
+### Running Integration Tests with Telemetry
+
+Integration tests validate tool workflows and emit performance metrics:
+
+```bash
+# Run pen + selection integration test with verbose output
+flutter test test/integration/test/integration/tool_pen_selection_test.dart --verbose
+```
+
+**Sample Console Output:**
+```
+=== Telemetry Validation ===
+Event Count: 5
+Replay Time: 18 ms
+============================
+
+All tests passed!
+```
+
+**Telemetry Metrics Captured:**
+- Event count per workflow
+- Replay latency (for small event sets: <50ms)
+- Event sampling intervals (50ms target)
+- Deterministic replay verification (3+ runs)
+
+**Reference:** [Tooling QA Checklist - Telemetry Validation](../qa/tooling_checklist.md#telemetry-validation)
+
+---
+
+### Creating Custom Event Fixtures
+
+To create your own event sequences for testing:
+
+1. **Generate Events via Tools:**
+   - Run the application in debug mode
+   - Perform desired tool interactions (pen tool path, selection, etc.)
+   - Events are logged to console if telemetry enabled
+
+2. **Extract Event JSON:**
+   - Check SQLite database: `events` table contains full event payloads
+   - Or copy logged events from console/debug output
+
+3. **Save to Fixture File:**
+   ```json
+   [
+     {
+       "eventType": "CreatePathEvent",
+       "eventId": "evt-001",
+       "timestamp": 1699305600000,
+       "pathId": "path-1",
+       "startAnchor": {"x": 100.0, "y": 100.0},
+       "strokeColor": "#000000",
+       "strokeWidth": 2.0
+     },
+     {
+       "eventType": "AddAnchorEvent",
+       "eventId": "evt-002",
+       "timestamp": 1699305601000,
+       "pathId": "path-1",
+       "position": {"x": 200.0, "y": 150.0},
+       "anchorType": "bezier",
+       "handleOut": {"x": 50.0, "y": -20.0},
+       "handleIn": {"x": -50.0, "y": 20.0}
+     }
+   ]
+   ```
+
+4. **Load in Tests:**
+   - Add to `test/integration/test/integration/fixtures/`
+   - Load via `rootBundle.loadString()` or direct file I/O
+   - Replay via `EventReplayer` or inject into tool tests
+
+**Validation:** Event schema must match [Event Schema Reference](event_schema.md)
+
+---
+
+### Enabling Mock Events for Demos
+
+For live demonstrations without manual interaction:
+
+**Option 1: Replay Fixture Events**
+
+```dart
+// In demo setup code
+final replayer = EventReplayer(
+  eventStore: eventStore,
+  snapshotStore: snapshotStore,
+  dispatcher: dispatcher,
+);
+
+// Load and replay fixture
+final fixtureEvents = await loadFixture('sample_events.json');
+for (final event in fixtureEvents) {
+  await eventStore.insertEvent(documentId, event);
+}
+
+final state = await replayer.replayFromSnapshot(
+  documentId: documentId,
+  maxSequence: fixtureEvents.length - 1,
+);
+```
+
+**Option 2: Programmatic Event Injection**
+
+```dart
+// Inject events directly (for widget tests)
+final mockEvents = [
+  CreatePathEvent(...),
+  AddAnchorEvent(...),
+  FinishPathEvent(...),
+];
+
+for (final event in mockEvents) {
+  await documentProvider.applyEvent(event);
+}
+```
+
+**Use Cases:**
+- Conference demos with pre-built artwork
+- UI screenshots without manual drawing
+- Benchmark tests with large event volumes
+
+---
+
+### Capturing Tool Usage Media
+
+To create screenshots or GIFs for documentation and demos:
+
+#### macOS
+
+**Screenshots:**
+```bash
+# Full screen: Cmd+Shift+3
+# Selected area: Cmd+Shift+4 (then drag)
+# Window capture: Cmd+Shift+4, then press Space, click window
+```
+
+**Screen Recording:**
+```bash
+# Built-in: Cmd+Shift+5 (opens recording toolbar)
+# Or use QuickTime Player → File → New Screen Recording
+```
+
+**Recommended Tools:**
+- **[Kap](https://getkap.co/)** - Open-source screen recorder with GIF export
+- **[CleanShot X](https://cleanshot.com/)** - Professional screenshot/recording (paid)
+
+#### Windows
+
+**Screenshots:**
+```bash
+# Snipping Tool: Windows+Shift+S (select area)
+# Full screen: PrtScn key
+# Active window: Alt+PrtScn
+```
+
+**Screen Recording:**
+```bash
+# Game Bar: Windows+G (opens recording controls)
+# Or Windows+Alt+R to start/stop recording
+```
+
+**Recommended Tools:**
+- **[ScreenToGif](https://www.screentogif.com/)** - Free recorder with built-in GIF editor
+- **[ShareX](https://getsharex.com/)** - Open-source screenshot/recording suite
+
+#### Cross-Platform
+
+**[OBS Studio](https://obsproject.com/)** - Professional-grade screen recording
+- Supports macOS, Windows, Linux
+- Scene composition, overlays, custom layouts
+- Export to MP4, MOV, etc.
+
+**GIF Conversion:**
+```bash
+# FFmpeg (install via brew/choco)
+ffmpeg -i input.mp4 -vf "fps=10,scale=800:-1" output.gif
+```
+
+---
+
+### Media Storage & Gitignore
+
+**Recommended Directory Structure:**
+```
+docs/assets/
+├── screenshots/     # PNG/JPG static images
+│   ├── pen_tool_bezier_demo.png
+│   └── selection_marquee.png
+└── gifs/            # Animated GIFs
+    ├── pen_tool_workflow.gif
+    └── tool_switching.gif
+```
+
+**Update .gitignore (if needed):**
+
+If screenshots/GIFs become large (>1 MB), consider excluding them from version
+control:
+
+```gitignore
+# Documentation media (large files)
+docs/assets/screenshots/*.png
+docs/assets/gifs/*.gif
+
+# Keep a README or placeholder
+!docs/assets/screenshots/README.md
+!docs/assets/gifs/README.md
+```
+
+**Alternative:** Use Git LFS for large binary assets:
+```bash
+git lfs track "docs/assets/**/*.png"
+git lfs track "docs/assets/**/*.gif"
+```
+
+**Current Status:** `.gitignore` does not yet exclude media assets. Update if
+binary files exceed 1 MB to keep repository lean.
+
+---
 
 ---
 
@@ -523,5 +790,6 @@ If you encounter issues not covered here:
 
 ---
 
-**Last Updated**: 2025-11-08
+**Last Updated**: 2025-11-09
 **Maintained By**: WireTuner Development Team
+**Related Tasks**: [I3.T11 - Documentation Update](../../.codemachine/artifacts/plan/02_Iteration_I3.md#task-i3-t11)

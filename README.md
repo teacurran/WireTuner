@@ -8,13 +8,14 @@ A professional event-sourced vector drawing application for macOS and Windows bu
 
 WireTuner is a desktop vector drawing application designed with an event-sourcing architecture at its core. Every user interaction is recorded as an immutable event, enabling powerful features like unlimited undo/redo, time-travel debugging, and comprehensive document history.
 
-### Key Features (Planned)
+### Key Features
 
 - **Event-Sourced Architecture**: All user interactions recorded with 50ms sampling rate
-- **Professional Vector Tools**: Pen tool (straight/Bezier), selection tools, shape creation
-- **Direct Manipulation**: Drag objects, anchor points, and Bezier control points
+- **Professional Vector Tools**: ✅ Pen tool with Bezier curves, ✅ Selection tool, shape creation (planned)
+- **Tool Framework**: Sub-30ms tool switching, keyboard shortcuts (V, P, A), modifier-driven workflows
+- **Direct Manipulation**: ✅ Object selection and movement, anchor/handle manipulation (I4)
 - **SQLite Persistence**: Self-contained .wiretuner file format (SQLite database)
-- **Import/Export**: Adobe Illustrator import, SVG/PDF export
+- **Import/Export**: Adobe Illustrator import (planned), SVG/PDF export (planned)
 - **High Performance**: 60 FPS rendering targeting 10,000+ objects
 - **Performance Monitoring**: Real-time FPS and render metrics overlay (toggle with Cmd/Ctrl+Shift+P)
 
@@ -265,7 +266,9 @@ Detailed documentation is available in the `docs/` directory:
 - `docs/api/`: API documentation and contracts
 - `docs/adr/`: Architectural Decision Records
 - `docs/reference/`: Reference documentation
-  - **[Developer Workflow Guide](docs/reference/dev_workflow.md)**: Complete guide to development tooling, editor setup, testing, and CI integration
+  - **[Tooling Overview](docs/reference/tooling_overview.md)**: Complete guide to WireTuner's tool framework, keyboard shortcuts, and visual feedback system (see [I3 plan](.codemachine/artifacts/plan/02_Iteration_I3.md#iteration-3-plan))
+  - **[Pen Tool Usage](docs/reference/tools/pen_tool_usage.md)**: Comprehensive reference for pen tool interactions, Bezier curves, modifiers, and event emission
+  - **[Developer Workflow Guide](docs/reference/dev_workflow.md)**: Complete guide to development tooling, editor setup, testing, mock events, and CI integration
   - **[Rendering Troubleshooting Guide](docs/reference/rendering_troubleshooting.md)**: Diagnostic procedures for rendering performance issues, including known problems (precision loss, z-fighting, performance dips), diagnostic commands (benchmark harness, performance overlay), and remediation steps with escalation paths
   - **[Overlay Architecture](docs/reference/overlay_architecture.md)**: Z-index management system for coordinating selection boxes, pen previews, snapping guides, and tool overlays with deterministic stacking order
   - [Event Schema Reference](docs/reference/event_schema.md): Universal event metadata, sampling rules, snapshot policy, and collaboration fields
@@ -273,6 +276,8 @@ Detailed documentation is available in the `docs/` directory:
 - `docs/specs/`: Technical specifications
   - [Event Payload Specification](docs/specs/event_payload.md): Per-event field definitions and JSON Schema
   - [Event Lifecycle](docs/specs/event_lifecycle.md): Complete event flow from creation through replay
+- `docs/qa/`: Quality assurance and testing
+  - **[Tooling QA Checklist](docs/qa/tooling_checklist.md)**: Manual QA procedures, platform parity matrix, performance benchmarks, and telemetry validation for tool framework
 - `docs/testing/`: Testing strategy and coverage reports
 
 For comprehensive architecture documentation, see `.codemachine/artifacts/architecture/`.
@@ -375,9 +380,21 @@ mmdc -i docs/diagrams/data_snapshot_erd.mmd -o docs/diagrams/data_snapshot_erd.p
 
 ## Project Status
 
-**Current Phase**: Infrastructure Setup (Iteration 1)
+**Current Phase**: Tool Framework & Vector Tooling (Iteration 3 Complete)
 
-This is an active development project. The current iteration focuses on establishing the project foundation, SQLite integration, and event sourcing infrastructure.
+This is an active development project. Iteration 3 delivered a robust tool framework with selection and pen tool implementations, overlay feedback system, and comprehensive testing infrastructure. See the [I3 Plan](.codemachine/artifacts/plan/02_Iteration_I3.md#iteration-3-plan) for details.
+
+**Recently Completed (I3):**
+- ✅ Tool framework with sub-30ms switching
+- ✅ Selection tool (click, marquee, multi-select)
+- ✅ Pen tool with Bezier curves and handle manipulation
+- ✅ Overlay layer system for visual feedback
+- ✅ Cross-platform QA (macOS + Windows parity)
+
+**Next Up (I4):**
+- Direct selection tool for anchor manipulation
+- Shape tools (rectangle, ellipse, polygon, star)
+- Undo/redo orchestration with grouped events
 
 ## License
 

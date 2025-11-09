@@ -75,3 +75,12 @@ coverage/
 .codemachine/memory
 .codemachine/prompts
 .codemachine/agents
+
+# Documentation media (large files - added per I3.T11)
+# Exclude large screenshots/GIFs (>1 MB) from version control
+# docs/assets/screenshots/*.png
+# docs/assets/gifs/*.gif
+# Uncomment above lines if binary assets exceed 1 MB
+# Note: Keep placeholder READMEs tracked
+# !docs/assets/screenshots/README.md
+# !docs/assets/gifs/README.md
