@@ -16,6 +16,8 @@ dependencies:
     path: packages/app_shell
   event_core:
     path: packages/event_core
+  io_services:
+    path: packages/io_services
 
   # State Management
   provider: ^6.0.0

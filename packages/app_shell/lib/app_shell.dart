@@ -18,4 +18,5 @@ export 'src/app_shell_base.dart';
 export 'src/state/tool_provider.dart';
 export 'src/state/undo_provider.dart';
 export 'src/window/window_manager.dart';
+export 'src/ui/open_dialogs.dart';
 export 'src/ui/save_dialogs.dart';

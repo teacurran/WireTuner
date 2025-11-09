@@ -19,6 +19,10 @@ dependencies:
   event_core:
     path: ../event_core
 
+  # IO services for load/save
+  io_services:
+    path: ../io_services
+
   # State management
   provider: ^6.0.0
 

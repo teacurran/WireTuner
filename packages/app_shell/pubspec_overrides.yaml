@@ -1,4 +1,6 @@
-# melos_managed_dependency_overrides: event_core
+# melos_managed_dependency_overrides: event_core,io_services
 dependency_overrides:
   event_core:
     path: ../event_core
+  io_services:
+    path: ../io_services

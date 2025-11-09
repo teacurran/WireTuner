@@ -167,6 +167,13 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "4.3.0"
+  io_services:
+    dependency: "direct main"
+    description:
+      path: "../io_services"
+      relative: true
+    source: path
+    version: "0.1.0"
   json_annotation:
     dependency: transitive
     description:
