@@ -37,6 +37,15 @@
 /// - [EventCoreDiagnosticsConfig]: Configuration for logging and metrics
 /// - [PerformanceCounters]: Helper for timing operations
 /// - [StructuredMetricsSink]: Production metrics sink with logging
+///
+/// ## Operation Grouping (I4.T1)
+///
+/// - [OperationGroupingService]: Groups events into operations for undo/redo
+/// - [OperationGroup]: Immutable operation group value object
+/// - [EventMetadata]: Lightweight event metadata for grouping decisions
+/// - [Observable]: Simple observer pattern base class (non-Flutter)
+/// - [Clock]: Clock abstraction for testability
+/// - [SystemClock]: Default clock implementation
 library event_core;
 
 // Core interfaces
@@ -55,6 +64,9 @@ export 'src/metrics_sink.dart';
 export 'src/diagnostics_config.dart';
 export 'src/performance_counters.dart';
 export 'src/structured_metrics_sink.dart';
+
+// Operation grouping (I4.T1)
+export 'src/operation_grouping.dart';
 
 // Stub implementations
 export 'src/stubs/stub_event_sampler.dart';
