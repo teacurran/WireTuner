@@ -266,6 +266,7 @@ Detailed documentation is available in the `docs/` directory:
 - `docs/reference/`: Reference documentation
   - **[Developer Workflow Guide](docs/reference/dev_workflow.md)**: Complete guide to development tooling, editor setup, testing, and CI integration
   - [Event Schema Reference](docs/reference/event_schema.md): Universal event metadata, sampling rules, snapshot policy, and collaboration fields
+  - [Vector Model Specification](docs/reference/vector_model.md): Immutable domain model structures (Document, Layer, Path, Shape, Segment, Anchor, Style, Transform, Selection, Viewport) with invariants, copyWith patterns, and JSON serialization examples
 - `docs/specs/`: Technical specifications
   - [Event Payload Specification](docs/specs/event_payload.md): Per-event field definitions and JSON Schema
   - [Event Lifecycle](docs/specs/event_lifecycle.md): Complete event flow from creation through replay
