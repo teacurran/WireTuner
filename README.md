@@ -258,6 +258,65 @@ WireTuner documents use the `.wiretuner` extension, which are standard SQLite da
 - `snapshots` table: Periodic document state snapshots
 - `metadata` table: Document properties (title, version, timestamps)
 
+## History & Undo/Redo
+
+WireTuner provides professional-grade undo/redo functionality powered by its event-sourced architecture:
+
+### Keyboard Shortcuts
+
+| Action | macOS | Windows/Linux | Description |
+|--------|-------|---------------|-------------|
+| **Undo** | `Cmd+Z` | `Ctrl+Z` | Undo last operation |
+| **Redo** | `Cmd+Shift+Z` | `Ctrl+Y` or `Ctrl+Shift+Z` | Redo previously undone operation |
+| **History Panel** | `Cmd+Shift+H` | `Ctrl+Shift+H` | Open/close history panel |
+
+### Key Features
+
+- **Operation-Based Undo**: Undo groups related events together (e.g., entire drag operation undone with single `Cmd+Z`)
+- **Unlimited History**: Navigate through complete document history with <80ms latency
+- **History Panel**: Visual timeline interface for scrubbing through operations ([usage guide](docs/reference/history_panel_usage.md))
+- **Snapshot Optimization**: Automatic snapshots every 1,000 events for instant navigation
+- **Multi-Window Support**: Each window maintains isolated undo stack while sharing event store
+- **Crash Recovery**: History preserved across crashes and application restarts
+
+### Operation Grouping
+
+Related events are automatically grouped into single undo actions using a 200ms idle threshold:
+
+- **Sampled Operations**: Dragging, moving, resizing (40+ events) = 1 undo action
+- **Discrete Operations**: Click, select, create = 1 undo action each
+- **Operation Labels**: Human-readable names ("Move Objects", "Create Path") shown in Edit menu
+
+### History Panel
+
+The History Panel provides interactive navigation through your document's timeline:
+
+- Visual list of all operations with labels
+- Click any operation to jump to that point in history
+- Current position indicator (►) shows where you are
+- Redo branch (grayed operations) shows future states
+- Real-time updates as you work
+
+**See:** [History Panel Usage Guide](docs/reference/history_panel_usage.md) for complete reference
+
+### Redo Branch Behavior
+
+**Important:** Taking a new action after undo permanently clears the redo branch. This prevents timeline branching and maintains linear history, matching professional tool behavior (Adobe Illustrator, Photoshop).
+
+### Performance
+
+- **Undo/Redo Latency**: <80ms (90th percentile) via snapshot optimization
+- **History Scrubbing**: 5,000 events/sec playback rate for smooth navigation
+- **Snapshot Cadence**: Automatic snapshots every 1,000 events (adaptive tuning)
+
+### Documentation
+
+- **[History Panel Usage Guide](docs/reference/history_panel_usage.md)**: Complete user reference with workflows and troubleshooting
+- **[Undo Label Reference](docs/reference/undo_labels.md)**: Operation naming conventions and UI integration
+- **[History QA Checklist](docs/qa/history_checklist.md)**: QA procedures and platform parity testing
+- **[Undo Timeline Diagram](docs/diagrams/undo_timeline.mmd)**: Architecture visualization ([PNG](docs/diagrams/undo_timeline.png) | [SVG](docs/diagrams/undo_timeline.svg))
+- **[History Debug Workflow](docs/reference/history_debug.md)**: Dev-only export/import for crash reproduction
+
 ## Documentation
 
 Detailed documentation is available in the `docs/` directory:

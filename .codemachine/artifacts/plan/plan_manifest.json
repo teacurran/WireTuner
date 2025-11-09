@@ -401,6 +401,24 @@
       "file": "03_Verification_and_Glossary.md",
       "start_anchor": "<!-- anchor: glossary -->",
       "description": "Definitions for recurring project terms (ADR, BCP, Hybrid State, etc.)."
+    },
+    {
+      "key": "qa-history-checklist",
+      "file": "../../docs/qa/history_checklist.md",
+      "start_anchor": "<!-- anchor: qa-history-checklist -->",
+      "description": "QA checklist for undo/redo navigation, history panel, operation grouping, and timeline playback with manual test procedures for macOS/Windows."
+    },
+    {
+      "key": "history-panel-usage",
+      "file": "../../docs/reference/history_panel_usage.md",
+      "start_anchor": "<!-- anchor: history-panel-usage -->",
+      "description": "Complete user guide for History Panel including navigation, keyboard shortcuts, redo branch behavior, workflows, and troubleshooting."
+    },
+    {
+      "key": "history-debug-workflow",
+      "file": "../../docs/reference/history_debug.md",
+      "start_anchor": "<!-- anchor: history-debug-workflow -->",
+      "description": "Dev-only history export/import feature for debugging, crash reproduction, and development workflows with CLI reference and security warnings."
     }
   ]
 }
