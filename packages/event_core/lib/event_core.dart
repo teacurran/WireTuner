@@ -46,6 +46,10 @@
 /// - [Observable]: Simple observer pattern base class (non-Flutter)
 /// - [Clock]: Clock abstraction for testability
 /// - [SystemClock]: Default clock implementation
+///
+/// ## Undo/Redo Navigation (I4.T3)
+///
+/// - [UndoNavigator]: Operation-based undo/redo navigator service
 library event_core;
 
 // Core interfaces
@@ -67,6 +71,9 @@ export 'src/structured_metrics_sink.dart';
 
 // Operation grouping (I4.T1)
 export 'src/operation_grouping.dart';
+
+// Undo/redo navigation (I4.T3)
+export 'src/undo_navigator.dart';
 
 // Stub implementations
 export 'src/stubs/stub_event_sampler.dart';
