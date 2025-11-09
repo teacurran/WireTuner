@@ -1,0 +1,271 @@
+---
+title: Undo/Redo Timeline - Operation Navigation with Snapshots and Branch Invalidation
+description: |
+  This diagram illustrates the undo/redo navigation mechanism in WireTuner,
+  showing the relationship between events, operation groups, snapshots, and
+  redo-branch invalidation. Demonstrates how the operation grouping service
+  (200ms idle threshold) creates atomic undo boundaries, how the navigator
+  uses snapshots for efficient time-travel, and how redo history is invalidated
+  when new actions occur after navigating backwards.
+version: 1.0
+date: 2025-11-09
+references:
+  - Task I4.T1 - Operation Grouping Service Implementation
+  - Decision 7 - Provider-based State Management
+  - Section 2.1 Artifact Plan (Iteration 4)
+  - docs/reference/undo_labels.md
+  - packages/event_core/lib/src/operation_grouping.dart
+  - Flow 3 - Undo Operation (Event Navigation)
+---
+
+%% ============================================================================
+%% anchor: undo-timeline
+%% ============================================================================
+%% This sequence diagram demonstrates the complete undo/redo lifecycle:
+%% operation grouping → undo navigation → redo → branch invalidation flow,
+%% aligned with Iteration 4 KPIs and Decision 7 Provider integration.
+%%
+%% Key Performance Indicators (Iteration 4):
+%% - Undo latency: <80ms (snapshot + replay optimization)
+%% - History scrubbing: 5,000 events/sec playback rate
+%% - Operation grouping: 200ms idle threshold detection
+%% - Snapshot cadence: Every 1,000 events (as per Decision 1)
+%% - Multi-window coordination: Isolated undo stacks per window
+%%
+%% Redo Branch Invalidation Rules:
+%% - When user navigates backwards (undo) and takes NEW action
+%% - All redo history beyond current position is CLEARED
+%% - Operation group completion triggers invalidation check
+%% - Navigator maintains current sequence pointer for invalidation detection
+%% ============================================================================
+
+sequenceDiagram
+    autonumber
+
+    participant User
+    participant UI as UI Layer
+    participant Tool as Active Tool
+
+    box LightBlue Operation Grouping (200ms Idle Threshold)
+        participant OpGroup as Operation<br/>Grouping Service
+        participant Recorder as Event Recorder
+    end
+
+    box LightGreen Undo/Redo Navigation
+        participant Navigator as Undo Navigator
+    end
+
+    box LightYellow Storage Layer
+        participant EventStore as Event Store<br/>(SQLite)
+        participant SnapStore as Snapshot Store<br/>(SQLite)
+    end
+
+    participant Doc as Document State<br/>(Immutable)
+    participant Renderer as Canvas Renderer
+
+    %% ========================================================================
+    %% PHASE 1: NORMAL OPERATION WITH GROUPING
+    %% ========================================================================
+
+    Note over User,Renderer: PHASE 1: NORMAL OPERATION WITH GROUPING
+
+    User->>Tool: Start drag operation<br/>(e.g., move rectangle)
+
+    Tool->>OpGroup: startUndoGroup(label: 'Move Rectangle')
+    Note right of OpGroup: LOG: Manual undo group start<br/>Pending label stored:<br/>"Move Rectangle"
+
+    loop Drag sampling (50ms intervals, ~40 events over 2 seconds)
+        User->>Tool: Pointer move
+        Tool->>Recorder: recordEvent(MoveObjectEvent)
+        Recorder->>Recorder: Assign sequence: 1001, 1002, 1003...
+        Recorder->>EventStore: INSERT event
+        EventStore-->>Recorder: Persisted
+
+        Recorder->>OpGroup: onEventRecorded(metadata)
+
+        alt First event in group
+            OpGroup->>OpGroup: Create active group<br/>(groupId: 'group_5',<br/>startSeq: 1001)
+            Note right of OpGroup: LOG: Started operation group<br/>METRIC: Group creation
+        else Subsequent events
+            OpGroup->>OpGroup: Extend active group<br/>(eventCount++, lastTimestamp updated)
+            Note right of OpGroup: LOG: Extended group<br/>200ms idle timer restarted
+        end
+
+        Recorder->>Doc: applyEvent(event)
+        Doc->>Doc: Create new immutable state
+        Doc-->>UI: notifyListeners()
+        UI->>Renderer: paint(newDocument)
+        Renderer-->>User: Visual feedback
+    end
+
+    User->>Tool: Release pointer<br/>(end drag)
+
+    Note over OpGroup: 200ms idle period elapses<br/>(no new events)
+
+    OpGroup->>OpGroup: _completeActiveGroup()<br/>(reason: 'idle_threshold')
+
+    OpGroup->>OpGroup: Create OperationGroup:<br/>groupId='group_5',<br/>label='Move Rectangle',<br/>startSeq=1001, endSeq=1040,<br/>eventCount=40, duration=2000ms
+
+    OpGroup->>OpGroup: Store lastCompletedGroup
+    OpGroup->>OpGroup: notifyListeners()<br/>(Provider pattern)
+
+    Note right of OpGroup: LOG: Operation completed<br/>METRIC: Operation duration=2s<br/>METRIC: Events per operation=40<br/><br/>UI history panel can now<br/>display "Move Rectangle"<br/>as single undo entry
+
+    UI->>UI: Update Edit menu:<br/>"Undo Move Rectangle"
+
+    %% ========================================================================
+    %% SNAPSHOT MANAGEMENT
+    %% ========================================================================
+
+    Note over User,Renderer: SNAPSHOT CREATION (Every 1,000 Events)
+
+    alt Sequence milestone (1000, 2000, 3000...)
+        Recorder->>SnapStore: Check event count
+        Note right of Recorder: Event sequence: 2000<br/>(milestone reached)
+
+        Recorder->>Doc: getCurrentDocument()
+        Doc-->>Recorder: Current document state
+
+        Recorder->>Recorder: Serialize → JSON → gzip<br/>(~10:1 compression)
+        Note right of Recorder: LOG: Snapshot creation start<br/>METRIC: Serialization time
+
+        Recorder->>SnapStore: INSERT INTO snapshots<br/>(event_sequence=2000, blob)
+        SnapStore-->>Recorder: Snapshot created
+
+        Note right of SnapStore: LOG: Snapshot persisted<br/>METRIC: Snapshot size ~10-50KB<br/>KPI: <25ms latency<br/><br/>Snapshots optimize undo/redo<br/>by avoiding replay from seq=1
+    end
+
+    %% ========================================================================
+    %% PHASE 2: UNDO NAVIGATION
+    %% ========================================================================
+
+    Note over User,Renderer: PHASE 2: UNDO NAVIGATION (Time Travel Backwards)
+
+    User->>UI: Press Cmd+Z (Undo)
+    UI->>Navigator: undo()
+
+    Note right of Navigator: LOG: Undo triggered<br/>METRIC: Undo operation count<br/><br/>Current sequence: 2500<br/>Target: Previous operation end
+
+    Navigator->>OpGroup: Get lastCompletedGroup
+    OpGroup-->>Navigator: OperationGroup<br/>(label='Move Rectangle',<br/>endSeq=2500, startSeq=2461)
+
+    Navigator->>Navigator: Calculate target:<br/>targetSeq = 2460<br/>(one operation back)
+
+    Navigator->>SnapStore: SELECT MAX(event_sequence)<br/>FROM snapshots<br/>WHERE event_sequence <= 2460
+    SnapStore-->>Navigator: snapshotSeq = 2000
+
+    Note right of Navigator: LOG: Found snapshot at seq=2000<br/>METRIC: Snapshot retrieval time<br/><br/>Only need to replay 460 events<br/>instead of 2460!
+
+    Navigator->>SnapStore: SELECT snapshot_data<br/>WHERE event_sequence = 2000
+    SnapStore-->>Navigator: Compressed snapshot BLOB
+
+    Navigator->>Navigator: Decompress + deserialize<br/>→ Document at seq=2000
+
+    Navigator->>EventStore: SELECT * FROM events<br/>WHERE event_sequence > 2000<br/>AND event_sequence <= 2460<br/>ORDER BY event_sequence ASC
+    EventStore-->>Navigator: Events 2001-2460 (460 events)
+
+    loop Replay events (2001 to 2460)
+        Navigator->>Doc: applyEvent(event)
+        Doc->>Doc: Create new state
+    end
+
+    Navigator->>Navigator: Set currentSequence = 2460
+    Navigator->>UI: setDocument(docAtSeq2460)
+    UI->>UI: notifyListeners()
+    UI->>Renderer: paint(Document)
+    Renderer-->>User: Display with last action undone
+
+    Note right of Navigator: LOG: Undo complete<br/>METRIC: Undo latency<br/>KPI: <80ms end-to-end<br/><br/>Update Edit menu:<br/>"Redo Move Rectangle"<br/>(redo now available)
+
+    %% ========================================================================
+    %% PHASE 3: REDO NAVIGATION
+    %% ========================================================================
+
+    Note over User,Renderer: PHASE 3: REDO NAVIGATION (Time Travel Forwards)
+
+    User->>UI: Press Cmd+Shift+Z (Redo)
+    UI->>Navigator: redo()
+
+    Note right of Navigator: LOG: Redo triggered<br/>Current sequence: 2460<br/>Target: Next operation end (2500)
+
+    Navigator->>Navigator: targetSeq = 2500<br/>(forward to undone operation)
+
+    Note right of Navigator: No snapshot needed!<br/>Already have base state at 2460,<br/>just apply delta events
+
+    Navigator->>EventStore: SELECT * FROM events<br/>WHERE event_sequence > 2460<br/>AND event_sequence <= 2500<br/>ORDER BY event_sequence ASC
+    EventStore-->>Navigator: Events 2461-2500 (40 events)
+
+    loop Replay events (2461 to 2500)
+        Navigator->>Doc: applyEvent(event)
+        Doc->>Doc: Create new state
+    end
+
+    Navigator->>Navigator: Set currentSequence = 2500
+    Navigator->>UI: setDocument(docAtSeq2500)
+    UI->>UI: notifyListeners()
+    UI->>Renderer: paint(Document)
+    Renderer-->>User: Display with action re-applied
+
+    Note right of Navigator: LOG: Redo complete<br/>METRIC: Redo latency<br/>KPI: <80ms<br/><br/>Update Edit menu:<br/>"Undo Move Rectangle"
+
+    %% ========================================================================
+    %% PHASE 4: REDO BRANCH INVALIDATION
+    %% ========================================================================
+
+    Note over User,Renderer: PHASE 4: REDO BRANCH INVALIDATION
+
+    Note over User: Scenario: User undoes, then<br/>takes NEW action instead<br/>of redo
+
+    User->>UI: Press Cmd+Z (Undo again)
+    UI->>Navigator: undo()
+
+    Note right of Navigator: Navigate back to seq=2460<br/>(same process as Phase 2)
+
+    Navigator->>UI: setDocument(docAtSeq2460)
+    UI-->>User: Display
+
+    Note right of Navigator: Current state:<br/>Sequence: 2460<br/>Redo history available: 2461-2500
+
+    User->>Tool: Start NEW action<br/>(e.g., create ellipse)
+
+    Tool->>OpGroup: startUndoGroup(label: 'Create Ellipse')
+    Tool->>Recorder: recordEvent(CreateShapeEvent)
+    Recorder->>Recorder: Assign NEW sequence: 2461<br/>(overwrites old seq=2461!)
+
+    Note right of Recorder: CRITICAL: New event at seq=2461<br/>invalidates all redo history<br/>(old events 2461-2500)
+
+    Recorder->>EventStore: INSERT event (seq=2461)
+    EventStore->>EventStore: DELETE FROM events<br/>WHERE event_sequence > 2460
+
+    Note right of EventStore: LOG: Redo branch cleared<br/>METRIC: Invalidated events count<br/><br/>Redo history pruned:<br/>Old sequences 2461-2500 removed<br/>from database permanently
+
+    Recorder->>Navigator: onEventRecorded(seq=2461)
+    Navigator->>Navigator: Detect branch invalidation:<br/>currentSeq=2460,<br/>newSeq=2461 → CLEAR REDO
+
+    Navigator->>Navigator: redoStack.clear()
+    Navigator->>UI: notifyListeners()
+    UI->>UI: Disable "Redo" menu item<br/>(no redo history)
+
+    Note right of Navigator: LOG: Redo branch invalidated<br/>METRIC: Invalidation trigger count<br/><br/>User has diverged from<br/>original timeline.<br/>Redo no longer valid.
+
+    OpGroup->>OpGroup: Complete operation:<br/>"Create Ellipse"
+    OpGroup->>UI: notifyListeners()
+    UI->>UI: Update menu:<br/>"Undo Create Ellipse"
+
+    %% ========================================================================
+    %% ANNOTATIONS
+    %% ========================================================================
+
+    Note over OpGroup: **Operation Grouping Strategy:**<br/>- Idle threshold: 200ms (Decision 7)<br/>- Sampled events (drag/move): Grouped atomically<br/>- Discrete events (click/select): Single-event groups<br/>- Labels from undo_labels.md specification<br/><br/>LOG: Operation lifecycle events<br/>METRIC: Group duration, event count
+
+    Note over Navigator: **Undo/Redo Navigation:**<br/>- Time travel to specific event sequence<br/>- Snapshot optimization: <80ms undo latency<br/>- Operation-based: Navigate by group, not event<br/>- Multi-window: Isolated stacks per window<br/><br/>LOG: Navigation actions, latencies<br/>METRIC: Undo/redo counts, replay performance
+
+    Note over SnapStore,EventStore: **Storage Strategy:**<br/>- Snapshots every 1,000 events (Decision 1)<br/>- Gzip compression (~10:1 ratio)<br/>- SQLite WAL mode for durability<br/>- Event replay from nearest snapshot<br/><br/>LOG: Snapshot creation, retrieval<br/>METRIC: Snapshot size, compression ratio
+
+    Note over EventStore: **Redo Clearing Rules:**<br/>1. Redo valid ONLY if no new actions since undo<br/>2. New event insertion triggers DELETE of future events<br/>3. Navigator clears redo stack on branch divergence<br/>4. UI disables "Redo" menu when stack empty<br/><br/>LOG: Branch invalidation events<br/>METRIC: Invalidation frequency, pruned event count
+
+%% ============================================================================
+%% PERFORMANCE SUMMARY
+%% ============================================================================
+
+Note over User,Renderer: **PERFORMANCE TARGETS (Iteration 4 KPIs)**<br/><br/>**Undo Latency:** <80ms (snapshot optimization)<br/>- Typical: 100-500 events between snapshots<br/>- Worst case: 1,000 events (snapshot cadence)<br/>- Optimization: Lazy replay, viewport culling<br/><br/>**History Scrubbing:** 5,000 events/sec<br/>- Interactive timeline navigation<br/>- Background replay for history panel preview<br/><br/>**Operation Grouping:** 200ms idle detection<br/>- Balances responsiveness vs. over-segmentation<br/>- Tunable per tool (future enhancement)<br/><br/>**Multi-Window Coordination:**<br/>- Isolated undo stacks per document window<br/>- Shared event store, independent navigators<br/>- Provider scoping per window context

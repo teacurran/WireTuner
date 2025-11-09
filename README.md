@@ -339,6 +339,28 @@ The diagram shows table relationships, foreign key constraints, and includes ann
 
 See [Data and Snapshot ERD Documentation](docs/diagrams/data_snapshot_erd.md) for complete schema rationale, validation checklist, and architectural decision references.
 
+**Undo/Redo Timeline** ([Mermaid source](docs/diagrams/undo_timeline.mmd) | [PNG](docs/diagrams/undo_timeline.png) | [SVG](docs/diagrams/undo_timeline.svg))
+
+This sequence diagram illustrates the complete undo/redo navigation lifecycle in WireTuner:
+
+- **Operation Grouping**: 200ms idle threshold detection for atomic undo boundaries (Decision 7)
+- **Undo Navigation**: Time-travel to previous operation using nearest snapshot
+- **Redo Navigation**: Forward navigation through operation history
+- **Branch Invalidation**: Automatic clearing of redo history when new actions occur after undo
+
+The diagram shows the interaction between:
+- Operation Grouping Service with 200ms idle threshold
+- Undo Navigator for time-travel operations
+- Snapshot Store for efficient replay (snapshots every 1,000 events)
+- Event Store for complete operation history
+
+Includes Iteration 4 KPIs:
+- Undo latency: <80ms (snapshot optimization)
+- History scrubbing: 5,000 events/sec playback rate
+- Multi-window coordination with isolated undo stacks
+
+See [Undo Label Reference](docs/reference/undo_labels.md) for operation naming conventions and UI integration.
+
 **Tool Framework State Machine** ([PlantUML source](docs/diagrams/tool_framework_state_machine.puml) | [PNG](docs/diagrams/tool_framework_state_machine.png) | [SVG](docs/diagrams/tool_framework_state_machine.svg))
 
 This state machine diagram documents the complete behavior of WireTuner's three foundational tools:
@@ -376,6 +398,10 @@ mmdc -i docs/diagrams/event_flow_sequence.mmd -o docs/diagrams/event_flow_sequen
 # Data and Snapshot ERD (Mermaid)
 mmdc -i docs/diagrams/data_snapshot_erd.mmd -o docs/diagrams/data_snapshot_erd.svg
 mmdc -i docs/diagrams/data_snapshot_erd.mmd -o docs/diagrams/data_snapshot_erd.png
+
+# Undo/Redo Timeline (Mermaid)
+mmdc -i docs/diagrams/undo_timeline.mmd -o docs/diagrams/undo_timeline.svg
+mmdc -i docs/diagrams/undo_timeline.mmd -o docs/diagrams/undo_timeline.png
 ```
 
 ## Project Status
