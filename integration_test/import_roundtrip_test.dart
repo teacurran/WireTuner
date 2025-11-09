@@ -393,11 +393,11 @@ void main() {
         final events = await svgImporter.importFromString(svgContent);
 
         // Assert
-        // Text is skipped, but path should be imported
+        // Text is converted to placeholder rectangle, and path is imported
         final createEvents =
             events.where((e) => e.eventType == 'CreatePathEvent');
-        expect(createEvents.length, 1,
-            reason: 'Path should be imported despite unsupported text');
+        expect(createEvents.length, 2,
+            reason: 'Both text placeholder and path should be imported');
       });
 
       testWidgets('Log warning for filter but do not crash', (tester) async {

@@ -14,7 +14,7 @@ import 'package:wiretuner/infrastructure/import_export/import_validator.dart';
 /// that can be replayed to reconstruct the document. It follows WireTuner's
 /// event sourcing architecture.
 ///
-/// ## Supported Features (Milestone 0.1)
+/// ## Supported Features (Tier-1 and Tier-2)
 ///
 /// **Path Elements:**
 /// - M/m (moveTo) - absolute and relative
@@ -36,16 +36,28 @@ import 'package:wiretuner/infrastructure/import_export/import_validator.dart';
 /// - `<polygon>` - closed polygons
 ///
 /// **Grouping:**
-/// - `<g>` - groups (flattened to single layer in 0.1)
+/// - `<g>` - groups (flattened to single layer)
 ///
-/// ## Limitations (Milestone 0.1)
+/// **Gradients (Tier-2):**
+/// - `<linearGradient>` - linear gradients (basic support with warnings for advanced features)
+/// - `<radialGradient>` - radial gradients (basic support with warnings for advanced features)
+/// - Gradient stops with colors and offsets
+///
+/// **Clipping (Tier-2):**
+/// - `<clipPath>` - basic clipping paths (logged with warnings about limitations)
+///
+/// **Text (Tier-2):**
+/// - `<text>` - converted to simple placeholder paths with warnings
+///
+/// ## Limitations
 ///
 /// - Transform attributes ignored (future enhancement)
-/// - Gradients/patterns not supported (logged as warning)
+/// - Advanced gradient features logged as warnings (gradientUnits, spreadMethod, etc.)
 /// - Filters/effects not supported (logged as warning)
-/// - Text elements not supported (logged as warning)
+/// - Text converted to placeholder geometry (logged as warning)
 /// - Nested layers not supported (groups are flattened)
 /// - Style inheritance simplified (stroke/fill from element only)
+/// - Clipping paths are noted but not fully applied (logged as warning)
 ///
 /// ## Security
 ///
@@ -77,6 +89,15 @@ class SvgImporter {
 
   /// Last control point for smooth Bezier commands.
   Point? _lastControlPoint;
+
+  /// Parsed gradient definitions (id -> gradient data).
+  final Map<String, _GradientDefinition> _gradients = {};
+
+  /// Parsed clipPath definitions (id -> clipPath data).
+  final Map<String, _ClipPathDefinition> _clipPaths = {};
+
+  /// Maximum number of gradient stops to prevent memory issues.
+  static const int _maxGradientStops = 100;
 
   /// Imports an SVG file and returns a list of events.
   ///
@@ -145,6 +166,8 @@ class SvgImporter {
       _timestampCounter = 0;
       _currentPoint = const Point(x: 0, y: 0);
       _lastControlPoint = null;
+      _gradients.clear();
+      _clipPaths.clear();
 
       // Parse XML (xml package doesn't support DTD/entities by default - safe)
       final document = XmlDocument.parse(svgContent);
@@ -155,7 +178,10 @@ class SvgImporter {
         throw ImportException('No <svg> root element found');
       }
 
-      // Parse all child elements
+      // First pass: Parse definitions (gradients, clipPaths, etc.)
+      _parseDefinitions(svgElement);
+
+      // Second pass: Parse all child elements
       final events = <EventBase>[];
       for (final element in svgElement.children.whereType<XmlElement>()) {
         events.addAll(_parseElement(element));
@@ -167,6 +193,37 @@ class SvgImporter {
     } catch (e) {
       if (e is ImportException) rethrow;
       throw ImportException('SVG parsing failed: $e');
+    }
+  }
+
+  /// Parses SVG definitions (gradients, clipPaths, etc.) from defs and root element.
+  void _parseDefinitions(XmlElement svgElement) {
+    // Find all defs sections
+    final defsElements = svgElement.findElements('defs');
+    for (final defs in defsElements) {
+      _parseDefsContent(defs);
+    }
+
+    // Also check root-level definitions (some SVGs put gradients/clipPaths directly in <svg>)
+    _parseDefsContent(svgElement);
+  }
+
+  /// Parses the content of a defs element or root SVG element.
+  void _parseDefsContent(XmlElement parent) {
+    for (final element in parent.children.whereType<XmlElement>()) {
+      final tagName = element.name.local.toLowerCase();
+
+      switch (tagName) {
+        case 'lineargradient':
+          _parseLinearGradient(element);
+          break;
+        case 'radialgradient':
+          _parseRadialGradient(element);
+          break;
+        case 'clippath':
+          _parseClipPathDefinition(element);
+          break;
+      }
     }
   }
 
@@ -191,30 +248,30 @@ class SvgImporter {
         return _parsePolygonElement(element);
       case 'g':
         return _parseGroupElement(element);
+      case 'text':
+      case 'tspan':
+        return _parseTextElement(element);
 
-      // Unsupported but safe to ignore
+      // Definitions - already parsed in first pass
       case 'defs':
+      case 'lineargradient':
+      case 'radialgradient':
+      case 'clippath':
       case 'metadata':
       case 'title':
       case 'desc':
         return [];
 
-      // Unsupported features - log warning
-      case 'text':
-      case 'tspan':
-        _logger.w('Unsupported SVG element: <$tagName> (text not supported in Milestone 0.1), skipping');
-        return [];
-
-      case 'lineargradient':
-      case 'radialgradient':
       case 'pattern':
-        _logger.w('Unsupported SVG element: <$tagName> (gradients/patterns not supported), skipping');
+        _logger.w('Unsupported SVG element: <$tagName> (pattern fills not supported), skipping');
         return [];
 
       case 'filter':
       case 'fegaussianblur':
       case 'fecolormatrix':
-        _logger.w('Unsupported SVG element: <$tagName> (filters not supported), skipping');
+      case 'feblend':
+      case 'feoffset':
+        _logger.w('Unsupported SVG element: <$tagName> (filter effects not supported), skipping');
         return [];
 
       case 'image':
@@ -1114,17 +1171,68 @@ class SvgImporter {
   /// Parses style attributes from an element.
   _StyleAttributes _parseStyle(XmlElement element) {
     // Extract stroke and fill attributes
-    // In Milestone 0.1, we only support basic attributes
     final stroke = element.getAttribute('stroke');
     final strokeWidth = element.getAttribute('stroke-width');
     final fill = element.getAttribute('fill');
     final opacity = element.getAttribute('opacity');
+    final clipPath = element.getAttribute('clip-path');
+
+    // Resolve gradient or color references
+    String? resolvedFill;
+    String? fillGradientId;
+
+    if (fill != null && fill != 'none') {
+      if (fill.startsWith('url(#') && fill.endsWith(')')) {
+        // Extract gradient ID
+        fillGradientId = fill.substring(5, fill.length - 1);
+        if (_gradients.containsKey(fillGradientId)) {
+          _logger.d('Gradient reference detected: $fillGradientId (support limited, using fallback)');
+          // For now, use first stop color as fallback
+          final gradient = _gradients[fillGradientId]!;
+          resolvedFill = gradient.stops.isNotEmpty ? gradient.stops.first.color : null;
+        } else {
+          _logger.w('Gradient reference not found: $fillGradientId, using no fill');
+        }
+      } else {
+        resolvedFill = fill;
+      }
+    }
+
+    String? resolvedStroke;
+    if (stroke != null && stroke != 'none') {
+      if (stroke.startsWith('url(#') && stroke.endsWith(')')) {
+        final gradientId = stroke.substring(5, stroke.length - 1);
+        if (_gradients.containsKey(gradientId)) {
+          _logger.d('Stroke gradient reference detected: $gradientId (support limited, using fallback)');
+          final gradient = _gradients[gradientId]!;
+          resolvedStroke = gradient.stops.isNotEmpty ? gradient.stops.first.color : null;
+        } else {
+          _logger.w('Stroke gradient reference not found: $gradientId, using no stroke');
+        }
+      } else {
+        resolvedStroke = stroke;
+      }
+    }
+
+    // Check for clipPath reference
+    if (clipPath != null && clipPath.isNotEmpty) {
+      String? clipPathId;
+      if (clipPath.startsWith('url(#') && clipPath.endsWith(')')) {
+        clipPathId = clipPath.substring(5, clipPath.length - 1);
+        if (_clipPaths.containsKey(clipPathId)) {
+          _logger.w('ClipPath detected: $clipPathId - Clipping paths are recognized but not fully applied in current version. Visual clipping may not be accurate.');
+        } else {
+          _logger.w('ClipPath reference not found: $clipPathId');
+        }
+      }
+    }
 
     return _StyleAttributes(
-      strokeColor: stroke != null && stroke != 'none' ? stroke : null,
+      strokeColor: resolvedStroke,
       strokeWidth: strokeWidth != null ? _parseDouble(strokeWidth) : null,
-      fillColor: fill != null && fill != 'none' ? fill : null,
+      fillColor: resolvedFill,
       opacity: opacity != null ? _parseDouble(opacity) : null,
+      fillGradientId: fillGradientId,
     );
   }
 
@@ -1144,6 +1252,210 @@ class SvgImporter {
   int _nextTimestamp() {
     final base = DateTime.now().millisecondsSinceEpoch;
     return base + _timestampCounter++;
+  }
+
+  /// Parses a <linearGradient> element.
+  void _parseLinearGradient(XmlElement element) {
+    final id = element.getAttribute('id');
+    if (id == null || id.isEmpty) {
+      _logger.w('LinearGradient has no id attribute, skipping');
+      return;
+    }
+
+    final x1 = _parseDouble(element.getAttribute('x1') ?? '0');
+    final y1 = _parseDouble(element.getAttribute('y1') ?? '0');
+    final x2 = _parseDouble(element.getAttribute('x2') ?? '1');
+    final y2 = _parseDouble(element.getAttribute('y2') ?? '0');
+
+    // Parse gradient stops
+    final stops = _parseGradientStops(element);
+
+    if (stops.isEmpty) {
+      _logger.w('LinearGradient $id has no stops, skipping');
+      return;
+    }
+
+    // Check for unsupported features and log warnings
+    final gradientUnits = element.getAttribute('gradientUnits');
+    final spreadMethod = element.getAttribute('spreadMethod');
+    final gradientTransform = element.getAttribute('gradientTransform');
+
+    if (gradientUnits != null && gradientUnits != 'objectBoundingBox') {
+      _logger.w('LinearGradient $id: gradientUnits="$gradientUnits" not fully supported, may render incorrectly');
+    }
+
+    if (spreadMethod != null && spreadMethod != 'pad') {
+      _logger.w('LinearGradient $id: spreadMethod="$spreadMethod" not supported, using pad fallback');
+    }
+
+    if (gradientTransform != null) {
+      _logger.w('LinearGradient $id: gradientTransform not supported, gradient orientation may be incorrect');
+    }
+
+    _gradients[id] = _GradientDefinition(
+      id: id,
+      type: _GradientType.linear,
+      x1: x1,
+      y1: y1,
+      x2: x2,
+      y2: y2,
+      stops: stops,
+    );
+
+    _logger.d('Parsed linearGradient: $id with ${stops.length} stops');
+  }
+
+  /// Parses a <radialGradient> element.
+  void _parseRadialGradient(XmlElement element) {
+    final id = element.getAttribute('id');
+    if (id == null || id.isEmpty) {
+      _logger.w('RadialGradient has no id attribute, skipping');
+      return;
+    }
+
+    final cx = _parseDouble(element.getAttribute('cx') ?? '0.5');
+    final cy = _parseDouble(element.getAttribute('cy') ?? '0.5');
+    final r = _parseDouble(element.getAttribute('r') ?? '0.5');
+    final fx = _parseDouble(element.getAttribute('fx') ?? cx.toString());
+    final fy = _parseDouble(element.getAttribute('fy') ?? cy.toString());
+
+    // Parse gradient stops
+    final stops = _parseGradientStops(element);
+
+    if (stops.isEmpty) {
+      _logger.w('RadialGradient $id has no stops, skipping');
+      return;
+    }
+
+    // Check for unsupported features
+    final gradientUnits = element.getAttribute('gradientUnits');
+    final spreadMethod = element.getAttribute('spreadMethod');
+
+    if (gradientUnits != null && gradientUnits != 'objectBoundingBox') {
+      _logger.w('RadialGradient $id: gradientUnits="$gradientUnits" not fully supported, may render incorrectly');
+    }
+
+    if (spreadMethod != null && spreadMethod != 'pad') {
+      _logger.w('RadialGradient $id: spreadMethod="$spreadMethod" not supported, using pad fallback');
+    }
+
+    _gradients[id] = _GradientDefinition(
+      id: id,
+      type: _GradientType.radial,
+      cx: cx,
+      cy: cy,
+      r: r,
+      fx: fx,
+      fy: fy,
+      stops: stops,
+    );
+
+    _logger.d('Parsed radialGradient: $id with ${stops.length} stops');
+  }
+
+  /// Parses gradient stops from a gradient element.
+  List<_GradientStop> _parseGradientStops(XmlElement gradientElement) {
+    final stops = <_GradientStop>[];
+
+    for (final stopElement in gradientElement.findElements('stop')) {
+      if (stops.length >= _maxGradientStops) {
+        _logger.w('Gradient has more than $_maxGradientStops stops, truncating');
+        break;
+      }
+
+      final offsetStr = stopElement.getAttribute('offset') ?? '0';
+      final offset = _parsePercentageOrDouble(offsetStr);
+      final stopColor = stopElement.getAttribute('stop-color') ?? '#000000';
+      final stopOpacity = stopElement.getAttribute('stop-opacity');
+
+      stops.add(_GradientStop(
+        offset: offset,
+        color: stopColor,
+        opacity: stopOpacity != null ? _parseDouble(stopOpacity) : 1.0,
+      ));
+    }
+
+    return stops;
+  }
+
+  /// Parses a percentage string (e.g., "50%") or plain double.
+  /// Returns value in range 0.0 to 1.0.
+  double _parsePercentageOrDouble(String value) {
+    final trimmed = value.trim();
+    if (trimmed.endsWith('%')) {
+      final percentValue = double.parse(trimmed.substring(0, trimmed.length - 1));
+      return percentValue / 100.0;
+    } else {
+      return _parseDouble(trimmed);
+    }
+  }
+
+  /// Parses a <clipPath> definition.
+  void _parseClipPathDefinition(XmlElement element) {
+    final id = element.getAttribute('id');
+    if (id == null || id.isEmpty) {
+      _logger.w('ClipPath has no id attribute, skipping');
+      return;
+    }
+
+    // Extract the clipping path geometry (usually contains path, rect, circle, etc.)
+    final pathData = StringBuffer();
+    for (final child in element.children.whereType<XmlElement>()) {
+      final childTag = child.name.local.toLowerCase();
+      if (childTag == 'path') {
+        final d = child.getAttribute('d');
+        if (d != null) {
+          pathData.write(d);
+          pathData.write(' ');
+        }
+      } else if (childTag == 'rect' || childTag == 'circle' || childTag == 'ellipse') {
+        _logger.d('ClipPath $id contains <$childTag> - complex clipping shapes have limited support');
+      }
+    }
+
+    _clipPaths[id] = _ClipPathDefinition(
+      id: id,
+      pathData: pathData.toString().trim(),
+    );
+
+    _logger.d('Parsed clipPath: $id');
+  }
+
+  /// Parses a <text> element and converts to placeholder path geometry.
+  List<EventBase> _parseTextElement(XmlElement element) {
+    final x = _parseDouble(element.getAttribute('x') ?? '0');
+    final y = _parseDouble(element.getAttribute('y') ?? '0');
+    final text = element.innerText.trim();
+
+    if (text.isEmpty) {
+      _logger.d('Empty text element, skipping');
+      return [];
+    }
+
+    _logger.w(
+      'Text element encountered: "$text" at ($x, $y) - Text is not fully supported. '
+      'Converting to placeholder rectangle. For accurate text rendering, convert text to paths '
+      'in your design tool before exporting.',
+    );
+
+    // Create a simple rectangular placeholder
+    // Approximate text bounds: 10px height, 6px per character width
+    final approximateWidth = text.length * 6.0;
+    const approximateHeight = 10.0;
+
+    final pathId = 'import_text_placeholder_${_uuid.v4()}';
+    final style = _parseStyle(element);
+
+    // Create rectangle placeholder for text
+    return _rectangleToPath(
+      x,
+      y - approximateHeight, // SVG text y is baseline, adjust to top
+      approximateWidth,
+      approximateHeight,
+      0,
+      pathId,
+      style,
+    );
   }
 }
 
@@ -1166,11 +1478,75 @@ class _StyleAttributes {
   final double? strokeWidth;
   final String? fillColor;
   final double? opacity;
+  final String? fillGradientId;
 
   _StyleAttributes({
     this.strokeColor,
     this.strokeWidth,
     this.fillColor,
     this.opacity,
+    this.fillGradientId,
+  });
+}
+
+/// Gradient type enumeration.
+enum _GradientType { linear, radial }
+
+/// Internal representation of a gradient definition.
+class _GradientDefinition {
+  final String id;
+  final _GradientType type;
+  final List<_GradientStop> stops;
+
+  // Linear gradient coordinates
+  final double? x1;
+  final double? y1;
+  final double? x2;
+  final double? y2;
+
+  // Radial gradient coordinates
+  final double? cx;
+  final double? cy;
+  final double? r;
+  final double? fx;
+  final double? fy;
+
+  _GradientDefinition({
+    required this.id,
+    required this.type,
+    required this.stops,
+    this.x1,
+    this.y1,
+    this.x2,
+    this.y2,
+    this.cx,
+    this.cy,
+    this.r,
+    this.fx,
+    this.fy,
+  });
+}
+
+/// Gradient stop color definition.
+class _GradientStop {
+  final double offset; // 0.0 to 1.0
+  final String color; // CSS color string
+  final double opacity; // 0.0 to 1.0
+
+  _GradientStop({
+    required this.offset,
+    required this.color,
+    required this.opacity,
+  });
+}
+
+/// ClipPath definition.
+class _ClipPathDefinition {
+  final String id;
+  final String pathData;
+
+  _ClipPathDefinition({
+    required this.id,
+    required this.pathData,
   });
 }
