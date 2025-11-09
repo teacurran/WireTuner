@@ -77,9 +77,51 @@ For Windows:
 flutter run -d windows
 ```
 
-## Project Structure
+## Workspace Structure (Iteration I1+)
 
-WireTuner follows a layered architecture with clear separation of concerns:
+WireTuner uses a **melos-managed monorepo** to organize code into reusable packages. The workspace enables independent development, testing, and versioning of core components.
+
+### Package Overview
+
+```
+packages/
+├── app_shell/         # Flutter UI shell and window management
+├── event_core/        # Event sourcing infrastructure (recorder, replayer, snapshots)
+└── vector_engine/     # Vector graphics engine (models, geometry, hit testing)
+```
+
+### Workspace Commands
+
+The workspace uses [melos](https://melos.invertase.dev/) for package orchestration. Key commands:
+
+```bash
+# Bootstrap the workspace (run once after clone, or after adding packages)
+melos bootstrap
+
+# Run static analysis across all packages
+melos run analyze
+
+# Run all tests across all packages
+melos run test
+
+# Format all Dart files
+melos run format
+
+# Check formatting without modifying files
+melos run format:check
+
+# Clean all packages
+melos run clean
+
+# Run pub get in all packages
+melos run get
+```
+
+For detailed workspace architecture, see [.codemachine/artifacts/plan/01_Plan_Overview_and_Setup.md#directory-structure](.codemachine/artifacts/plan/01_Plan_Overview_and_Setup.md#directory-structure).
+
+## Legacy Single-Package Structure
+
+The original single-package structure is being migrated to the workspace model:
 
 ```
 lib/

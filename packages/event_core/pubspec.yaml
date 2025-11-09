@@ -1,0 +1,28 @@
+name: event_core
+description: Event sourcing core infrastructure for WireTuner (recorder, sampler, replayer, snapshot services)
+publish_to: 'none'
+version: 0.1.0
+
+environment:
+  sdk: '>=3.2.0 <4.0.0'
+
+dependencies:
+  # UUID Generation
+  uuid: ^4.0.0
+
+  # Logging
+  logger: ^2.0.0
+
+  # Serialization
+  freezed_annotation: ^2.4.0
+  json_annotation: ^4.8.0
+
+dev_dependencies:
+  test: ^1.24.0
+
+  # Code Generation
+  freezed: ^2.4.0
+  json_serializable: ^6.7.0
+  build_runner: ^2.4.0
+
+  flutter_lints: ^3.0.0
