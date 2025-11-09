@@ -50,6 +50,10 @@
 /// ## Undo/Redo Navigation (I4.T3)
 ///
 /// - [UndoNavigator]: Operation-based undo/redo navigator service
+///
+/// ## History Export/Import for Debugging (I4.T10)
+///
+/// - [HistoryExporter]: Export/import event log subsections for debugging
 library event_core;
 
 // Core interfaces
@@ -77,6 +81,9 @@ export 'src/operation_grouping.dart';
 
 // Undo/redo navigation (I4.T3)
 export 'src/undo_navigator.dart';
+
+// History export/import for debugging (I4.T10)
+export 'src/history_exporter.dart';
 
 // Stub implementations
 export 'src/stubs/stub_event_sampler.dart';

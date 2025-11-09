@@ -87,3 +87,28 @@ doctor:
     @mmdc --version || echo "⚠️  Mermaid CLI not found - see docs/reference/dev_workflow.md"
     @echo "\n=== Git ==="
     @git --version
+
+# Export event history subsection for debugging (DEV-ONLY)
+# Usage: just history-export doc-123 5000 5500 tmp/history.debug.json
+history-export DOC_ID START END OUTPUT:
+    @echo "⚠️  DEV-ONLY FEATURE - Exported files may contain sensitive data"
+    @dart tools/history_export.dart export \
+        --document-id={{DOC_ID}} \
+        --start={{START}} \
+        --end={{END}} \
+        --output={{OUTPUT}}
+
+# Import event history for reproduction (DEV-ONLY)
+# Usage: just history-import doc-123 tmp/history.debug.json
+history-import DOC_ID INPUT:
+    @echo "⚠️  DEV-ONLY FEATURE - Import will modify document state"
+    @dart tools/history_export.dart import \
+        --document-id={{DOC_ID}} \
+        --input={{INPUT}}
+
+# Import event history with verbose logging
+history-import-verbose DOC_ID INPUT:
+    @dart tools/history_export.dart import \
+        --document-id={{DOC_ID}} \
+        --input={{INPUT}} \
+        --verbose
