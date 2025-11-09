@@ -4,6 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:wiretuner/domain/models/geometry/point_extensions.dart';
 import 'package:wiretuner/domain/models/path.dart' as domain;
 import 'package:wiretuner/domain/models/segment.dart';
+import 'package:wiretuner/presentation/canvas/paint_styles.dart';
+import 'package:wiretuner/presentation/canvas/render_pipeline.dart';
 import 'package:wiretuner/presentation/canvas/viewport/viewport_controller.dart';
 
 /// CustomPainter that renders vector paths from the document model.
@@ -54,11 +56,14 @@ class DocumentPainter extends CustomPainter {
   /// The [paths] list should contain the paths to render.
   /// The [viewportController] provides the pan/zoom transformation state.
   /// The [strokeWidth] and [strokeColor] are placeholder style properties.
+  /// The [renderPipeline] is an optional advanced rendering pipeline; if not
+  /// provided, the painter uses the legacy direct rendering approach.
   DocumentPainter({
     required this.paths,
     required this.viewportController,
     this.strokeWidth = 1.0,
     this.strokeColor = Colors.black,
+    this.renderPipeline,
   }) : super(repaint: viewportController);
   /// The list of paths to render.
   ///
@@ -84,8 +89,53 @@ class DocumentPainter extends CustomPainter {
   /// will integrate with a proper style system.
   final Color strokeColor;
 
+  /// Optional render pipeline for advanced rendering features.
+  ///
+  /// When provided, this pipeline is used for rendering with support for
+  /// caching, culling, and performance optimizations. If null, falls back
+  /// to the legacy direct rendering approach.
+  final RenderPipeline? renderPipeline;
+
   @override
   void paint(Canvas canvas, Size size) {
+    // Use render pipeline if available
+    if (renderPipeline != null) {
+      _paintWithPipeline(canvas, size);
+    } else {
+      _paintLegacy(canvas, size);
+    }
+  }
+
+  /// Renders using the advanced render pipeline.
+  void _paintWithPipeline(Canvas canvas, Size size) {
+    // Convert paths to renderable objects with default style
+    final defaultStyle = PaintStyle.stroke(
+      color: strokeColor,
+      strokeWidth: strokeWidth,
+    );
+
+    final renderablePaths = <RenderablePath>[];
+    for (var i = 0; i < paths.length; i++) {
+      renderablePaths.add(
+        RenderablePath(
+          id: 'path-$i',
+          path: paths[i],
+          style: defaultStyle,
+        ),
+      );
+    }
+
+    // Render via pipeline
+    renderPipeline!.render(
+      canvas: canvas,
+      size: size,
+      viewportController: viewportController,
+      paths: renderablePaths,
+    );
+  }
+
+  /// Legacy rendering approach (backward compatibility).
+  void _paintLegacy(Canvas canvas, Size size) {
     // Apply viewport transformation
     canvas.save();
     canvas.transform(viewportController.worldToScreenMatrix.storage);

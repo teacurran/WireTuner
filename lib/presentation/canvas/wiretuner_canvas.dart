@@ -3,9 +3,11 @@ import 'package:wiretuner/domain/document/selection.dart';
 import 'package:wiretuner/domain/models/path.dart' as domain;
 import 'package:wiretuner/domain/models/shape.dart';
 import 'package:wiretuner/infrastructure/telemetry/telemetry_service.dart';
+import 'package:wiretuner/presentation/canvas/overlays/performance_overlay.dart';
 import 'package:wiretuner/presentation/canvas/overlays/selection_overlay.dart';
 import 'package:wiretuner/presentation/canvas/painter/document_painter.dart';
 import 'package:wiretuner/presentation/canvas/painter/path_renderer.dart';
+import 'package:wiretuner/presentation/canvas/render_pipeline.dart';
 import 'package:wiretuner/presentation/canvas/viewport/viewport_controller.dart';
 import 'package:wiretuner/presentation/canvas/viewport/viewport_state.dart';
 
@@ -70,7 +72,8 @@ import 'package:wiretuner/presentation/canvas/viewport/viewport_state.dart';
 class WireTunerCanvas extends StatefulWidget {
   /// Creates a WireTuner canvas widget.
   ///
-  /// All parameters are required except [telemetryService] and [hoveredAnchor].
+  /// All parameters are required except [telemetryService], [hoveredAnchor],
+  /// and [enableRenderPipeline].
   ///
   /// The [paths] list contains document path objects to render.
   /// The [shapes] map contains shape objects by ID.
@@ -78,6 +81,10 @@ class WireTunerCanvas extends StatefulWidget {
   /// The [viewportController] manages pan/zoom transformations.
   /// The [telemetryService] is optional and enables performance monitoring.
   /// The [hoveredAnchor] indicates the currently hovered anchor (if any).
+  /// The [enableRenderPipeline] enables advanced rendering optimizations (default: true).
+  ///
+  /// The performance overlay can be toggled at runtime using Cmd+Shift+P (macOS)
+  /// or Ctrl+Shift+P (Windows/Linux).
   const WireTunerCanvas({
     required this.paths,
     required this.shapes,
@@ -85,6 +92,7 @@ class WireTunerCanvas extends StatefulWidget {
     required this.viewportController,
     this.telemetryService,
     this.hoveredAnchor,
+    this.enableRenderPipeline = true,
     super.key,
   });
 
@@ -106,6 +114,9 @@ class WireTunerCanvas extends StatefulWidget {
   /// Currently hovered anchor point (if any).
   final HoveredAnchor? hoveredAnchor;
 
+  /// Enable advanced render pipeline with optimizations.
+  final bool enableRenderPipeline;
+
   @override
   State<WireTunerCanvas> createState() => _WireTunerCanvasState();
 }
@@ -113,6 +124,9 @@ class WireTunerCanvas extends StatefulWidget {
 class _WireTunerCanvasState extends State<WireTunerCanvas> {
   /// Path renderer for caching converted geometry.
   late final PathRenderer _pathRenderer;
+
+  /// Render pipeline for advanced rendering.
+  late final RenderPipeline? _renderPipeline;
 
   /// Viewport state manager for gesture handling.
   late final ViewportState _viewportState;
@@ -126,6 +140,18 @@ class _WireTunerCanvasState extends State<WireTunerCanvas> {
 
     // Initialize path renderer
     _pathRenderer = PathRenderer();
+
+    // Initialize render pipeline if enabled
+    _renderPipeline = widget.enableRenderPipeline
+        ? RenderPipeline(
+            pathRenderer: _pathRenderer,
+            config: const RenderPipelineConfig(
+              enablePathCaching: true,
+              enableViewportCulling: false, // Enable in I3
+              enableGPUCaching: false, // Enable in I3
+            ),
+          )
+        : null;
 
     // Initialize viewport state with telemetry callback
     _viewportState = ViewportState(
@@ -180,7 +206,7 @@ class _WireTunerCanvasState extends State<WireTunerCanvas> {
       pathsMap['path-$i'] = widget.paths[i];
     }
 
-    return RepaintBoundary(
+    final canvasWidget = RepaintBoundary(
       child: Listener(
         // Handle scroll events for zoom
         onPointerSignal: _viewportState.onPointerSignal,
@@ -200,6 +226,7 @@ class _WireTunerCanvasState extends State<WireTunerCanvas> {
                   viewportController: widget.viewportController,
                   strokeWidth: 2.0,
                   strokeColor: Colors.black87,
+                  renderPipeline: _renderPipeline,
                 ),
                 // Fill available space
                 size: Size.infinite,
@@ -221,6 +248,13 @@ class _WireTunerCanvasState extends State<WireTunerCanvas> {
           ),
         ),
       ),
+    );
+
+    // Always wrap with performance overlay wrapper (keyboard toggle available)
+    return PerformanceOverlayWrapper(
+      metrics: _renderPipeline?.lastMetrics,
+      viewportController: widget.viewportController,
+      child: canvasWidget,
     );
   }
 }

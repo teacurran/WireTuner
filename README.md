@@ -16,6 +16,7 @@ WireTuner is a desktop vector drawing application designed with an event-sourcin
 - **SQLite Persistence**: Self-contained .wiretuner file format (SQLite database)
 - **Import/Export**: Adobe Illustrator import, SVG/PDF export
 - **High Performance**: 60 FPS rendering targeting 10,000+ objects
+- **Performance Monitoring**: Real-time FPS and render metrics overlay (toggle with Cmd/Ctrl+Shift+P)
 
 ## Prerequisites
 
