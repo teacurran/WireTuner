@@ -230,6 +230,16 @@ Detailed documentation is available in the `docs/` directory:
 
 For comprehensive architecture documentation, see `.codemachine/artifacts/architecture/`.
 
+### Architectural Decision Records
+
+Key architectural decisions are documented in `docs/adr/` following the ADR template format:
+
+| # | Title | Status | Summary |
+|---|-------|--------|---------|
+| [001](docs/adr/ADR-001-hybrid-state-history.md) | Hybrid State + History Approach | Accepted | Documents the dual persistence strategy combining periodic snapshots (every 1000 events) with append-only event logs, enabling <200ms document loading while preserving complete history for infinite undo/redo and audit trails. |
+| [002](docs/adr/ADR-002-multi-window.md) | Multi-Window Document Editing | Accepted | Establishes isolated window state (independent undo stacks, canvas state, metrics) with shared event store via SQLite connection pooling and WAL mode concurrency, supporting professional multi-document workflows. |
+| [003](docs/adr/003-event-sourcing-architecture.md) | Event Sourcing Architecture Design | Accepted | Defines the complete event sourcing foundation with 50ms sampling rate, JSON event encoding, periodic snapshots (every 1000 events), and immutable domain models, providing unlimited undo/redo and future collaboration capabilities. |
+
 ### Architecture Diagrams
 
 The system architecture is documented through interactive diagrams that illustrate the key components, their responsibilities, and relationships:
