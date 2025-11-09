@@ -148,7 +148,7 @@
     "task_id": "I3.T9",
     "iteration_id": "I3",
     "iteration_goal": "Establish a robust tool framework with selection/direct-selection tooling, pen tool creation flows, overlays, and cursor/state management so later iterations can add shape tools, direct manipulation, and undo orchestration.",
-    "description": "Add telemetry + undo boundary annotations for tools: ensure operations flush pending sampled events, emit human-readable labels (“Move Rectangle”) for UI, and log tool usage counts.",
+    "description": "Add telemetry + undo boundary annotations for tools: ensure operations flush pending sampled events, emit human-readable labels (\"Move Rectangle\") for UI, and log tool usage counts.",
     "agent_type_hint": "BackendAgent",
     "inputs": "Task `I1.T8` metrics, `I3` tool implementations, Decision 7 undo granularity.",
     "target_files": [],
@@ -161,7 +161,7 @@
       "I1.T8"
     ],
     "parallelizable": true,
-    "done": false
+    "done": true
   },
   {
     "task_id": "I3.T10",
