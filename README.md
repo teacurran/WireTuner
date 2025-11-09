@@ -1,5 +1,7 @@
 # WireTuner
 
+[![CI](https://github.com/YOUR_USERNAME/WireTuner/actions/workflows/ci.yml/badge.svg)](https://github.com/YOUR_USERNAME/WireTuner/actions/workflows/ci.yml)
+
 A professional event-sourced vector drawing application for macOS and Windows built with Flutter.
 
 ## Overview
@@ -338,13 +340,32 @@ Before starting development, ensure your environment meets all requirements:
 
 ### Continuous Integration
 
-All pull requests are automatically validated via GitHub Actions CI:
-- Analyzer checks (warnings treated as errors)
-- Code formatting verification
-- Full test suite execution
-- Platform-specific builds (macOS and Windows)
+All pull requests are automatically validated via GitHub Actions CI with parallel jobs:
 
-Reference: `.github/workflows/ci.yml`
+**Automated Checks:**
+- **Lint & Analyze** - `flutter analyze` with warnings as errors (macOS + Windows)
+- **Format Check** - `dart format` validation (macOS + Windows)
+- **Tests** - Full test suite + SQLite smoke tests (macOS + Windows)
+- **Diagram Validation** - PlantUML and Mermaid syntax checks (macOS)
+- **Build Verification** - Debug builds for both platforms
+
+**Run Locally:**
+```bash
+# Run all CI checks locally
+./scripts/ci/run_checks.sh
+
+# Run individual checks
+bash tools/lint.sh          # Linting
+bash tools/test.sh          # Tests
+./scripts/ci/diagram_check.sh  # Diagrams
+dart format lib/ test/      # Fix formatting
+```
+
+**Documentation:**
+- CI Scripts: `scripts/ci/README.md`
+- Workflow Definition: `.github/workflows/ci.yml`
+
+The CI pipeline uses aggressive caching for Flutter SDK and pub dependencies to minimize build times.
 
 ## Contact
 

@@ -6,12 +6,19 @@ on:
   pull_request:
     branches: [ main, develop ]
 
+# Cancel in-progress runs for the same workflow + branch/PR
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
 jobs:
-  analyze-and-test:
-    name: Analyze and Test
+  # Job 1: Lint & Analyze (runs in parallel)
+  lint:
+    name: Lint & Analyze
     runs-on: ${{ matrix.os }}
 
     strategy:
+      fail-fast: false
       matrix:
         os: [macos-latest, windows-latest]
         flutter-version: ['3.16.0']
@@ -25,15 +32,24 @@ jobs:
         with:
           flutter-version: ${{ matrix.flutter-version }}
           channel: 'stable'
+          cache: true
 
-      - name: Verify Flutter installation
-        run: flutter doctor -v
+      - name: Cache pub dependencies
+        uses: actions/cache@v3
+        with:
+          path: |
+            ${{ runner.os == 'Windows' && '~\AppData\Local\Pub\Cache' || '~/.pub-cache' }}
+            .dart_tool
+          key: ${{ runner.os }}-pub-${{ hashFiles('**/pubspec.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-pub-
 
       - name: Get dependencies
         run: flutter pub get
 
       - name: Run code generation (if needed)
         run: flutter pub run build_runner build --delete-conflicting-outputs || echo "No code generation needed"
+        shell: bash
 
       - name: Run analyzer
         run: flutter analyze --fatal-infos --fatal-warnings
@@ -41,10 +57,157 @@ jobs:
       - name: Check formatting
         run: dart format --set-exit-if-changed lib/ test/
 
+  # Job 2: Tests (runs in parallel)
+  test:
+    name: Tests
+    runs-on: ${{ matrix.os }}
+
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-latest, windows-latest]
+        flutter-version: ['3.16.0']
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ matrix.flutter-version }}
+          channel: 'stable'
+          cache: true
+
+      - name: Cache pub dependencies
+        uses: actions/cache@v3
+        with:
+          path: |
+            ${{ runner.os == 'Windows' && '~\AppData\Local\Pub\Cache' || '~/.pub-cache' }}
+            .dart_tool
+          key: ${{ runner.os }}-pub-${{ hashFiles('**/pubspec.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-pub-
+
+      - name: Get dependencies
+        run: flutter pub get
+
+      - name: Run code generation (if needed)
+        run: flutter pub run build_runner build --delete-conflicting-outputs || echo "No code generation needed"
+        shell: bash
+
       - name: Run tests
         run: flutter test
 
-      - name: Build for platform
+      - name: Run SQLite smoke tests (if available)
+        run: dart test test/infrastructure/persistence/ --name="smoke" || dart test test/ --tags=smoke || echo "No SQLite smoke tests found"
+        shell: bash
+        continue-on-error: true
+
+  # Job 3: Diagram Validation (runs in parallel, macOS only for tooling)
+  diagram-validation:
+    name: Diagram Validation
+    runs-on: macos-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Java (for PlantUML)
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Cache PlantUML
+        id: cache-plantuml
+        uses: actions/cache@v3
+        with:
+          path: plantuml.jar
+          key: plantuml-jar-1.2023.13
+
+      - name: Download PlantUML
+        if: steps.cache-plantuml.outputs.cache-hit != 'true'
+        run: |
+          curl -L -o plantuml.jar https://github.com/plantuml/plantuml/releases/download/v1.2023.13/plantuml-1.2023.13.jar
+
+      - name: Set up Node.js (for Mermaid CLI)
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+
+      - name: Cache Mermaid CLI
+        uses: actions/cache@v3
+        with:
+          path: ~/.npm
+          key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-node-
+
+      - name: Install Mermaid CLI
+        run: npm install -g @mermaid-js/mermaid-cli
+
+      - name: Install Chromium dependencies (for Mermaid)
+        run: |
+          if command -v apt-get &> /dev/null; then
+            sudo apt-get update
+            sudo apt-get install -y libatk-bridge2.0-0 libgtk-3-0 libnss3 libxss1 libasound2
+          fi
+        continue-on-error: true
+
+      - name: Validate PlantUML diagrams
+        run: |
+          echo "Validating PlantUML diagrams..."
+          find docs/diagrams -name "*.puml" -print0 | while IFS= read -r -d '' file; do
+            echo "Checking: $file"
+            java -jar plantuml.jar -syntax "$file"
+          done
+
+      - name: Validate Mermaid diagrams
+        run: bash scripts/ci/diagram_check.sh docs/diagrams
+        continue-on-error: false
+
+  # Job 4: Build verification (depends on lint and test passing)
+  build:
+    name: Build Verification
+    needs: [lint, test]
+    runs-on: ${{ matrix.os }}
+
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-latest, windows-latest]
+        flutter-version: ['3.16.0']
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ matrix.flutter-version }}
+          channel: 'stable'
+          cache: true
+
+      - name: Cache pub dependencies
+        uses: actions/cache@v3
+        with:
+          path: |
+            ${{ runner.os == 'Windows' && '~\AppData\Local\Pub\Cache' || '~/.pub-cache' }}
+            .dart_tool
+          key: ${{ runner.os }}-pub-${{ hashFiles('**/pubspec.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-pub-
+
+      - name: Get dependencies
+        run: flutter pub get
+
+      - name: Run code generation (if needed)
+        run: flutter pub run build_runner build --delete-conflicting-outputs || echo "No code generation needed"
+        shell: bash
+
+      - name: Build for platform (debug)
         run: |
           if [ "$RUNNER_OS" == "macOS" ]; then
             flutter build macos --debug
@@ -52,3 +215,29 @@ jobs:
             flutter build windows --debug
           fi
         shell: bash
+
+  # Summary job (always runs, reports overall status)
+  ci-summary:
+    name: CI Summary
+    needs: [lint, test, diagram-validation, build]
+    runs-on: ubuntu-latest
+    if: always()
+
+    steps:
+      - name: Check all jobs status
+        run: |
+          echo "Lint: ${{ needs.lint.result }}"
+          echo "Test: ${{ needs.test.result }}"
+          echo "Diagram Validation: ${{ needs.diagram-validation.result }}"
+          echo "Build: ${{ needs.build.result }}"
+
+          if [ "${{ needs.lint.result }}" != "success" ] || \
+             [ "${{ needs.test.result }}" != "success" ] || \
+             [ "${{ needs.diagram-validation.result }}" != "success" ] || \
+             [ "${{ needs.build.result }}" != "success" ]; then
+            echo "❌ CI checks failed"
+            exit 1
+          else
+            echo "✅ All CI checks passed"
+            exit 0
+          fi

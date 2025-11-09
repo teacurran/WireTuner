@@ -1,4 +1,6 @@
 /// Integration tests for anchor point dragging (Task I8.T1).
+library;
+
 ///
 /// These tests verify the acceptance criteria for anchor drag functionality:
 /// - AC1: Drag anchor updates position smoothly at ~20 FPS (50ms sampling)
@@ -12,7 +14,6 @@
 import 'dart:ui' as ui;
 
 import 'package:flutter/gestures.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:wiretuner/application/tools/direct_selection/direct_selection_tool.dart';
 import 'package:wiretuner/domain/document/document.dart';
@@ -163,18 +164,27 @@ void main() {
         await Future.delayed(const Duration(milliseconds: 100));
 
         // Verify events were recorded
-        expect(recorder.anchorEvents, isNotEmpty,
-            reason: 'Should record drag events');
+        expect(
+          recorder.anchorEvents,
+          isNotEmpty,
+          reason: 'Should record drag events',
+        );
 
         // Verify final anchor position
         final finalEvent = recorder.anchorEvents.last;
         expect(finalEvent.pathId, equals('path-1'));
         expect(finalEvent.anchorIndex, equals(1)); // Second anchor
         expect(finalEvent.position, isNotNull);
-        expect(finalEvent.position!.x, closeTo(300, 1.0),
-            reason: 'Anchor moved 100px right');
-        expect(finalEvent.position!.y, closeTo(100, 1.0),
-            reason: 'Anchor Y unchanged');
+        expect(
+          finalEvent.position!.x,
+          closeTo(300, 1.0),
+          reason: 'Anchor moved 100px right',
+        );
+        expect(
+          finalEvent.position!.y,
+          closeTo(100, 1.0),
+          reason: 'Anchor Y unchanged',
+        );
       });
     });
 
@@ -201,10 +211,16 @@ void main() {
 
         // Verify sampling rate
         final eventsPerSec = recorder.eventsPerSecond;
-        expect(eventsPerSec, greaterThan(15),
-            reason: 'Should maintain at least 15 FPS');
-        expect(eventsPerSec, lessThan(25),
-            reason: 'Should not exceed 25 FPS due to 50ms sampling');
+        expect(
+          eventsPerSec,
+          greaterThan(15),
+          reason: 'Should maintain at least 15 FPS',
+        );
+        expect(
+          eventsPerSec,
+          lessThan(25),
+          reason: 'Should not exceed 25 FPS due to 50ms sampling',
+        );
 
         // Log for debugging
         print(
