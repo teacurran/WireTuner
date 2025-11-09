@@ -33,14 +33,16 @@ void main() {
   });
 
   group('HitTesting', () {
-    test('can be instantiated', () {
-      const hitTesting = HitTesting();
-      expect(hitTesting, isNotNull);
+    test('HitTester can be created', () {
+      final hitTester = HitTester.empty();
+      expect(hitTester, isNotNull);
+      expect(hitTester.objectCount, equals(0));
     });
 
-    test('has correct hit tolerance', () {
-      const hitTesting = HitTesting();
-      expect(hitTesting.hitTolerance, equals(5.0));
+    test('HitTestConfig has correct default tolerances', () {
+      const config = HitTestConfig();
+      expect(config.strokeTolerance, equals(5.0));
+      expect(config.anchorTolerance, equals(8.0));
     });
   });
 }
