@@ -43,6 +43,7 @@ node_modules/
 .pub-cache/
 .pub/
 /build/
+packages/**/build/
 
 # Symbolication related
 app.*.symbols

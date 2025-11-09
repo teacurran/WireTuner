@@ -20,7 +20,8 @@ class StubMetricsSink implements MetricsSink {
     required bool sampled,
     int? durationMs,
   }) {
-    print('[StubMetricsSink] recordEvent: $eventType (sampled: $sampled, duration: ${durationMs}ms)');
+    print(
+        '[StubMetricsSink] recordEvent: $eventType (sampled: $sampled, duration: ${durationMs}ms)');
   }
 
   @override
@@ -30,7 +31,8 @@ class StubMetricsSink implements MetricsSink {
     required int toSequence,
     required int durationMs,
   }) {
-    print('[StubMetricsSink] recordReplay: $eventCount events from $fromSequence to $toSequence (${durationMs}ms)');
+    print(
+        '[StubMetricsSink] recordReplay: $eventCount events from $fromSequence to $toSequence (${durationMs}ms)');
   }
 
   @override
@@ -39,7 +41,8 @@ class StubMetricsSink implements MetricsSink {
     required int snapshotSizeBytes,
     required int durationMs,
   }) {
-    print('[StubMetricsSink] recordSnapshot: seq=$sequenceNumber, size=${snapshotSizeBytes}B (${durationMs}ms)');
+    print(
+        '[StubMetricsSink] recordSnapshot: seq=$sequenceNumber, size=${snapshotSizeBytes}B (${durationMs}ms)');
   }
 
   @override
@@ -47,7 +50,8 @@ class StubMetricsSink implements MetricsSink {
     required int sequenceNumber,
     required int durationMs,
   }) {
-    print('[StubMetricsSink] recordSnapshotLoad: seq=$sequenceNumber (${durationMs}ms)');
+    print(
+        '[StubMetricsSink] recordSnapshotLoad: seq=$sequenceNumber (${durationMs}ms)');
   }
 
   @override

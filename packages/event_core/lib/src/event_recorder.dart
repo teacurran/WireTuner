@@ -4,10 +4,14 @@
 /// including sampling of high-frequency interactions like dragging.
 library;
 
+import 'package:logger/logger.dart';
+
 import 'event_sampler.dart';
 import 'event_dispatcher.dart';
 import 'event_store_gateway.dart';
 import 'metrics_sink.dart';
+import 'performance_counters.dart';
+import 'diagnostics_config.dart';
 
 /// Interface for recording user interaction events.
 ///
@@ -79,26 +83,43 @@ class DefaultEventRecorder implements EventRecorder {
   /// [dispatcher]: Asynchronous event dispatcher
   /// [storeGateway]: SQLite persistence gateway
   /// [metricsSink]: Metrics collection sink
+  /// [logger]: Logger instance for structured logging
+  /// [config]: Diagnostics configuration
   DefaultEventRecorder({
     required EventSampler sampler,
     required EventDispatcher dispatcher,
     required EventStoreGateway storeGateway,
     required MetricsSink metricsSink,
+    required Logger logger,
+    required EventCoreDiagnosticsConfig config,
   })  : _sampler = sampler,
         _dispatcher = dispatcher,
         _storeGateway = storeGateway,
-        _metricsSink = metricsSink;
+        _metricsSink = metricsSink,
+        _logger = logger,
+        _config = config,
+        _counters = PerformanceCounters();
 
   final EventSampler _sampler;
   final EventDispatcher _dispatcher;
   final EventStoreGateway _storeGateway;
   final MetricsSink _metricsSink;
+  final Logger _logger;
+  final EventCoreDiagnosticsConfig _config;
+  final PerformanceCounters _counters;
 
   bool _isPaused = false;
 
   @override
   Future<void> recordEvent(Map<String, dynamic> event) async {
-    if (_isPaused) return;
+    if (_isPaused) {
+      if (_config.enableDetailedLogging) {
+        _logger.d('Event recording paused, ignoring: ${event['eventType']}');
+      }
+      return;
+    }
+
+    final eventType = event['eventType'] as String? ?? 'UnknownEvent';
 
     // TODO(I1.T5): Implement event recording logic
     // 1. Validate event structure (eventId, timestamp, eventType)
@@ -106,28 +127,39 @@ class DefaultEventRecorder implements EventRecorder {
     // 3. Check if event should be sampled (_sampler.shouldSample)
     // 4. Persist to store (_storeGateway.persistEvent)
     // 5. Dispatch to handlers (_dispatcher.dispatch)
-    // 6. Record metrics (_metricsSink.recordEvent)
 
-    print('[EventRecorder] recordEvent called: ${event['eventType']}');
+    // Measure event persistence time (placeholder until I1.T5)
+    final durationMs = _counters.measureSync('event_record', () {
+      // Placeholder: actual persistence will happen in I1.T5
+      if (_config.enableDetailedLogging) {
+        _logger.d('Recording event: $eventType');
+      }
+    });
+
+    // Record metrics
+    _metricsSink.recordEvent(
+      eventType: eventType,
+      sampled: false, // TODO(I1.T5): Use actual sampler result
+      durationMs: durationMs,
+    );
   }
 
   @override
   void flush() {
-    // TODO(I1.T5): Flush sampled event buffer
     _sampler.flush();
-    print('[EventRecorder] flush called');
+    _logger.d('Event recorder flushed');
   }
 
   @override
   void pause() {
     _isPaused = true;
-    print('[EventRecorder] pause called');
+    _logger.i('Event recording paused');
   }
 
   @override
   void resume() {
     _isPaused = false;
-    print('[EventRecorder] resume called');
+    _logger.i('Event recording resumed');
   }
 
   @override

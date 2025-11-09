@@ -28,7 +28,8 @@ class StubEventDispatcher implements EventDispatcher {
   }
 
   @override
-  Future<void> dispatch(String eventType, Map<String, dynamic> eventData) async {
+  Future<void> dispatch(
+      String eventType, Map<String, dynamic> eventData) async {
     print('[StubEventDispatcher] dispatching $eventType');
 
     final handlers = _handlers[eventType];

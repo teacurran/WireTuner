@@ -4,10 +4,14 @@
 /// event store to reconstruct document state at any point in time.
 library;
 
+import 'package:logger/logger.dart';
+
 import 'event_store_gateway.dart';
 import 'event_dispatcher.dart';
 import 'snapshot_manager.dart';
 import 'metrics_sink.dart';
+import 'performance_counters.dart';
+import 'diagnostics_config.dart';
 
 /// Interface for replaying events to reconstruct document state.
 ///
@@ -76,20 +80,30 @@ class DefaultEventReplayer implements EventReplayer {
   /// [dispatcher]: Event dispatcher for applying events to state
   /// [snapshotManager]: Snapshot manager for snapshot-based replay
   /// [metricsSink]: Metrics collection sink
+  /// [logger]: Logger instance for structured logging
+  /// [config]: Diagnostics configuration
   DefaultEventReplayer({
     required EventStoreGateway storeGateway,
     required EventDispatcher dispatcher,
     required SnapshotManager snapshotManager,
     required MetricsSink metricsSink,
+    required Logger logger,
+    required EventCoreDiagnosticsConfig config,
   })  : _storeGateway = storeGateway,
         _dispatcher = dispatcher,
         _snapshotManager = snapshotManager,
-        _metricsSink = metricsSink;
+        _metricsSink = metricsSink,
+        _logger = logger,
+        _config = config,
+        _counters = PerformanceCounters();
 
   final EventStoreGateway _storeGateway;
   final EventDispatcher _dispatcher;
   final SnapshotManager _snapshotManager;
   final MetricsSink _metricsSink;
+  final Logger _logger;
+  final EventCoreDiagnosticsConfig _config;
+  final PerformanceCounters _counters;
 
   bool _isReplaying = false;
 
@@ -99,13 +113,33 @@ class DefaultEventReplayer implements EventReplayer {
     int? toSequence,
   }) async {
     _isReplaying = true;
+    _logger.i(
+        'Starting replay: fromSequence=$fromSequence, toSequence=$toSequence');
+
     try {
       // TODO(I1.T6): Implement replay logic
       // 1. Fetch events from store (_storeGateway.getEvents)
       // 2. Dispatch each event in sequence (_dispatcher.dispatch)
-      // 3. Record replay metrics (_metricsSink.recordReplay)
 
-      print('[EventReplayer] replay called: fromSequence=$fromSequence, toSequence=$toSequence');
+      // Measure replay duration (placeholder until I1.T6)
+      final durationMs = await _counters.time('replay', () async {
+        // Placeholder: actual replay will happen in I1.T6
+        if (_config.enableDetailedLogging) {
+          _logger.d('Replaying events $fromSequence → $toSequence');
+        }
+      });
+
+      // Record replay metrics
+      final eventCount = (toSequence ?? fromSequence) - fromSequence;
+      _metricsSink.recordReplay(
+        eventCount: eventCount,
+        fromSequence: fromSequence,
+        toSequence: toSequence ?? fromSequence,
+        durationMs: durationMs,
+      );
+    } catch (e, stackTrace) {
+      _logger.e('Replay failed', error: e, stackTrace: stackTrace);
+      rethrow;
     } finally {
       _isReplaying = false;
     }
@@ -116,14 +150,31 @@ class DefaultEventReplayer implements EventReplayer {
     int? maxSequence,
   }) async {
     _isReplaying = true;
+    _logger.i('Starting snapshot-based replay: maxSequence=$maxSequence');
+
     try {
       // TODO(I1.T6): Implement snapshot-based replay
       // 1. Load most recent snapshot (_snapshotManager.loadSnapshot)
       // 2. Fetch events after snapshot (_storeGateway.getEvents)
       // 3. Dispatch events to reconstruct state (_dispatcher.dispatch)
-      // 4. Record metrics (_metricsSink.recordSnapshotLoad, recordReplay)
 
-      print('[EventReplayer] replayFromSnapshot called: maxSequence=$maxSequence');
+      // Measure snapshot load + replay (placeholder until I1.T6)
+      final durationMs = await _counters.time('replay_from_snapshot', () async {
+        // Placeholder: actual snapshot-based replay will happen in I1.T6
+        if (_config.enableDetailedLogging) {
+          _logger.d('Loading snapshot and replaying to sequence $maxSequence');
+        }
+      });
+
+      // Record metrics (placeholder values)
+      _metricsSink.recordSnapshotLoad(
+        sequenceNumber: maxSequence ?? 0,
+        durationMs: durationMs,
+      );
+    } catch (e, stackTrace) {
+      _logger.e('Snapshot-based replay failed',
+          error: e, stackTrace: stackTrace);
+      rethrow;
     } finally {
       _isReplaying = false;
     }

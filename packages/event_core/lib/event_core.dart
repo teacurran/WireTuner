@@ -31,6 +31,12 @@
 /// - [StubEventDispatcher]: In-memory event dispatcher
 /// - [StubEventStoreGateway]: In-memory event store
 /// - [StubMetricsSink]: Console-based metrics sink
+///
+/// ## Diagnostics & Metrics (I1.T8)
+///
+/// - [EventCoreDiagnosticsConfig]: Configuration for logging and metrics
+/// - [PerformanceCounters]: Helper for timing operations
+/// - [StructuredMetricsSink]: Production metrics sink with logging
 library event_core;
 
 // Core interfaces
@@ -43,6 +49,11 @@ export 'src/event_sampler.dart';
 export 'src/event_dispatcher.dart';
 export 'src/event_store_gateway.dart';
 export 'src/metrics_sink.dart';
+
+// Diagnostics and metrics (I1.T8)
+export 'src/diagnostics_config.dart';
+export 'src/performance_counters.dart';
+export 'src/structured_metrics_sink.dart';
 
 // Stub implementations
 export 'src/stubs/stub_event_sampler.dart';

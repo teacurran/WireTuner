@@ -1,0 +1,32 @@
+name: io_services
+description: SQLite persistence gateway for WireTuner event sourcing (database connections, migrations, event store integration)
+publish_to: 'none'
+version: 0.1.0
+
+environment:
+  sdk: '>=3.2.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  # SQLite Desktop Support
+  sqflite_common_ffi: ^2.3.0
+
+  # Path Utilities
+  path: ^1.8.3
+  path_provider: ^2.1.0
+
+  # Logging
+  logger: ^2.0.0
+
+  # Internal Dependencies
+  event_core:
+    path: ../event_core
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+
+  test: ^1.24.0
+  flutter_lints: ^3.0.0

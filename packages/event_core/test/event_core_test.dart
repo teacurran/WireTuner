@@ -5,7 +5,11 @@
 library;
 
 import 'package:event_core/event_core.dart';
+import 'package:logger/logger.dart';
 import 'package:test/test.dart';
+
+/// Creates a no-op logger for tests.
+Logger createTestLogger() => Logger(level: Level.off);
 
 void main() {
   group('DefaultEventRecorder', () {
@@ -26,6 +30,8 @@ void main() {
         dispatcher: dispatcher,
         storeGateway: storeGateway,
         metricsSink: metricsSink,
+        logger: createTestLogger(),
+        config: EventCoreDiagnosticsConfig.silent(),
       );
     });
 
@@ -52,6 +58,8 @@ void main() {
       snapshotManager = DefaultSnapshotManager(
         storeGateway: storeGateway,
         metricsSink: metricsSink,
+        logger: createTestLogger(),
+        config: EventCoreDiagnosticsConfig.silent(),
       );
 
       replayer = DefaultEventReplayer(
@@ -59,6 +67,8 @@ void main() {
         dispatcher: dispatcher,
         snapshotManager: snapshotManager,
         metricsSink: metricsSink,
+        logger: createTestLogger(),
+        config: EventCoreDiagnosticsConfig.silent(),
       );
     });
 
@@ -82,6 +92,8 @@ void main() {
       snapshotManager = DefaultSnapshotManager(
         storeGateway: storeGateway,
         metricsSink: metricsSink,
+        logger: createTestLogger(),
+        config: EventCoreDiagnosticsConfig.silent(),
       );
     });
 

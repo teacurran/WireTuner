@@ -24,7 +24,8 @@ class StubEventStoreGateway implements EventStoreGateway {
     }
 
     _events.add(Map<String, dynamic>.from(eventData));
-    print('[StubEventStoreGateway] persisted event: ${eventData['eventType']} (seq: ${eventData['sequenceNumber']})');
+    print(
+        '[StubEventStoreGateway] persisted event: ${eventData['eventType']} (seq: ${eventData['sequenceNumber']})');
   }
 
   @override
@@ -47,7 +48,8 @@ class StubEventStoreGateway implements EventStoreGateway {
       return true;
     }).toList();
 
-    print('[StubEventStoreGateway] retrieved ${filtered.length} events from $fromSequence to $toSequence');
+    print(
+        '[StubEventStoreGateway] retrieved ${filtered.length} events from $fromSequence to $toSequence');
     return filtered;
   }
 
@@ -63,6 +65,7 @@ class StubEventStoreGateway implements EventStoreGateway {
       final seq = event['sequenceNumber'] as int;
       return seq < sequenceNumber;
     });
-    print('[StubEventStoreGateway] pruned events before sequence $sequenceNumber');
+    print(
+        '[StubEventStoreGateway] pruned events before sequence $sequenceNumber');
   }
 }

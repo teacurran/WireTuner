@@ -4,8 +4,12 @@
 /// fast document loading without replaying entire event history.
 library;
 
+import 'package:logger/logger.dart';
+
 import 'event_store_gateway.dart';
 import 'metrics_sink.dart';
+import 'performance_counters.dart';
+import 'diagnostics_config.dart';
 
 /// Interface for managing document state snapshots.
 ///
@@ -90,52 +94,112 @@ class DefaultSnapshotManager implements SnapshotManager {
   ///
   /// [storeGateway]: SQLite persistence gateway for storing snapshots
   /// [metricsSink]: Metrics collection sink
+  /// [logger]: Logger instance for structured logging
+  /// [config]: Diagnostics configuration
   /// [snapshotInterval]: Events between snapshots (default: 1000)
   DefaultSnapshotManager({
     required EventStoreGateway storeGateway,
     required MetricsSink metricsSink,
+    required Logger logger,
+    required EventCoreDiagnosticsConfig config,
     int snapshotInterval = 1000,
   })  : _storeGateway = storeGateway,
         _metricsSink = metricsSink,
-        _snapshotInterval = snapshotInterval;
+        _logger = logger,
+        _config = config,
+        _snapshotInterval = snapshotInterval,
+        _counters = PerformanceCounters();
 
   final EventStoreGateway _storeGateway;
   final MetricsSink _metricsSink;
+  final Logger _logger;
+  final EventCoreDiagnosticsConfig _config;
   final int _snapshotInterval;
+  final PerformanceCounters _counters;
 
   @override
   Future<void> createSnapshot({
     required Map<String, dynamic> documentState,
     required int sequenceNumber,
   }) async {
-    // TODO(I1.T7): Implement snapshot creation
-    // 1. Serialize document state to JSON
-    // 2. Compress snapshot data (optional)
-    // 3. Persist to storage (separate table or file)
-    // 4. Record metrics (_metricsSink.recordSnapshot)
+    _logger.i('Creating snapshot at sequence $sequenceNumber');
 
-    print('[SnapshotManager] createSnapshot called: sequenceNumber=$sequenceNumber');
+    try {
+      // TODO(I1.T7): Implement snapshot creation
+      // 1. Serialize document state to JSON
+      // 2. Compress snapshot data (optional)
+      // 3. Persist to storage (separate table or file)
+
+      // Measure snapshot creation duration (placeholder until I1.T7)
+      final durationMs = await _counters.time('snapshot_create', () async {
+        // Placeholder: actual snapshot persistence will happen in I1.T7
+        if (_config.enableDetailedLogging) {
+          _logger
+              .d('Serializing and persisting snapshot at seq=$sequenceNumber');
+        }
+      });
+
+      // Record metrics (placeholder size until I1.T7)
+      _metricsSink.recordSnapshot(
+        sequenceNumber: sequenceNumber,
+        snapshotSizeBytes: 0, // TODO(I1.T7): Calculate actual serialized size
+        durationMs: durationMs,
+      );
+    } catch (e, stackTrace) {
+      _logger.e('Snapshot creation failed', error: e, stackTrace: stackTrace);
+      rethrow;
+    }
   }
 
   @override
   Future<SnapshotData?> loadSnapshot({int? maxSequence}) async {
-    // TODO(I1.T7): Implement snapshot loading
-    // 1. Query most recent snapshot at or before maxSequence
-    // 2. Decompress snapshot data (if compressed)
-    // 3. Deserialize to document state
-    // 4. Record metrics (_metricsSink.recordSnapshotLoad)
+    _logger.i('Loading snapshot: maxSequence=$maxSequence');
 
-    print('[SnapshotManager] loadSnapshot called: maxSequence=$maxSequence');
-    return null;
+    try {
+      // TODO(I1.T7): Implement snapshot loading
+      // 1. Query most recent snapshot at or before maxSequence
+      // 2. Decompress snapshot data (if compressed)
+      // 3. Deserialize to document state
+
+      // Measure snapshot load duration (placeholder until I1.T7)
+      final durationMs = await _counters.time('snapshot_load', () async {
+        // Placeholder: actual snapshot loading will happen in I1.T7
+        if (_config.enableDetailedLogging) {
+          _logger.d('Querying and deserializing snapshot');
+        }
+      });
+
+      // Record metrics (placeholder until I1.T7)
+      if (maxSequence != null) {
+        _metricsSink.recordSnapshotLoad(
+          sequenceNumber: maxSequence,
+          durationMs: durationMs,
+        );
+      }
+
+      return null; // TODO(I1.T7): Return actual snapshot data
+    } catch (e, stackTrace) {
+      _logger.e('Snapshot load failed', error: e, stackTrace: stackTrace);
+      rethrow;
+    }
   }
 
   @override
   Future<void> pruneSnapshotsBeforeSequence(int sequenceNumber) async {
-    // TODO(I1.T7): Implement snapshot pruning
-    // 1. Delete snapshots with sequenceNumber < threshold
-    // 2. Retain 2-3 recent snapshots for redundancy
+    _logger.i('Pruning snapshots before sequence $sequenceNumber');
 
-    print('[SnapshotManager] pruneSnapshotsBeforeSequence called: sequenceNumber=$sequenceNumber');
+    try {
+      // TODO(I1.T7): Implement snapshot pruning
+      // 1. Delete snapshots with sequenceNumber < threshold
+      // 2. Retain 2-3 recent snapshots for redundancy
+
+      if (_config.enableDetailedLogging) {
+        _logger.d('Deleting old snapshots before seq=$sequenceNumber');
+      }
+    } catch (e, stackTrace) {
+      _logger.e('Snapshot pruning failed', error: e, stackTrace: stackTrace);
+      rethrow;
+    }
   }
 
   @override

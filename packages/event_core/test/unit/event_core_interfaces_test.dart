@@ -8,7 +8,11 @@
 library;
 
 import 'package:event_core/event_core.dart';
+import 'package:logger/logger.dart';
 import 'package:test/test.dart';
+
+/// Creates a no-op logger for tests.
+Logger createTestLogger() => Logger(level: Level.off);
 
 void main() {
   group('EventRecorder Interface', () {
@@ -29,6 +33,8 @@ void main() {
         dispatcher: dispatcher,
         storeGateway: storeGateway,
         metricsSink: metricsSink,
+        logger: createTestLogger(),
+        config: EventCoreDiagnosticsConfig.silent(),
       );
     });
 
@@ -45,6 +51,8 @@ void main() {
         dispatcher: dispatcher,
         storeGateway: storeGateway,
         metricsSink: metricsSink,
+        logger: createTestLogger(),
+        config: EventCoreDiagnosticsConfig.silent(),
       );
       expect(testRecorder, isNotNull);
     });
@@ -107,6 +115,8 @@ void main() {
       snapshotManager = DefaultSnapshotManager(
         storeGateway: storeGateway,
         metricsSink: metricsSink,
+        logger: createTestLogger(),
+        config: EventCoreDiagnosticsConfig.silent(),
       );
 
       replayer = DefaultEventReplayer(
@@ -114,6 +124,8 @@ void main() {
         dispatcher: dispatcher,
         snapshotManager: snapshotManager,
         metricsSink: metricsSink,
+        logger: createTestLogger(),
+        config: EventCoreDiagnosticsConfig.silent(),
       );
     });
 
@@ -128,6 +140,8 @@ void main() {
         dispatcher: dispatcher,
         snapshotManager: snapshotManager,
         metricsSink: metricsSink,
+        logger: createTestLogger(),
+        config: EventCoreDiagnosticsConfig.silent(),
       );
       expect(testReplayer, isNotNull);
     });
@@ -177,6 +191,8 @@ void main() {
       snapshotManager = DefaultSnapshotManager(
         storeGateway: storeGateway,
         metricsSink: metricsSink,
+        logger: createTestLogger(),
+        config: EventCoreDiagnosticsConfig.silent(),
       );
     });
 
@@ -189,6 +205,8 @@ void main() {
       final testManager = DefaultSnapshotManager(
         storeGateway: storeGateway,
         metricsSink: metricsSink,
+        logger: createTestLogger(),
+        config: EventCoreDiagnosticsConfig.silent(),
       );
       expect(testManager, isNotNull);
     });
@@ -201,6 +219,8 @@ void main() {
       final customManager = DefaultSnapshotManager(
         storeGateway: storeGateway,
         metricsSink: metricsSink,
+        logger: createTestLogger(),
+        config: EventCoreDiagnosticsConfig.silent(),
         snapshotInterval: 500,
       );
       expect(customManager.snapshotInterval, equals(500));
@@ -493,10 +513,14 @@ void main() {
       final dispatcher = StubEventDispatcher();
       final storeGateway = StubEventStoreGateway();
       final metricsSink = StubMetricsSink();
+      final logger = createTestLogger();
+      final config = EventCoreDiagnosticsConfig.silent();
 
       final snapshotManager = DefaultSnapshotManager(
         storeGateway: storeGateway,
         metricsSink: metricsSink,
+        logger: logger,
+        config: config,
       );
 
       final recorder = DefaultEventRecorder(
@@ -504,6 +528,8 @@ void main() {
         dispatcher: dispatcher,
         storeGateway: storeGateway,
         metricsSink: metricsSink,
+        logger: logger,
+        config: config,
       );
 
       final replayer = DefaultEventReplayer(
@@ -511,6 +537,8 @@ void main() {
         dispatcher: dispatcher,
         snapshotManager: snapshotManager,
         metricsSink: metricsSink,
+        logger: logger,
+        config: config,
       );
 
       expect(recorder, isNotNull);
@@ -523,12 +551,16 @@ void main() {
       final dispatcher = StubEventDispatcher();
       final storeGateway = StubEventStoreGateway();
       final metricsSink = StubMetricsSink();
+      final logger = createTestLogger();
+      final config = EventCoreDiagnosticsConfig.silent();
 
       final recorder = DefaultEventRecorder(
         sampler: sampler,
         dispatcher: dispatcher,
         storeGateway: storeGateway,
         metricsSink: metricsSink,
+        logger: logger,
+        config: config,
       );
 
       final replayer = DefaultEventReplayer(
@@ -537,8 +569,12 @@ void main() {
         snapshotManager: DefaultSnapshotManager(
           storeGateway: storeGateway,
           metricsSink: metricsSink,
+          logger: logger,
+          config: config,
         ),
         metricsSink: metricsSink,
+        logger: logger,
+        config: config,
       );
 
       // Record some events
