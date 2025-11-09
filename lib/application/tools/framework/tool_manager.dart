@@ -360,6 +360,52 @@ class ToolManager extends ChangeNotifier {
     return handled;
   }
 
+  /// Handles global hotkey shortcuts for tool activation.
+  ///
+  /// This method should be called by the application shell to handle
+  /// tool-switching shortcuts (e.g., 'P' for pen tool, 'V' for selection).
+  ///
+  /// Returns `true` if the hotkey was handled, `false` otherwise.
+  ///
+  /// **Implementation Status**: PLACEHOLDER
+  /// This is a placeholder for future hotkey mapping implementation.
+  /// The actual mapping will be integrated in a future iteration with
+  /// the [ToolRegistry] shortcuts.
+  ///
+  /// **Planned Implementation**:
+  /// 1. Query [ToolRegistry] for tool definitions with shortcuts
+  /// 2. Match the key event against registered shortcuts
+  /// 3. Activate the matching tool via [activateTool]
+  /// 4. Handle modifier keys (Shift for temporary tool switch)
+  ///
+  /// Example (future):
+  /// ```dart
+  /// Focus(
+  ///   onKey: (node, event) {
+  ///     // Try global tool hotkeys first
+  ///     if (toolManager.handleToolHotkey(event)) {
+  ///       return KeyEventResult.handled;
+  ///     }
+  ///
+  ///     // Then try active tool's key handler
+  ///     if (toolManager.handleKeyPress(event)) {
+  ///       return KeyEventResult.handled;
+  ///     }
+  ///
+  ///     return KeyEventResult.ignored;
+  ///   },
+  /// )
+  /// ```
+  ///
+  /// Related: [ToolRegistry.getDefinitionByShortcut], Section 2 (Tool System)
+  bool handleToolHotkey(KeyEvent event) {
+    // TODO(I3.T1): Implement hotkey mapping with ToolRegistry
+    // This placeholder allows the API to be defined now and implemented later.
+
+    _logger.d('Tool hotkey handling not yet implemented: ${event.logicalKey}');
+    return false;
+  }
+
   /// Renders the active tool's overlay.
   ///
   /// This method should be called from a CustomPainter during the paint phase.

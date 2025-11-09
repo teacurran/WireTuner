@@ -520,6 +520,195 @@ void main() {
     });
   });
 
+  group('Hotkey Handling', () {
+    late ToolManager toolManager;
+    late CursorService cursorService;
+    late FakeTool penTool;
+
+    setUp(() {
+      cursorService = CursorService();
+      toolManager = ToolManager(
+        cursorService: cursorService,
+      );
+      penTool = FakeTool('pen', cursor: SystemMouseCursors.precise);
+      toolManager.registerTool(penTool);
+    });
+
+    tearDown(() {
+      toolManager.dispose();
+      cursorService.dispose();
+    });
+
+    test('should handle tool hotkey placeholder', () {
+      const event = KeyDownEvent(
+        logicalKey: LogicalKeyboardKey.keyP,
+        physicalKey: PhysicalKeyboardKey.keyP,
+        timeStamp: Duration.zero,
+      );
+
+      // Currently returns false as it's a placeholder
+      final handled = toolManager.handleToolHotkey(event);
+
+      expect(handled, isFalse);
+    });
+
+    test('should not interfere with active tool key handling', () {
+      toolManager.activateTool('pen');
+
+      const hotkeyEvent = KeyDownEvent(
+        logicalKey: LogicalKeyboardKey.keyP,
+        physicalKey: PhysicalKeyboardKey.keyP,
+        timeStamp: Duration.zero,
+      );
+
+      const toolKeyEvent = KeyDownEvent(
+        logicalKey: LogicalKeyboardKey.enter,
+        physicalKey: PhysicalKeyboardKey.enter,
+        timeStamp: Duration.zero,
+      );
+
+      // Hotkey returns false (placeholder)
+      expect(toolManager.handleToolHotkey(hotkeyEvent), isFalse);
+
+      // Tool key handling still works
+      expect(toolManager.handleKeyPress(toolKeyEvent), isFalse);
+      expect(penTool.eventLog, contains('keyPress'));
+    });
+  });
+
+  group('Invalid Activation Attempts', () {
+    late ToolManager toolManager;
+    late CursorService cursorService;
+    late FakeTool penTool;
+    late FakeTool selectionTool;
+
+    setUp(() {
+      cursorService = CursorService();
+      toolManager = ToolManager(
+        cursorService: cursorService,
+      );
+      penTool = FakeTool('pen', cursor: SystemMouseCursors.precise);
+      selectionTool = FakeTool('selection', cursor: SystemMouseCursors.click);
+      toolManager.registerTool(penTool);
+      toolManager.registerTool(selectionTool);
+    });
+
+    tearDown(() {
+      toolManager.dispose();
+      cursorService.dispose();
+    });
+
+    test('should reject activation of unregistered tool', () {
+      final success = toolManager.activateTool('nonexistent');
+
+      expect(success, isFalse);
+      expect(toolManager.activeToolId, isNull);
+      expect(toolManager.activeTool, isNull);
+    });
+
+    test('should handle activation of empty string toolId', () {
+      final success = toolManager.activateTool('');
+
+      expect(success, isFalse);
+      expect(toolManager.activeToolId, isNull);
+    });
+
+    test('should handle multiple invalid activation attempts', () {
+      expect(toolManager.activateTool('invalid1'), isFalse);
+      expect(toolManager.activateTool('invalid2'), isFalse);
+      expect(toolManager.activateTool('invalid3'), isFalse);
+
+      expect(toolManager.activeToolId, isNull);
+      expect(toolManager.activeTool, isNull);
+    });
+
+    test('should allow valid activation after invalid attempts', () {
+      toolManager.activateTool('invalid1');
+      toolManager.activateTool('invalid2');
+
+      final success = toolManager.activateTool('pen');
+
+      expect(success, isTrue);
+      expect(toolManager.activeToolId, equals('pen'));
+      expect(penTool.activateCallCount, equals(1));
+    });
+
+    test('should preserve current tool if invalid activation attempted', () {
+      toolManager.activateTool('pen');
+      expect(toolManager.activeToolId, equals('pen'));
+
+      final success = toolManager.activateTool('invalid');
+
+      expect(success, isFalse);
+      expect(toolManager.activeToolId, equals('pen')); // Still pen
+      expect(penTool.deactivateCallCount, equals(0)); // Not deactivated
+    });
+
+    test('should handle special characters in toolId', () {
+      final success = toolManager.activateTool('tool-with-@#\$%');
+
+      expect(success, isFalse);
+      expect(toolManager.activeToolId, isNull);
+    });
+  });
+
+  group('Activation Order Verification', () {
+    late ToolManager toolManager;
+    late CursorService cursorService;
+    late FakeTool penTool;
+    late FakeTool selectionTool;
+
+    setUp(() {
+      cursorService = CursorService();
+      toolManager = ToolManager(
+        cursorService: cursorService,
+      );
+      penTool = FakeTool('pen', cursor: SystemMouseCursors.precise);
+      selectionTool = FakeTool('selection', cursor: SystemMouseCursors.click);
+      toolManager.registerTool(penTool);
+      toolManager.registerTool(selectionTool);
+    });
+
+    tearDown(() {
+      toolManager.dispose();
+      cursorService.dispose();
+    });
+
+    test('should enforce deactivate before activate order', () {
+      toolManager.activateTool('pen');
+      penTool.reset();
+      selectionTool.reset();
+
+      toolManager.activateTool('selection');
+
+      // Verify order: pen deactivated first, then selection activated
+      expect(penTool.eventLog, ['deactivate']);
+      expect(selectionTool.eventLog, ['activate']);
+      expect(penTool.deactivateCallCount, equals(1));
+      expect(selectionTool.activateCallCount, equals(1));
+    });
+
+    test('should complete deactivation before new tool sees events', () {
+      toolManager.activateTool('pen');
+      penTool.reset();
+      selectionTool.reset();
+
+      // Switch tools
+      toolManager.activateTool('selection');
+
+      // Verify pen is deactivated
+      expect(penTool.deactivateCallCount, equals(1));
+
+      // Verify selection is active and receives events
+      const event = PointerDownEvent(position: Offset(100, 100));
+      toolManager.handlePointerDown(event);
+
+      expect(selectionTool.eventLog, contains('activate'));
+      expect(selectionTool.eventLog, contains('pointerDown'));
+      expect(penTool.eventLog, isNot(contains('pointerDown')));
+    });
+  });
+
   group('CursorService', () {
     late CursorService cursorService;
 

@@ -11,6 +11,10 @@ dependencies:
   flutter:
     sdk: flutter
 
+  # Core application
+  wiretuner:
+    path: ../../
+
   # State management
   provider: ^6.0.0
 
