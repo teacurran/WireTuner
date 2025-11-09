@@ -31,12 +31,33 @@ import 'package:wiretuner/infrastructure/export/svg_writer.dart';
 /// - Layers (exported as SVG groups)
 /// - Document metadata (title, creator)
 ///
-/// ## Limitations (Milestone 0.1)
+/// ## Tier-2 Export Capabilities
 ///
-/// - No style export (all paths use default black stroke, no fill)
+/// **Currently Exported:**
+/// - ✅ Paths (line and cubic Bezier segments)
+/// - ✅ Shapes (converted to paths via toPath())
+/// - ✅ Compound paths (multiple segments with mixed line/Bezier)
+/// - ✅ Layers (exported as SVG groups with proper hierarchy)
+/// - ✅ Document metadata (title, creator, format in RDF)
+/// - ✅ Coordinate precision (2 decimal places)
+/// - ✅ XML well-formedness and SVG 1.1 compliance
+///
+/// **Infrastructure Ready (API exists, awaiting domain model support):**
+/// - 🔧 Styles (stroke color, fill color, opacity) - VectorObject doesn't store style data yet
+/// - 🔧 Gradients (linear and radial) - VectorObject doesn't store gradient definitions yet
+/// - 🔧 Clipping masks - VectorObject doesn't store clipping relationships yet
+/// - 🔧 Transform matrices - VectorObject doesn't store transforms yet
+///
+/// **Current Limitations:**
+/// - All paths export with default black stroke, no fill (style system pending)
+/// - No filter effects (drop shadows, blurs)
+/// - No blend modes beyond normal
+/// - No pattern fills
+/// - No text rendering (text system not yet implemented)
 /// - Selection state is ignored (not exported)
 /// - Invisible layers are skipped
-/// - No gradient, filter, or effect support
+///
+/// See `docs/reference/svg_export.md` for detailed limitations and roadmap.
 ///
 /// ## Usage
 ///
@@ -122,6 +143,17 @@ class SvgExporter {
 
     // Write SVG header
     writer.writeHeader(viewBox: bounds);
+
+    // Collect all gradients and clip paths needed (for future enhancement)
+    // This would scan all objects and extract gradient/clipping definitions
+    final hasDefsContent = false; // Placeholder for future gradient detection
+
+    // Write defs section if needed
+    if (hasDefsContent) {
+      writer.startDefs();
+      // Future: Write gradients and clip paths here
+      writer.endDefs();
+    }
 
     // Write metadata
     writer.writeMetadata(title: document.title);

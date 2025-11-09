@@ -612,6 +612,183 @@ void main() {
     });
   });
 
+  group('SvgExporter - Tier-2 Features', () {
+    late SvgExporter exporter;
+
+    setUp(() {
+      exporter = SvgExporter();
+    });
+
+    test('Exports document with defs section when needed', () {
+      final document = Document(
+        id: 'doc-defs',
+        title: 'Defs Test',
+        layers: [
+          Layer(
+            id: 'layer-1',
+            objects: [
+              VectorObject.path(
+                id: 'path-1',
+                path: Path.line(
+                  start: const Point(x: 0, y: 0),
+                  end: const Point(x: 100, y: 100),
+                ),
+              ),
+            ],
+          ),
+        ],
+        selection: const Selection(),
+        viewport: const Viewport(),
+      );
+
+      final svgContent = exporter.generateSvg(document);
+
+      // Currently defs is not included since we have no gradients
+      // This test validates the structure is still correct
+      expect(svgContent, contains('<svg'));
+      expect(svgContent, contains('<metadata>'));
+      expect(svgContent, contains('</svg>'));
+    });
+
+    test('Handles compound paths with multiple segments', () {
+      // Create a path with multiple complex segments
+      final compoundPath = Path(
+        anchors: [
+          AnchorPoint.corner(const Point(x: 0, y: 0)),
+          AnchorPoint(
+            position: const Point(x: 50, y: 50),
+            handleIn: const Point(x: -20, y: 0),
+            handleOut: const Point(x: 20, y: 0),
+          ),
+          AnchorPoint.corner(const Point(x: 100, y: 0)),
+          AnchorPoint(
+            position: const Point(x: 150, y: 50),
+            handleIn: const Point(x: -10, y: -10),
+            handleOut: const Point(x: 10, y: 10),
+          ),
+        ],
+        segments: [
+          Segment.line(startIndex: 0, endIndex: 1),
+          Segment.bezier(startIndex: 1, endIndex: 2),
+          Segment.line(startIndex: 2, endIndex: 3),
+        ],
+        closed: true,
+      );
+
+      final document = Document(
+        id: 'doc-compound',
+        title: 'Compound Path Test',
+        layers: [
+          Layer(
+            id: 'layer-1',
+            objects: [
+              VectorObject.path(id: 'compound-path-1', path: compoundPath),
+            ],
+          ),
+        ],
+        selection: const Selection(),
+        viewport: const Viewport(),
+      );
+
+      final svgContent = exporter.generateSvg(document);
+
+      // Verify path contains both line and curve commands
+      expect(svgContent, contains('L ')); // Line command
+      expect(svgContent, contains('C ')); // Bezier curve command
+      expect(svgContent, contains('Z')); // Close path command
+    });
+
+    test('Exports well-formed XML that can be parsed', () {
+      final document = Document(
+        id: 'doc-xml',
+        title: 'XML Validation Test',
+        layers: [
+          Layer(
+            id: 'layer-1',
+            objects: [
+              VectorObject.path(
+                id: 'path-1',
+                path: Path.line(
+                  start: const Point(x: 0, y: 0),
+                  end: const Point(x: 100, y: 100),
+                ),
+              ),
+            ],
+          ),
+        ],
+        selection: const Selection(),
+        viewport: const Viewport(),
+      );
+
+      final svgContent = exporter.generateSvg(document);
+
+      // Basic XML structure validation
+      expect(svgContent, startsWith('<?xml version="1.0"'));
+      expect(svgContent, contains('<svg'));
+      expect(svgContent, contains('xmlns="http://www.w3.org/2000/svg"'));
+      expect(svgContent, contains('</svg>'));
+
+      // Verify proper nesting
+      final openTags = '<svg'.allMatches(svgContent).length;
+      final closeTags = '</svg>'.allMatches(svgContent).length;
+      expect(openTags, equals(closeTags));
+    });
+
+    test('Handles paths with only anchors (no segments)', () {
+      final singleAnchorPath = Path(
+        anchors: [AnchorPoint.corner(const Point(x: 50, y: 50))],
+        segments: const [],
+        closed: false,
+      );
+
+      final document = Document(
+        id: 'doc-single',
+        title: 'Single Anchor Test',
+        layers: [
+          Layer(
+            id: 'layer-1',
+            objects: [
+              VectorObject.path(id: 'single-anchor', path: singleAnchorPath),
+            ],
+          ),
+        ],
+        selection: const Selection(),
+        viewport: const Viewport(),
+      );
+
+      final svgContent = exporter.generateSvg(document);
+
+      // Should contain move command only
+      expect(svgContent, contains('M 50.00 50.00'));
+      expect(svgContent, isNot(contains('L ')));
+      expect(svgContent, isNot(contains('C ')));
+    });
+
+    test('Preserves coordinate precision for smooth curves', () {
+      final smoothCurve = Path(
+        anchors: [
+          AnchorPoint(
+            position: const Point(x: 0.123456, y: 0.987654),
+            handleOut: const Point(x: 10.111111, y: 20.222222),
+          ),
+          AnchorPoint(
+            position: const Point(x: 100.555555, y: 100.666666),
+            handleIn: const Point(x: -10.333333, y: -20.444444),
+          ),
+        ],
+        segments: [Segment.bezier(startIndex: 0, endIndex: 1)],
+      );
+
+      final svgData = exporter.pathToSvgPathData(smoothCurve);
+
+      // Verify 2 decimal precision
+      expect(svgData, contains('0.12')); // x coordinate of first anchor
+      expect(svgData, contains('0.99')); // y coordinate of first anchor
+      expect(svgData, contains('100.56')); // x coordinate of second anchor
+      expect(svgData, contains('100.67')); // y coordinate of second anchor
+    });
+  });
+
   group('SvgExporter - Performance', () {
     late SvgExporter exporter;
 

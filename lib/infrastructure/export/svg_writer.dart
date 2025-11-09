@@ -151,6 +151,14 @@ class SvgWriter {
   /// - [stroke]: Stroke color (default "black")
   /// - [strokeWidth]: Stroke width (default "1")
   /// - [fill]: Fill color (default "none")
+  /// - [opacity]: Opacity value (0.0 to 1.0)
+  /// - [strokeOpacity]: Stroke-specific opacity
+  /// - [fillOpacity]: Fill-specific opacity
+  /// - [strokeDasharray]: Dash pattern for strokes
+  /// - [strokeLinecap]: Line cap style
+  /// - [strokeLinejoin]: Line join style
+  /// - [transform]: SVG transform attribute
+  /// - [clipPath]: Reference to a clip path (e.g., "url(#clip-1)")
   ///
   /// Example:
   /// ```dart
@@ -168,6 +176,14 @@ class SvgWriter {
     String stroke = 'black',
     String strokeWidth = '1',
     String fill = 'none',
+    double? opacity,
+    double? strokeOpacity,
+    double? fillOpacity,
+    String? strokeDasharray,
+    String? strokeLinecap,
+    String? strokeLinejoin,
+    String? transform,
+    String? clipPath,
   }) {
     _buffer.write(_getIndent());
     _buffer.write('<path');
@@ -176,7 +192,207 @@ class SvgWriter {
     _buffer.write(' stroke="$stroke"');
     _buffer.write(' stroke-width="$strokeWidth"');
     _buffer.write(' fill="$fill"');
+
+    if (opacity != null) {
+      _buffer.write(' opacity="${_fmt(opacity)}"');
+    }
+    if (strokeOpacity != null) {
+      _buffer.write(' stroke-opacity="${_fmt(strokeOpacity)}"');
+    }
+    if (fillOpacity != null) {
+      _buffer.write(' fill-opacity="${_fmt(fillOpacity)}"');
+    }
+    if (strokeDasharray != null) {
+      _buffer.write(' stroke-dasharray="$strokeDasharray"');
+    }
+    if (strokeLinecap != null) {
+      _buffer.write(' stroke-linecap="$strokeLinecap"');
+    }
+    if (strokeLinejoin != null) {
+      _buffer.write(' stroke-linejoin="$strokeLinejoin"');
+    }
+    if (transform != null) {
+      _buffer.write(' transform="$transform"');
+    }
+    if (clipPath != null) {
+      _buffer.write(' clip-path="$clipPath"');
+    }
+
     _buffer.writeln('/>');
+  }
+
+  /// Starts a defs section for reusable resources.
+  ///
+  /// The defs element is used to store graphical objects that will be
+  /// referenced later (gradients, clip paths, patterns, etc.).
+  ///
+  /// Must be followed by [endDefs] to close the section.
+  ///
+  /// Example:
+  /// ```dart
+  /// writer.startDefs();
+  /// writer.writeLinearGradient(...);
+  /// writer.writeClipPath(...);
+  /// writer.endDefs();
+  /// ```
+  void startDefs() {
+    _writeLine('<defs>');
+    _indentLevel++;
+  }
+
+  /// Ends the defs section.
+  void endDefs() {
+    _indentLevel--;
+    _writeLine('</defs>');
+  }
+
+  /// Writes a linear gradient definition.
+  ///
+  /// Creates a `<linearGradient>` element in the defs section.
+  ///
+  /// Parameters:
+  /// - [id]: Unique identifier for the gradient (referenced via url(#id))
+  /// - [x1], [y1]: Start point coordinates (0.0 to 1.0 or absolute)
+  /// - [x2], [y2]: End point coordinates (0.0 to 1.0 or absolute)
+  /// - [stops]: List of color stops with offsets and colors
+  /// - [gradientUnits]: Coordinate system ("userSpaceOnUse" or "objectBoundingBox")
+  ///
+  /// Example:
+  /// ```dart
+  /// writer.writeLinearGradient(
+  ///   id: 'grad-1',
+  ///   x1: '0%', y1: '0%',
+  ///   x2: '100%', y2: '100%',
+  ///   stops: [
+  ///     GradientStop(offset: '0%', color: '#ff0000'),
+  ///     GradientStop(offset: '100%', color: '#0000ff'),
+  ///   ],
+  /// );
+  /// ```
+  void writeLinearGradient({
+    required String id,
+    required String x1,
+    required String y1,
+    required String x2,
+    required String y2,
+    required List<GradientStop> stops,
+    String gradientUnits = 'objectBoundingBox',
+  }) {
+    _buffer.write(_getIndent());
+    _buffer.write('<linearGradient');
+    _buffer.write(' id="${_escapeXml(id)}"');
+    _buffer.write(' x1="$x1" y1="$y1"');
+    _buffer.write(' x2="$x2" y2="$y2"');
+    _buffer.write(' gradientUnits="$gradientUnits"');
+    _buffer.writeln('>');
+    _indentLevel++;
+
+    for (final stop in stops) {
+      _buffer.write(_getIndent());
+      _buffer.write('<stop offset="${stop.offset}"');
+      _buffer.write(' stop-color="${stop.color}"');
+      if (stop.opacity != null) {
+        _buffer.write(' stop-opacity="${_fmt(stop.opacity!)}"');
+      }
+      _buffer.writeln('/>');
+    }
+
+    _indentLevel--;
+    _writeLine('</linearGradient>');
+  }
+
+  /// Writes a radial gradient definition.
+  ///
+  /// Creates a `<radialGradient>` element in the defs section.
+  ///
+  /// Parameters:
+  /// - [id]: Unique identifier for the gradient
+  /// - [cx], [cy]: Center point coordinates
+  /// - [r]: Radius
+  /// - [fx], [fy]: Focal point coordinates (optional)
+  /// - [stops]: List of color stops
+  /// - [gradientUnits]: Coordinate system
+  ///
+  /// Example:
+  /// ```dart
+  /// writer.writeRadialGradient(
+  ///   id: 'grad-radial-1',
+  ///   cx: '50%', cy: '50%',
+  ///   r: '50%',
+  ///   stops: [
+  ///     GradientStop(offset: '0%', color: '#ffffff'),
+  ///     GradientStop(offset: '100%', color: '#000000'),
+  ///   ],
+  /// );
+  /// ```
+  void writeRadialGradient({
+    required String id,
+    required String cx,
+    required String cy,
+    required String r,
+    String? fx,
+    String? fy,
+    required List<GradientStop> stops,
+    String gradientUnits = 'objectBoundingBox',
+  }) {
+    _buffer.write(_getIndent());
+    _buffer.write('<radialGradient');
+    _buffer.write(' id="${_escapeXml(id)}"');
+    _buffer.write(' cx="$cx" cy="$cy"');
+    _buffer.write(' r="$r"');
+    if (fx != null) _buffer.write(' fx="$fx"');
+    if (fy != null) _buffer.write(' fy="$fy"');
+    _buffer.write(' gradientUnits="$gradientUnits"');
+    _buffer.writeln('>');
+    _indentLevel++;
+
+    for (final stop in stops) {
+      _buffer.write(_getIndent());
+      _buffer.write('<stop offset="${stop.offset}"');
+      _buffer.write(' stop-color="${stop.color}"');
+      if (stop.opacity != null) {
+        _buffer.write(' stop-opacity="${_fmt(stop.opacity!)}"');
+      }
+      _buffer.writeln('/>');
+    }
+
+    _indentLevel--;
+    _writeLine('</radialGradient>');
+  }
+
+  /// Starts a clipPath definition.
+  ///
+  /// ClipPaths define regions where content is visible. Content outside
+  /// the clip path is masked.
+  ///
+  /// Parameters:
+  /// - [id]: Unique identifier for the clip path
+  /// - [clipPathUnits]: Coordinate system ("userSpaceOnUse" or "objectBoundingBox")
+  ///
+  /// Must be followed by path/shape elements and then [endClipPath].
+  ///
+  /// Example:
+  /// ```dart
+  /// writer.startClipPath(id: 'clip-1');
+  /// writer.writePath(id: 'clip-path-1', pathData: 'M 0 0 L 100 0 L 100 100 Z');
+  /// writer.endClipPath();
+  /// ```
+  void startClipPath({
+    required String id,
+    String clipPathUnits = 'userSpaceOnUse',
+  }) {
+    _buffer.write(_getIndent());
+    _buffer.write('<clipPath');
+    _buffer.write(' id="${_escapeXml(id)}"');
+    _buffer.write(' clipPathUnits="$clipPathUnits"');
+    _buffer.writeln('>');
+    _indentLevel++;
+  }
+
+  /// Ends a clipPath definition.
+  void endClipPath() {
+    _indentLevel--;
+    _writeLine('</clipPath>');
   }
 
   /// Writes the closing SVG root element tag.
@@ -225,4 +441,51 @@ class SvgWriter {
       .replaceAll('>', '&gt;')
       .replaceAll('"', '&quot;')
       .replaceAll("'", '&apos;');
+}
+
+/// Represents a gradient color stop for SVG gradients.
+///
+/// Used in linear and radial gradient definitions to specify color
+/// transitions at specific offsets along the gradient.
+///
+/// Example:
+/// ```dart
+/// final stop = GradientStop(
+///   offset: '50%',
+///   color: '#ff0000',
+///   opacity: 0.8,
+/// );
+/// ```
+class GradientStop {
+  /// Creates a gradient stop.
+  ///
+  /// Parameters:
+  /// - [offset]: Position along gradient (0% to 100% or 0.0 to 1.0)
+  /// - [color]: Color value (hex string like "#ff0000" or color name)
+  /// - [opacity]: Optional opacity for this stop (0.0 to 1.0)
+  const GradientStop({
+    required this.offset,
+    required this.color,
+    this.opacity,
+  });
+
+  /// The position of this color stop along the gradient.
+  ///
+  /// Can be specified as:
+  /// - Percentage: "0%", "50%", "100%"
+  /// - Decimal: "0.0", "0.5", "1.0"
+  final String offset;
+
+  /// The color at this stop.
+  ///
+  /// Can be specified as:
+  /// - Hex color: "#ff0000", "#rgb", "#rrggbb"
+  /// - Named color: "red", "blue", "transparent"
+  /// - RGB: "rgb(255, 0, 0)"
+  final String color;
+
+  /// Optional opacity for this color stop (0.0 = transparent, 1.0 = opaque).
+  ///
+  /// If null, the color's inherent opacity is used.
+  final double? opacity;
 }
