@@ -17,7 +17,7 @@ void main() {
     setUp(() {
       baseDragController = DragController();
       snappingService = SnappingService(
-        snapEnabled: true,
+        gridSnapEnabled: true, angleSnapEnabled: true,
         gridSize: 10.0,
         angleIncrement: 15.0,
       );

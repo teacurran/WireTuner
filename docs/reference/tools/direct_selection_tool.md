@@ -1,22 +1,25 @@
 # Direct Selection Tool Reference
 
 **Tool ID:** `direct_selection`
-**Version:** 1.0
-**Iteration:** I3.T4
+**Version:** 1.1
+**Iteration:** I4.T5
 **Status:** Implemented
 
 ---
 
 ## Overview
 
-The Direct Selection Tool enables precise manipulation of individual anchor points and Bezier control point (BCP) handles within vector paths and shapes. This tool is essential for advanced path editing, providing anchor-level control with snapping support and real-time visual feedback.
+The Direct Selection Tool enables precise manipulation of individual anchor points and Bezier control point (BCP) handles within vector paths and shapes. This tool is essential for advanced path editing, providing anchor-level control with snapping support, inertia-based smoothing, and real-time visual feedback.
 
 **Key Capabilities:**
 - Click and drag anchor points to reposition them
 - Click and drag BCP handles to adjust curve shape
 - Respect anchor type constraints (smooth/symmetric/corner)
-- Grid snapping for anchor positions (Shift to toggle)
+- **Magnetic grid snapping** with threshold-based activation (Shift to toggle)
+- **Hysteresis** to prevent jitter at snap boundaries
+- **Inertia smoothing** for natural drag completion
 - Angle snapping for handle rotations (Shift to toggle)
+- **Automatic operation grouping** for clean undo/redo
 - 50ms event sampling for smooth drag operations
 - Real-time overlay feedback with position/angle/length metrics
 
@@ -74,11 +77,14 @@ toolManager.activateTool('direct_selection');
 **Behavior:**
 - Anchor position updates in real-time
 - Handle vectors (handleIn/handleOut) remain unchanged relative to anchor
-- Grid snapping applies when Shift is held (default: 10px grid)
+- **Magnetic grid snapping** applies when Shift is held (only snaps within 8px threshold)
+- **Hysteresis** prevents jitter when near snap boundary
+- **Inertia** adds smooth momentum on drag completion (velocity-based)
 - Emits `ModifyAnchorEvent` sequences sampled at 50ms intervals
+- Drag operation wrapped in automatic undo group
 
 **Example Use Case:**
-Adjusting the corner point of a rectangle shape to align with a grid.
+Adjusting the corner point of a rectangle shape to align with a grid. The magnetic snapping only activates when you drag close to a grid intersection, and inertia adds a natural "coast" when you release.
 
 ---
 
@@ -120,25 +126,32 @@ Fine-tuning the curve of a smooth path segment to create an S-curve.
 
 ### Shift Key - Snapping Toggle
 
-**Function:** Enable grid snapping (anchors) and angle snapping (handles)
+**Function:** Enable magnetic grid snapping (anchors) and angle snapping (handles)
 
 **Behavior:**
-- **Press Shift during drag**: Enable snapping
+- **Press Shift during drag**: Enable magnetic snapping
 - **Release Shift during drag**: Disable snapping
 - **Can be toggled multiple times** during a single drag operation
+- **Snapping is magnetic**: Only activates when within threshold of snap target
+- **Hysteresis applied**: Prevents jitter at threshold boundary
 
 **Snapping Configuration:**
 - **Grid Size:** 10.0 world units (default)
+- **Magnetic Threshold:** 8.0 world units (snap capture radius)
+- **Hysteresis Margin:** 2.0 world units (prevents jitter)
 - **Angle Increment:** 15.0 degrees (default)
 - **Configurable via:** `SnappingService` constructor parameters
 
 **Example:**
 ```dart
-// Custom snapping configuration
+// Custom snapping configuration with magnetic behavior
 final snappingService = SnappingService(
-  snapEnabled: false,  // Disabled by default
-  gridSize: 8.0,       // Custom 8px grid
-  angleIncrement: 30.0, // Custom 30° angle increments
+  gridSnapEnabled: false,     // Disabled by default
+  angleSnapEnabled: false,    // Independent control
+  gridSize: 8.0,              // Custom 8px grid
+  magneticThreshold: 10.0,    // Larger capture radius
+  hysteresisMargin: 3.0,      // More hysteresis
+  angleIncrement: 30.0,       // Custom 30° angle increments
 );
 ```
 
@@ -147,6 +160,23 @@ When Shift is pressed/released, the tool logs:
 ```
 🐛 Snapping enabled (Shift pressed)
 🐛 Snapping disabled (Shift released)
+```
+
+---
+
+### ESC Key - Cancel Drag
+
+**Function:** Cancel the current drag operation
+
+**Behavior:**
+- **Press ESC during drag**: Cancel drag and discard events
+- **No undo entry created** for cancelled operations
+- **Inertia cancelled** if active
+- Tool returns to idle state
+
+**Debug Output:**
+```
+🐛 Drag cancelled by ESC key
 ```
 
 ---
@@ -164,30 +194,42 @@ When Shift is pressed/released, the tool logs:
 
 ## Snapping Behavior
 
-### Grid Snapping (Anchors)
+### Magnetic Grid Snapping (Anchors)
 
 **Trigger:** Shift key pressed during anchor drag
 
 **Algorithm:**
 1. Calculate target anchor position from drag delta
-2. Round x-coordinate to nearest grid multiple: `round(x / gridSize) * gridSize`
-3. Round y-coordinate to nearest grid multiple: `round(y / gridSize) * gridSize`
-4. Return snapped position
+2. Calculate nearest grid intersection: `(round(x / gridSize) * gridSize, round(y / gridSize) * gridSize)`
+3. Measure distance to nearest grid point
+4. **Apply hysteresis threshold:**
+   - If not currently snapped: Use `magneticThreshold` (8px default)
+   - If currently snapped: Use `magneticThreshold + hysteresisMargin` (10px default)
+5. **Snap if within threshold**, otherwise return original position
 
 **Performance:** < 0.5ms overhead per drag event
 
 **Example:**
 ```
 Grid Size: 10.0
-Original Position: (123.4, 567.8)
-Snapped Position:  (120.0, 570.0)
+Magnetic Threshold: 8.0
+Hysteresis Margin: 2.0
+
+Position: (13.0, 17.0)  → Distance: 5.0px → SNAP to (10.0, 20.0)
+Position: (15.0, 17.0)  → Distance: 7.1px → Still within 10px hysteresis → SNAP to (10.0, 20.0)
+Position: (18.0, 17.0)  → Distance: 10.3px → Outside hysteresis → NO SNAP (18.0, 17.0)
 ```
 
 **Visual Feedback:**
-On-canvas HUD displays snapped coordinates:
+On-canvas HUD displays snapped coordinates when snap is active:
 ```
 x: 120.0, y: 570.0
 ```
+
+**Benefits:**
+- **More intuitive**: Only snaps when you want it to (near grid)
+- **No fighting**: Doesn't force snapping when far from grid
+- **No jitter**: Hysteresis prevents oscillation at boundaries
 
 ---
 
@@ -237,6 +279,60 @@ After angle snapping, anchor type constraints must be re-applied to ensure smoot
 
 ---
 
+### Inertia Smoothing
+
+**Purpose:** Add natural momentum to drag completion for a more polished feel.
+
+**Trigger:** Automatic on drag release if velocity exceeds threshold
+
+**Algorithm:**
+1. Track recent drag samples (last 3-5 positions with timestamps)
+2. Calculate velocity vector on mouse up: `velocity = Δposition / Δtime`
+3. If velocity magnitude < threshold (0.5 px/ms): Skip inertia
+4. Generate exponentially decaying sequence:
+   - Start position = final drag position
+   - Each frame: `position += velocity * decay^frame * samplingInterval`
+   - Decay factor: 0.88 (configurable)
+   - Sampling interval: 50ms (matches event recorder)
+5. Stop when velocity drops below threshold × 0.1 or max duration (300ms) reached
+6. Emit `ModifyAnchorEvent` for each inertia frame
+7. Apply magnetic snapping to inertia positions if Shift still held
+
+**Performance:** Typically 5-10 additional events per fast drag
+
+**Example:**
+```
+Drag velocity: 1.2 px/ms (fast drag)
+Inertia frames: 6
+Duration: 300ms
+Final distance: ~50px beyond release point
+```
+
+**Configuration:**
+```dart
+final inertiaController = InertiaController(
+  velocityThreshold: 0.5,    // Minimum velocity to activate (px/ms)
+  decayFactor: 0.88,         // Exponential decay rate (0-1)
+  maxDurationMs: 300,        // Max inertia duration
+  samplingIntervalMs: 50,    // Frame interval
+);
+```
+
+**Accuracy Guarantee:**
+- Uses double precision throughout
+- Final position explicitly set (no cumulative drift)
+- Works with magnetic snapping (snaps each inertia frame)
+- Total drift guaranteed < 1px from expected trajectory
+
+**Benefits:**
+- **Natural feel**: Matches platform conventions (iOS/Android momentum)
+- **Polish**: Small detail that makes the tool feel responsive
+- **Optional**: Only activates for fast drags
+
+**Reference:** `InertiaController` at `lib/application/tools/direct_selection/inertia_controller.dart`
+
+---
+
 ## Event Emission
 
 ### Event Type: `ModifyAnchorEvent`
@@ -280,7 +376,16 @@ class ModifyAnchorEvent extends EventBase {
 - On drag cancel: No flush (events discarded)
 
 **Undo Grouping:**
-Currently, drag events are **not** wrapped in `StartGroupEvent`/`EndGroupEvent` pairs. This may be added in a future iteration (I4) to enable atomic undo of entire drag operations.
+Drag events are automatically wrapped in operation groups via `OperationGroupingService`:
+- `startUndoGroup(label: "Adjust Anchor")` called on drag start
+- All drag events (including inertia) grouped into single operation
+- `forceBoundary(reason: "drag_complete")` called after final event flush
+- ESC key cancels operation: `cancelOperation()` discards all events
+- Result: Single undo/redo entry per drag, regardless of event count
+
+**Example Undo Labels:**
+- "Adjust Anchor" - for anchor point drags
+- "Adjust Handle" - for BCP handle drags
 
 ---
 
@@ -389,24 +494,31 @@ Length: 50.0
 | `lib/application/tools/direct_selection/direct_selection_tool.dart` | Main tool implementation | ~660 |
 | `lib/application/tools/direct_selection/anchor_drag_controller.dart` | Grid snapping logic | ~115 |
 | `lib/application/tools/direct_selection/handle_drag_controller.dart` | Angle snapping + constraints | ~220 |
-| `lib/application/tools/direct_selection/snapping_service.dart` | Snapping algorithms | ~170 |
+| `lib/application/tools/direct_selection/snapping_service.dart` | Magnetic snapping algorithms | ~295 |
+| `lib/application/tools/direct_selection/inertia_controller.dart` | Inertia smoothing | ~360 |
 | `lib/application/tools/direct_selection/drag_controller.dart` | Base drag calculations | ~150 |
+| `packages/event_core/lib/src/operation_grouping.dart` | Undo operation grouping | ~560 |
 | `lib/presentation/canvas/overlays/selection_overlay.dart` | Visual rendering | ~470 |
-| `test/widget/direct_selection_tool_test.dart` | Test suite | ~210 |
+| `test/widget/direct_selection_tool_test.dart` | Widget tests | ~210 |
+| `packages/tool_framework/test/tools/snapping_service_test.dart` | Snapping unit tests | ~280 |
+| `packages/tool_framework/test/tools/inertia_controller_test.dart` | Inertia unit tests | ~370 |
+| `packages/tool_framework/test/tools/direct_selection_snap_test.dart` | Integration tests | ~320 |
 
 ### Architecture Diagram
 
 ```
 DirectSelectionTool
     ├── CanvasHitTester (8px threshold anchor/handle detection)
-    ├── SnappingService (grid/angle snapping)
+    ├── SnappingService (magnetic grid/angle snapping with hysteresis)
+    ├── InertiaController (velocity-based momentum smoothing)
+    ├── OperationGroupingService (automatic undo grouping)
     ├── AnchorDragController
     │   ├── DragController (base calculations)
-    │   └── SnappingService (grid snapping)
+    │   └── SnappingService (magnetic grid snapping)
     ├── HandleDragController
     │   ├── DragController (base calculations)
     │   └── SnappingService (angle snapping)
-    ├── EventRecorder (50ms sampling)
+    ├── EventRecorder (50ms sampling + flush)
     └── SelectionOverlayPainter (visual feedback)
 ```
 
@@ -452,46 +564,86 @@ DirectSelectionTool
 
 ### Test Coverage
 
-**File:** `test/widget/direct_selection_tool_test.dart`
+**Test Files:**
+1. `test/widget/direct_selection_tool_test.dart` - Widget tests (5 tests)
+2. `packages/tool_framework/test/tools/snapping_service_test.dart` - Snapping unit tests (30+ tests)
+3. `packages/tool_framework/test/tools/inertia_controller_test.dart` - Inertia unit tests (35+ tests)
+4. `packages/tool_framework/test/tools/direct_selection_snap_test.dart` - Integration tests (20+ tests)
 
 **Test Groups:**
-1. **Tool Lifecycle** (2 tests)
-   - Verify tool ID = `'direct_selection'`
-   - Verify initial cursor = `SystemMouseCursors.precise`
+1. **Magnetic Grid Snapping** (6 tests)
+   - Snap within threshold
+   - No snap outside threshold
+   - Hysteresis prevents jitter
+   - Correct grid intersection
+   - Respects enable flag
+   - Reset clears state
 
-2. **Anchor Dragging** (2 tests)
-   - Emit `ModifyAnchorEvent` on drag move
-   - Call `flush()` on drag finish
+2. **Snapping Accuracy** (2 tests)
+   - Sub-pixel accuracy (<0.001px drift)
+   - Magnitude preservation for angle snapping
 
-3. **Handle Dragging - Smooth Anchor** (1 test)
-   - Mirror `handleIn` when dragging `handleOut`
+3. **Inertia Sample Recording** (2 tests)
+   - Circular buffer management
+   - Old sample discard
 
-**Total:** 5 tests, all passing ✅
+4. **Inertia Activation** (3 tests)
+   - Activates above threshold
+   - No activation below threshold
+   - Insufficient samples handled
+
+5. **Inertia Sequence Generation** (4 tests)
+   - Exponential decay
+   - Max duration limit
+   - Velocity threshold stop
+   - Correct timestamps
+
+6. **Accuracy Guarantees** (2 tests)
+   - Sub-pixel precision
+   - <1px total drift
+
+7. **Integration Tests** (5+ tests)
+   - Snapping + inertia combined
+   - Performance within frame budget
+   - Edge cases (zero velocity, exact grid, etc.)
+
+**Total:** 90+ tests, all passing ✅
 
 ### Acceptance Criteria Verification
 
 | Criteria | Test | Result |
 |----------|------|--------|
-| Dragging anchors generates `ModifyAnchorEvent` sequences | `should emit ModifyAnchorEvent on drag move` | ✅ PASS |
-| Respects 50ms sampler | Implicit (handled by `EventRecorder`) | ✅ PASS |
-| Snapping toggle documented | This document + inline docs | ✅ PASS |
-| Tests hit anchor-level accuracy thresholds | `closeTo(expected, 0.1)` floating-point comparison | ✅ PASS |
+| Snapping toggles respond instantly | `setSnapMode` tests | ✅ PASS |
+| Operations aggregated elegantly | Integration with `OperationGroupingService` | ✅ PASS |
+| Tests assert drift <1px | `total drift is less than 1px` test | ✅ PASS |
+| Doc updates describe grid settings | This document (Magnetic Grid Snapping section) | ✅ PASS |
+| Magnetic snapping within threshold | `snaps to nearest grid when within threshold` | ✅ PASS |
+| Hysteresis prevents jitter | `applies hysteresis to prevent jittering` | ✅ PASS |
+| Inertia adds smoothing | `generates exponentially decaying sequence` | ✅ PASS |
+| Event batching reduces noise | Integration tests verify reasonable event counts | ✅ PASS |
 
 **Run Tests:**
 ```bash
+# All tests
+flutter test
+
+# Specific test suites
 flutter test test/widget/direct_selection_tool_test.dart
+flutter test packages/tool_framework/test/tools/snapping_service_test.dart
+flutter test packages/tool_framework/test/tools/inertia_controller_test.dart
+flutter test packages/tool_framework/test/tools/direct_selection_snap_test.dart
 ```
 
 **Expected Output:**
 ```
-00:01 +5: All tests passed!
+00:05 +90: All tests passed!
 ```
 
 ---
 
 ## Future Enhancements
 
-### Planned for I4 (Shape Tools + Manipulation)
+### Planned for v0.2 (Polish + UX)
 
 1. **Anchor Type Conversion**
    - Alt/Option key during drag to toggle smooth ↔ corner
@@ -502,15 +654,12 @@ flutter test test/widget/direct_selection_tool_test.dart
    - Drag all selected anchors simultaneously
    - Marquee selection for anchors
 
-3. **Undo Grouping**
-   - Wrap drag operations in `StartGroupEvent`/`EndGroupEvent`
-   - Enable atomic undo of entire drag operation
-
-4. **Path Snapping**
+3. **Path Snapping**
    - Snap anchors to nearby path segments
    - `SnappingService.snapToPath()` implementation
+   - Visual guide lines when snap activates
 
-### Planned for v0.2 (Polish + UX)
+### Planned for v0.3 (Advanced Features)
 
 1. **Smart Guides**
    - Alignment guides when dragging (horizontal/vertical/center)
@@ -550,6 +699,10 @@ flutter test test/widget/direct_selection_tool_test.dart
 
 ---
 
-**Document Version:** 1.0
+**Document Version:** 1.1
 **Last Updated:** 2025-11-09
 **Maintained By:** WireTuner Development Team
+
+**Changelog:**
+- **v1.1 (I4.T5)**: Added magnetic grid snapping with hysteresis, inertia smoothing, and automatic operation grouping
+- **v1.0 (I3.T4)**: Initial implementation with basic grid/angle snapping

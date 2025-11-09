@@ -8,6 +8,7 @@ import 'package:uuid/uuid.dart';
 import 'package:wiretuner/application/tools/direct_selection/anchor_drag_controller.dart';
 import 'package:wiretuner/application/tools/direct_selection/drag_controller.dart';
 import 'package:wiretuner/application/tools/direct_selection/handle_drag_controller.dart';
+import 'package:wiretuner/application/tools/direct_selection/inertia_controller.dart';
 import 'package:wiretuner/application/tools/direct_selection/snapping_service.dart';
 import 'package:wiretuner/application/tools/framework/tool_interface.dart';
 import 'package:wiretuner/domain/document/document.dart';
@@ -17,6 +18,7 @@ import 'package:wiretuner/domain/models/anchor_point.dart' as domain_anchor;
 import 'package:wiretuner/domain/models/geometry/point_extensions.dart';
 import 'package:wiretuner/infrastructure/event_sourcing/event_recorder.dart';
 import 'package:wiretuner/infrastructure/telemetry/telemetry_service.dart';
+import 'package:event_core/src/operation_grouping.dart';
 import 'package:wiretuner/presentation/canvas/overlays/hit_tester.dart'
     hide HitTestResult;
 import 'package:wiretuner/presentation/canvas/overlays/hit_tester.dart'
@@ -84,11 +86,13 @@ class DirectSelectionTool implements ITool {
     required ViewportController viewportController,
     required EventRecorder eventRecorder,
     required PathRenderer pathRenderer,
+    OperationGroupingService? operationGroupingService,
     TelemetryService? telemetryService,
   })  : _document = document,
         _viewportController = viewportController,
         _eventRecorder = eventRecorder,
         _pathRenderer = pathRenderer,
+        _operationGroupingService = operationGroupingService,
         _telemetryService = telemetryService {
     // Initialize hit tester with viewport and path renderer
     _hitTester = CanvasHitTester(
@@ -97,11 +101,22 @@ class DirectSelectionTool implements ITool {
       hitThresholdScreenPx: 8.0,
     );
 
-    // Initialize snapping service (disabled by default, Shift to enable)
+    // Initialize snapping service with magnetic snapping enabled
     _snappingService = SnappingService(
-      snapEnabled: false,
+      gridSnapEnabled: false,
+      angleSnapEnabled: false,
       gridSize: 10.0,
       angleIncrement: 15.0,
+      magneticThreshold: 8.0,
+      hysteresisMargin: 2.0,
+    );
+
+    // Initialize inertia controller
+    _inertiaController = InertiaController(
+      velocityThreshold: 0.5,
+      decayFactor: 0.88,
+      maxDurationMs: 300,
+      samplingIntervalMs: 50,
     );
 
     // Initialize drag controllers
@@ -121,6 +136,7 @@ class DirectSelectionTool implements ITool {
   final ViewportController _viewportController;
   final EventRecorder _eventRecorder;
   final PathRenderer _pathRenderer;
+  final OperationGroupingService? _operationGroupingService;
   final TelemetryService? _telemetryService;
   final Logger _logger = Logger();
   final Uuid _uuid = const Uuid();
@@ -130,6 +146,9 @@ class DirectSelectionTool implements ITool {
 
   /// Snapping service for grid and angle snapping.
   late final SnappingService _snappingService;
+
+  /// Inertia controller for smooth drag completion.
+  late final InertiaController _inertiaController;
 
   /// Anchor drag controller for grid snapping.
   late final AnchorDragController _anchorDragController;
@@ -252,6 +271,15 @@ class DirectSelectionTool implements ITool {
 
   @override
   bool onKeyPress(KeyEvent event) {
+    // Handle ESC key for canceling drag
+    if (event is KeyDownEvent && event.logicalKey == LogicalKeyboardKey.escape) {
+      if (_dragContext != null) {
+        _cancelDrag();
+        _logger.d('Drag cancelled by ESC key');
+        return true;
+      }
+    }
+
     // Handle Shift key for snap toggle
     if (event is KeyDownEvent &&
         (event.logicalKey == LogicalKeyboardKey.shiftLeft ||
@@ -311,17 +339,39 @@ class DirectSelectionTool implements ITool {
 
     // Calculate initial position based on component
     Point startPosition;
+    String operationLabel;
     switch (component) {
       case AnchorComponent.anchor:
         startPosition = anchor.position;
+        operationLabel = 'Adjust Anchor';
         break;
       case AnchorComponent.handleIn:
         startPosition = anchor.position + anchor.handleIn!;
+        operationLabel = 'Adjust Handle';
         break;
       case AnchorComponent.handleOut:
         startPosition = anchor.position + anchor.handleOut!;
+        operationLabel = 'Adjust Handle';
         break;
     }
+
+    // Start undo group for this drag operation
+    _operationGroupingService?.startUndoGroup(
+      label: operationLabel,
+      toolId: toolId,
+    );
+
+    // Reset snapping state for new drag
+    _snappingService.resetSnapState();
+
+    // Reset inertia controller for new drag
+    _inertiaController.reset();
+
+    // Record initial sample for inertia
+    _inertiaController.recordSample(
+      position: worldPos,
+      timestamp: DateTime.now().millisecondsSinceEpoch,
+    );
 
     // Initialize drag context
     _dragContext = _DragContext(
@@ -346,11 +396,27 @@ class DirectSelectionTool implements ITool {
     if (_dragContext == null) return;
 
     final context = _dragContext!;
+    final timestamp = DateTime.now().millisecondsSinceEpoch;
+
+    // Record sample for inertia calculation
+    _inertiaController.recordSample(
+      position: worldPos,
+      timestamp: timestamp,
+    );
+
+    // Apply magnetic snapping if enabled (only for anchor drags)
+    Point effectiveWorldPos = worldPos;
+    if (context.component == AnchorComponent.anchor) {
+      final snappedPos = _snappingService.maybeSnapToGrid(worldPos);
+      if (snappedPos != null) {
+        effectiveWorldPos = snappedPos;
+      }
+    }
 
     // Calculate delta from start position
     final delta = Point(
-      x: worldPos.x - context.startPosition.x,
-      y: worldPos.y - context.startPosition.y,
+      x: effectiveWorldPos.x - context.startPosition.x,
+      y: effectiveWorldPos.y - context.startPosition.y,
     );
 
     // Get current anchor
@@ -412,7 +478,7 @@ class DirectSelectionTool implements ITool {
     // Emit ModifyAnchorEvent (will be auto-sampled)
     _recordEvent(ModifyAnchorEvent(
       eventId: _uuid.v4(),
-      timestamp: DateTime.now().millisecondsSinceEpoch,
+      timestamp: timestamp,
       pathId: context.objectId,
       anchorIndex: context.anchorIndex,
       position: result.position,
@@ -422,7 +488,7 @@ class DirectSelectionTool implements ITool {
 
     // Update drag context with feedback metrics
     _dragContext = context.copyWith(
-      currentPosition: worldPos,
+      currentPosition: effectiveWorldPos,
       eventCount: context.eventCount + 1,
       feedbackMetrics: feedbackMetrics,
     );
@@ -433,17 +499,83 @@ class DirectSelectionTool implements ITool {
     if (_dragContext == null) return;
 
     final context = _dragContext!;
+    final finishTime = DateTime.now();
+    final timestamp = finishTime.millisecondsSinceEpoch;
+
+    // Try to activate inertia
+    final inertiaSequence = _inertiaController.activate(
+      finalPosition: context.currentPosition,
+      currentTimestamp: timestamp,
+    );
+
+    // Emit inertia events if sequence generated
+    if (inertiaSequence != null && inertiaSequence.length > 0) {
+      _logger.d('Inertia activated: ${inertiaSequence.length} frames');
+
+      for (int i = 0; i < inertiaSequence.length; i++) {
+        final position = inertiaSequence.positions[i];
+        final eventTimestamp = inertiaSequence.timestamps[i];
+
+        // Apply snapping to inertia positions if enabled
+        Point effectivePosition = position;
+        if (context.component == AnchorComponent.anchor) {
+          final snappedPos = _snappingService.maybeSnapToGrid(position);
+          if (snappedPos != null) {
+            effectivePosition = snappedPos;
+          }
+        }
+
+        // Calculate delta from start for this inertia position
+        final delta = Point(
+          x: effectivePosition.x - context.startPosition.x,
+          y: effectivePosition.y - context.startPosition.y,
+        );
+
+        // Use drag controller to calculate result
+        DragResult result;
+        if (context.component == AnchorComponent.anchor) {
+          result = _anchorDragController.calculateDragUpdate(
+            anchor: context.originalAnchor,
+            delta: delta,
+          );
+        } else {
+          result = _handleDragController.calculateDragUpdate(
+            anchor: context.originalAnchor,
+            delta: delta,
+            component: context.component,
+          );
+        }
+
+        // Emit event for this inertia frame
+        _recordEvent(ModifyAnchorEvent(
+          eventId: _uuid.v4(),
+          timestamp: eventTimestamp,
+          pathId: context.objectId,
+          anchorIndex: context.anchorIndex,
+          position: result.position,
+          handleIn: result.handleIn,
+          handleOut: result.handleOut,
+        ),);
+      }
+    }
 
     // Flush event recorder to persist final position
     _eventRecorder.flush();
 
+    // Force operation boundary to close undo group
+    _operationGroupingService?.forceBoundary(
+      reason: 'drag_complete',
+    );
+
     // Calculate telemetry metrics
-    final duration = DateTime.now().difference(context.startTime);
-    final eventsPerSecond = context.eventCount / duration.inMilliseconds * 1000;
+    final duration = finishTime.difference(context.startTime);
+    final totalEvents = context.eventCount + (inertiaSequence?.length ?? 0);
+    final eventsPerSecond = totalEvents / duration.inMilliseconds * 1000;
 
     _logger.d(
       'Finished drag: duration=${duration.inMilliseconds}ms, '
-      'events=${context.eventCount}, events/sec=${eventsPerSecond.toStringAsFixed(1)}',
+      'events=$totalEvents (${context.eventCount} drag + ${inertiaSequence?.length ?? 0} inertia), '
+      'events/sec=${eventsPerSecond.toStringAsFixed(1)}',
     );
 
     // Log telemetry warning if performance threshold exceeded
@@ -451,13 +583,6 @@ class DirectSelectionTool implements ITool {
       _logger.w(
         'Drag performance warning: duration=${duration.inMilliseconds}ms, '
         'events/sec=${eventsPerSecond.toStringAsFixed(1)}',
-      );
-      // Note: recordDragMetrics is an extension method defined in tool_metrics.dart
-      // For now, just log the metrics
-      _logger.i(
-        'Drag telemetry: tool=direct_selection, '
-        'duration=${duration.inMilliseconds}ms, '
-        'events=${ context.eventCount}, eventsPerSec=${eventsPerSecond.toStringAsFixed(1)}',
       );
     }
 
@@ -468,6 +593,13 @@ class DirectSelectionTool implements ITool {
   /// Cancels the drag operation without flushing events.
   void _cancelDrag() {
     _logger.d('Cancelled drag operation');
+
+    // Cancel inertia if active
+    _inertiaController.cancel();
+
+    // Cancel operation grouping
+    _operationGroupingService?.cancelOperation();
+
     _dragContext = null;
     _currentCursor = SystemMouseCursors.precise;
   }

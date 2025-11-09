@@ -80,7 +80,7 @@ class SelectionTool implements ITool {
   })  : _document = document,
         _viewportController = viewportController,
         _eventRecorder = eventRecorder,
-        _snappingService = snappingService ?? SnappingService(snapEnabled: false),
+        _snappingService = snappingService ?? SnappingService(gridSnapEnabled: false, angleSnapEnabled: false),
         _objectDragController = ObjectDragController(snappingService: snappingService) {
     _logger.i('SelectionTool initialized');
   }

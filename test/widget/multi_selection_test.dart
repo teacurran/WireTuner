@@ -63,7 +63,7 @@ void main() {
         initialZoom: 1.0,
       );
       eventRecorder = MockEventRecorder();
-      snappingService = SnappingService(snapEnabled: false, gridSize: 10.0);
+      snappingService = SnappingService(gridSnapEnabled: false, angleSnapEnabled: false, gridSize: 10.0);
 
       // Create a test document with three objects
       final path1 = domain.Path(

@@ -16,7 +16,7 @@ void main() {
 
     setUp(() {
       snappingService = SnappingService(
-        snapEnabled: true,
+        gridSnapEnabled: true, angleSnapEnabled: true,
         gridSize: 10.0,
         angleIncrement: 15.0,
       );
@@ -109,7 +109,7 @@ void main() {
 
     setUp(() {
       snappingService = SnappingService(
-        snapEnabled: true,
+        gridSnapEnabled: true, angleSnapEnabled: true,
         gridSize: 10.0,
         angleIncrement: 15.0,
       );
@@ -313,7 +313,7 @@ void main() {
 
     setUp(() {
       snappingService = SnappingService(
-        snapEnabled: true,
+        gridSnapEnabled: true, angleSnapEnabled: true,
         gridSize: 10.0,
         angleIncrement: 15.0,
       );

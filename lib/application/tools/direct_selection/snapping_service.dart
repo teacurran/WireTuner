@@ -13,23 +13,31 @@ import 'package:wiretuner/domain/models/geometry/point_extensions.dart';
 ///
 /// - **Grid Snapping**: Snaps positions to nearest grid intersection
 /// - **Angle Snapping**: Snaps handle vectors to angular increments (e.g., 15°)
+/// - **Magnetic Snapping**: Only snaps when within threshold distance
 /// - **Path Snapping** (optional): Snaps to nearby path segments
+///
+/// ## Magnetic Snapping
+///
+/// Magnetic snapping provides more intuitive behavior by only applying
+/// snapping when the pointer is within a capture radius of a snap target.
+/// Hysteresis prevents jittering at the threshold boundary.
 ///
 /// ## Usage
 ///
 /// ```dart
 /// final snappingService = SnappingService(
-///   snapEnabled: true,
+///   gridSnapEnabled: true,
+///   magneticThreshold: 8.0,
 ///   gridSize: 10.0,
 ///   angleIncrement: 15.0,
 /// );
 ///
-/// // Grid snapping
-/// final snappedPos = snappingService.snapToGrid(Point(x: 123.4, y: 567.8));
-/// // Returns Point(x: 120.0, y: 570.0)
+/// // Magnetic grid snapping
+/// final result = snappingService.maybeSnapToGrid(Point(x: 123.4, y: 567.8));
+/// // Returns snapped position only if within 8px of grid intersection
 ///
 /// // Angle snapping
-/// final snappedHandle = snappingService.snapHandleToAngle(
+/// final snapped = snappingService.snapHandleToAngle(
 ///   Point(x: 10.0, y: 5.0),
 /// );
 /// // Returns handle vector snapped to nearest 15° increment
@@ -43,17 +51,23 @@ import 'package:wiretuner/domain/models/geometry/point_extensions.dart';
 class SnappingService {
 
   SnappingService({
-    this.snapEnabled = false,
+    this.gridSnapEnabled = false,
+    this.angleSnapEnabled = false,
     this.gridSize = 10.0,
     this.angleIncrement = 15.0,
-    this.snapThreshold = 5.0,
+    this.magneticThreshold = 8.0,
+    this.hysteresisMargin = 2.0,
   }) {
     // Precompute reciprocals to avoid division in hot paths
     _gridSizeInverse = 1.0 / gridSize;
     _angleIncrementRadians = angleIncrement * (math.pi / 180.0);
   }
-  /// Whether snapping is currently enabled.
-  bool snapEnabled;
+
+  /// Whether grid snapping is currently enabled.
+  bool gridSnapEnabled;
+
+  /// Whether angle snapping is currently enabled.
+  bool angleSnapEnabled;
 
   /// Grid size in world units (default: 10.0).
   ///
@@ -67,12 +81,17 @@ class SnappingService {
   /// For example, angleIncrement=15.0 snaps to 0°, 15°, 30°, 45°, etc.
   final double angleIncrement;
 
-  /// Snap threshold in world units (default: 5.0).
+  /// Magnetic snap threshold in world units (default: 8.0).
   ///
-  /// Only applies snapping if the distance to snap target is within this threshold.
-  /// Currently unused for grid/angle snapping (always snaps), but reserved for
-  /// future path-snapping implementation.
-  final double snapThreshold;
+  /// Snap capture radius for magnetic snapping. Only snaps to grid
+  /// when within this distance from the nearest intersection.
+  final double magneticThreshold;
+
+  /// Hysteresis margin in world units (default: 2.0).
+  ///
+  /// Once snapped, the threshold is increased by this margin to prevent
+  /// jittering at the boundary. Must be less than magneticThreshold.
+  final double hysteresisMargin;
 
   /// Precomputed reciprocal of grid size for performance optimization.
   late final double _gridSizeInverse;
@@ -80,9 +99,18 @@ class SnappingService {
   /// Precomputed angle increment in radians.
   late final double _angleIncrementRadians;
 
-  /// Snaps a position to the nearest grid intersection.
+  /// Last snapped grid position (for hysteresis tracking).
+  Point? _lastSnappedGrid;
+
+  /// Whether currently snapped (for hysteresis).
+  bool _isSnapped = false;
+
+  /// Snaps a position to the nearest grid intersection (legacy API).
   ///
-  /// If [snapEnabled] is false, returns the original position unchanged.
+  /// If [gridSnapEnabled] is false, returns the original position unchanged.
+  /// Always snaps regardless of distance (non-magnetic behavior).
+  ///
+  /// **Note:** For magnetic snapping behavior, use [maybeSnapToGrid] instead.
   ///
   /// Algorithm:
   /// 1. Divide coordinates by grid size
@@ -91,19 +119,81 @@ class SnappingService {
   ///
   /// Example:
   /// ```dart
-  /// final service = SnappingService(snapEnabled: true, gridSize: 10.0);
+  /// final service = SnappingService(gridSnapEnabled: true, gridSize: 10.0);
   /// service.snapToGrid(Point(x: 12.3, y: 45.6));
   /// // Returns Point(x: 10.0, y: 50.0)
   /// ```
   ///
   /// Performance: O(1), typically < 0.5ms
   Point snapToGrid(Point position) {
-    if (!snapEnabled) return position;
+    if (!gridSnapEnabled) return position;
 
     return Point(
       x: (position.x * _gridSizeInverse).round() * gridSize,
       y: (position.y * _gridSizeInverse).round() * gridSize,
     );
+  }
+
+  /// Magnetically snaps a position to the nearest grid intersection.
+  ///
+  /// Only snaps if within [magneticThreshold] distance from grid intersection.
+  /// Uses hysteresis to prevent jittering once snapped.
+  ///
+  /// Returns null if no snap should be applied (outside threshold).
+  ///
+  /// Algorithm:
+  /// 1. Calculate nearest grid intersection
+  /// 2. Calculate distance to that intersection
+  /// 3. Apply hysteresis threshold if currently snapped
+  /// 4. Snap if within threshold, else return null
+  ///
+  /// Example:
+  /// ```dart
+  /// final service = SnappingService(
+  ///   gridSnapEnabled: true,
+  ///   magneticThreshold: 8.0,
+  ///   gridSize: 10.0,
+  /// );
+  ///
+  /// // 7 pixels from grid - snaps
+  /// final result1 = service.maybeSnapToGrid(Point(x: 13.0, y: 17.0));
+  /// // Returns Point(x: 10.0, y: 20.0)
+  ///
+  /// // 15 pixels from grid - no snap
+  /// final result2 = service.maybeSnapToGrid(Point(x: 5.0, y: 5.0));
+  /// // Returns null
+  /// ```
+  ///
+  /// Performance: O(1), typically < 0.5ms
+  Point? maybeSnapToGrid(Point position) {
+    if (!gridSnapEnabled) return null;
+
+    // Calculate nearest grid intersection
+    final nearestX = (position.x * _gridSizeInverse).round() * gridSize;
+    final nearestY = (position.y * _gridSizeInverse).round() * gridSize;
+    final nearestGrid = Point(x: nearestX, y: nearestY);
+
+    // Calculate distance to nearest grid (use squared distance to avoid sqrt)
+    final dx = position.x - nearestX;
+    final dy = position.y - nearestY;
+    final distanceSquared = dx * dx + dy * dy;
+
+    // Apply hysteresis if currently snapped
+    final effectiveThreshold = _isSnapped
+        ? magneticThreshold + hysteresisMargin
+        : magneticThreshold;
+    final thresholdSquared = effectiveThreshold * effectiveThreshold;
+
+    // Snap if within threshold
+    if (distanceSquared <= thresholdSquared) {
+      _lastSnappedGrid = nearestGrid;
+      _isSnapped = true;
+      return nearestGrid;
+    } else {
+      // Outside threshold - no snap
+      _isSnapped = false;
+      return null;
+    }
   }
 
   /// Snaps a handle vector to the nearest angular increment.
@@ -125,7 +215,7 @@ class SnappingService {
   ///
   /// Performance: O(1), typically < 1ms
   Point snapHandleToAngle(Point handleVector) {
-    if (!snapEnabled) return handleVector;
+    if (!angleSnapEnabled) return handleVector;
 
     // Calculate current angle in radians
     final angle = math.atan2(handleVector.y, handleVector.x);
@@ -161,10 +251,44 @@ class SnappingService {
     return null;
   }
 
-  /// Sets whether snapping is enabled.
+  /// Sets whether snapping is enabled (legacy API).
   ///
   /// Typically called when modifier keys (e.g., Shift) are pressed/released.
+  /// Enables both grid and angle snapping together.
+  ///
+  /// **Deprecated**: Use [setSnapMode] for more fine-grained control.
   void setSnapEnabled(bool enabled) {
-    snapEnabled = enabled;
+    gridSnapEnabled = enabled;
+    angleSnapEnabled = enabled;
+  }
+
+  /// Sets snap mode with separate control for grid and angle snapping.
+  ///
+  /// Provides fine-grained control over snapping behavior.
+  ///
+  /// Example:
+  /// ```dart
+  /// // Enable only grid snapping
+  /// service.setSnapMode(gridEnabled: true, angleEnabled: false);
+  ///
+  /// // Enable both
+  /// service.setSnapMode(gridEnabled: true, angleEnabled: true);
+  /// ```
+  void setSnapMode({bool? gridEnabled, bool? angleEnabled}) {
+    if (gridEnabled != null) {
+      gridSnapEnabled = gridEnabled;
+    }
+    if (angleEnabled != null) {
+      angleSnapEnabled = angleEnabled;
+    }
+  }
+
+  /// Resets snap state (clears hysteresis tracking).
+  ///
+  /// Call this when starting a new drag operation or when snap mode changes
+  /// to prevent state leakage between operations.
+  void resetSnapState() {
+    _lastSnappedGrid = null;
+    _isSnapped = false;
   }
 }

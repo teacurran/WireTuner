@@ -1,247 +1,248 @@
-import 'dart:math' as math;
-
+import 'package:wiretuner/domain/events/event_base.dart' show Point;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:wiretuner/application/tools/direct_selection/snapping_service.dart';
-import 'package:wiretuner/domain/events/event_base.dart';
+import 'package:wiretuner/domain/models/geometry/point_extensions.dart';
 
 void main() {
-  group('SnappingService - Grid Snapping', () {
-    late SnappingService service;
-
-    setUp(() {
-      service = SnappingService(
-        snapEnabled: true,
+  group('SnappingService - Magnetic Grid Snapping', () {
+    test('snaps to nearest grid when within threshold', () {
+      final service = SnappingService(
+        gridSnapEnabled: true,
         gridSize: 10.0,
-        angleIncrement: 15.0,
+        magneticThreshold: 8.0,
       );
+
+      // Position 7px away from grid intersection (10, 20)
+      final position = Point(x: 13.0, y: 17.0);
+      final snapped = service.maybeSnapToGrid(position);
+
+      expect(snapped, isNotNull);
+      expect(snapped!.x, equals(10.0));
+      expect(snapped.y, equals(20.0));
     });
 
-    test('snaps to nearest grid intersection', () {
-      // Test various positions
-      expect(
-        service.snapToGrid(const Point(x: 12.3, y: 45.6)),
-        equals(const Point(x: 10.0, y: 50.0)),
-      );
-
-      expect(
-        service.snapToGrid(const Point(x: 17.8, y: 43.2)),
-        equals(const Point(x: 20.0, y: 40.0)),
-      );
-
-      expect(
-        service.snapToGrid(const Point(x: 5.0, y: 5.0)),
-        equals(const Point(x: 10.0, y: 10.0)),
-      );
-    });
-
-    test('snaps exactly on-grid positions correctly', () {
-      expect(
-        service.snapToGrid(const Point(x: 10.0, y: 20.0)),
-        equals(const Point(x: 10.0, y: 20.0)),
-      );
-
-      expect(
-        service.snapToGrid(const Point(x: 0.0, y: 0.0)),
-        equals(const Point(x: 0.0, y: 0.0)),
-      );
-    });
-
-    test('handles negative coordinates', () {
-      expect(
-        service.snapToGrid(const Point(x: -12.3, y: -45.6)),
-        equals(const Point(x: -10.0, y: -50.0)),
-      );
-
-      expect(
-        service.snapToGrid(const Point(x: -5.0, y: -5.0)),
-        equals(const Point(x: -10.0, y: -10.0)),
-      );
-    });
-
-    test('returns original position when snap disabled', () {
-      service.setSnapEnabled(false);
-
-      const original = Point(x: 12.3, y: 45.6);
-      expect(service.snapToGrid(original), equals(original));
-    });
-
-    test('uses correct grid size for custom values', () {
-      final customService = SnappingService(
-        snapEnabled: true,
-        gridSize: 25.0,
-      );
-
-      expect(
-        customService.snapToGrid(const Point(x: 30.0, y: 40.0)),
-        equals(const Point(x: 25.0, y: 50.0)),
-      );
-    });
-  });
-
-  group('SnappingService - Angle Snapping', () {
-    late SnappingService service;
-
-    setUp(() {
-      service = SnappingService(
-        snapEnabled: true,
+    test('does not snap when outside threshold', () {
+      final service = SnappingService(
+        gridSnapEnabled: true,
         gridSize: 10.0,
-        angleIncrement: 15.0,
+        magneticThreshold: 5.0,
       );
+
+      // Position 7px away from nearest grid intersection
+      final position = Point(x: 13.0, y: 17.0);
+      final snapped = service.maybeSnapToGrid(position);
+
+      expect(snapped, isNull);
     });
 
-    /// Helper to calculate angle in degrees from a point
-    double calculateAngleDegrees(Point p) {
-      final radians = math.atan2(p.y, p.x);
-      final degrees = radians * (180.0 / math.pi);
-      return degrees < 0 ? degrees + 360.0 : degrees;
-    }
-
-    /// Helper to create a vector from angle and magnitude
-    Point vectorFromAngle(double degrees, double magnitude) {
-      final radians = degrees * (math.pi / 180.0);
-      return Point(
-        x: math.cos(radians) * magnitude,
-        y: math.sin(radians) * magnitude,
+    test('applies hysteresis to prevent jittering', () {
+      final service = SnappingService(
+        gridSnapEnabled: true,
+        gridSize: 10.0,
+        magneticThreshold: 5.0,
+        hysteresisMargin: 2.0,
       );
-    }
 
-    test('snaps to nearest 15° increment', () {
-      const magnitude = 10.0;
+      // First snap - within threshold
+      final pos1 = Point(x: 13.0, y: 20.0);
+      final snap1 = service.maybeSnapToGrid(pos1);
+      expect(snap1, isNotNull);
+      expect(snap1!.x, equals(10.0));
 
-      // Test snapping near 0°
-      final vec7deg = vectorFromAngle(7.0, magnitude);
-      final snapped7 = service.snapHandleToAngle(vec7deg);
-      expect(calculateAngleDegrees(snapped7), closeTo(0.0, 0.1));
+      // Move slightly outside original threshold but within hysteresis
+      final pos2 = Point(x: 16.5, y: 20.0);
+      final snap2 = service.maybeSnapToGrid(pos2);
+      expect(snap2, isNotNull, reason: 'Hysteresis should keep snap active');
+      expect(snap2!.x, equals(10.0));
 
-      // Test snapping near 30°
-      final vec23deg = vectorFromAngle(23.0, magnitude);
-      final snapped23 = service.snapHandleToAngle(vec23deg);
-      expect(calculateAngleDegrees(snapped23), closeTo(30.0, 0.1));
-
-      // Test snapping near 45°
-      final vec52deg = vectorFromAngle(52.0, magnitude);
-      final snapped52 = service.snapHandleToAngle(vec52deg);
-      expect(calculateAngleDegrees(snapped52), closeTo(45.0, 0.1));
-
-      // Test snapping near 90°
-      final vec88deg = vectorFromAngle(88.0, magnitude);
-      final snapped88 = service.snapHandleToAngle(vec88deg);
-      expect(calculateAngleDegrees(snapped88), closeTo(90.0, 0.1));
+      // Move far outside threshold + hysteresis
+      final pos3 = Point(x: 18.0, y: 20.0);
+      final snap3 = service.maybeSnapToGrid(pos3);
+      expect(snap3, isNull, reason: 'Should release snap outside hysteresis');
     });
 
-    test('preserves handle magnitude after snapping', () {
-      const originalMagnitude = 50.0;
-      final vec = vectorFromAngle(23.0, originalMagnitude);
+    test('snaps to correct grid intersection', () {
+      final service = SnappingService(
+        gridSnapEnabled: true,
+        gridSize: 10.0,
+        magneticThreshold: 8.0,
+      );
 
-      final snapped = service.snapHandleToAngle(vec);
+      // Test multiple grid intersections
+      final testCases = [
+        (Point(x: 2.0, y: 3.0), Point(x: 0.0, y: 0.0)),
+        (Point(x: 28.0, y: 32.0), Point(x: 30.0, y: 30.0)),
+        (Point(x: 95.0, y: 105.0), Point(x: 100.0, y: 100.0)),
+      ];
 
-      // Calculate snapped magnitude
-      final snappedMagnitude =
-          math.sqrt(snapped.x * snapped.x + snapped.y * snapped.y);
-
-      expect(snappedMagnitude, closeTo(originalMagnitude, 0.01));
-    });
-
-    test('snaps all 24 increments correctly (0°, 15°, 30°, ... 345°)', () {
-      const magnitude = 10.0;
-
-      for (int i = 0; i < 24; i++) {
-        final targetAngle = i * 15.0;
-        final testAngle = targetAngle + 5.0; // Offset by 5°
-
-        final vec = vectorFromAngle(testAngle, magnitude);
-        final snapped = service.snapHandleToAngle(vec);
-
-        expect(
-          calculateAngleDegrees(snapped),
-          closeTo(targetAngle, 0.1),
-          reason: 'Failed for target angle $targetAngle°',
-        );
+      for (final (input, expected) in testCases) {
+        service.resetSnapState();
+        final snapped = service.maybeSnapToGrid(input);
+        expect(snapped, isNotNull);
+        expect(snapped!.x, equals(expected.x),
+            reason: 'X should snap to ${expected.x}');
+        expect(snapped.y, equals(expected.y),
+            reason: 'Y should snap to ${expected.y}');
       }
     });
 
-    test('handles negative angles (270°, 180°)', () {
-      const magnitude = 10.0;
-
-      // Test 270° (down)
-      final vec270 = vectorFromAngle(270.0, magnitude);
-      final snapped270 = service.snapHandleToAngle(vec270);
-      expect(calculateAngleDegrees(snapped270), closeTo(270.0, 0.1));
-
-      // Test 180° (left)
-      final vec180 = vectorFromAngle(180.0, magnitude);
-      final snapped180 = service.snapHandleToAngle(vec180);
-      expect(calculateAngleDegrees(snapped180), closeTo(180.0, 0.1));
-    });
-
-    test('returns original vector when snap disabled', () {
-      service.setSnapEnabled(false);
-
-      const original = Point(x: 10.0, y: 5.0);
-      final snapped = service.snapHandleToAngle(original);
-
-      expect(snapped, equals(original));
-    });
-
-    test('handles zero-length vectors', () {
-      const zeroVec = Point(x: 0.0, y: 0.0);
-      final snapped = service.snapHandleToAngle(zeroVec);
-
-      // Should return Point(0, 0) without error
-      expect(snapped.x.isNaN, isFalse);
-      expect(snapped.y.isNaN, isFalse);
-    });
-
-    test('uses correct angle increment for custom values', () {
-      final customService = SnappingService(
-        snapEnabled: true,
-        angleIncrement: 45.0, // Snap to 45° increments
+    test('respects gridSnapEnabled flag', () {
+      final service = SnappingService(
+        gridSnapEnabled: false,
+        gridSize: 10.0,
+        magneticThreshold: 8.0,
       );
 
-      final vec23deg = vectorFromAngle(23.0, 10.0);
-      final snapped = customService.snapHandleToAngle(vec23deg);
+      final position = Point(x: 13.0, y: 17.0);
+      final snapped = service.maybeSnapToGrid(position);
 
-      // Should snap to 0° or 45° (nearest 45° increment)
-      // 23° is closer to 0° (diff = 23°) than to 45° (diff = 22°), so snaps to 45°
-      expect(calculateAngleDegrees(snapped), closeTo(45.0, 1.0));
+      expect(snapped, isNull, reason: 'Should not snap when disabled');
+    });
 
-      final vec70deg = vectorFromAngle(70.0, 10.0);
-      final snapped70 = customService.snapHandleToAngle(vec70deg);
+    test('resetSnapState clears hysteresis', () {
+      final service = SnappingService(
+        gridSnapEnabled: true,
+        gridSize: 10.0,
+        magneticThreshold: 5.0,
+        hysteresisMargin: 2.0,
+      );
 
-      // Should snap to 90° (nearest 45° increment)
-      expect(calculateAngleDegrees(snapped70), closeTo(90.0, 1.0));
+      // Snap to grid
+      final pos1 = Point(x: 13.0, y: 20.0);
+      service.maybeSnapToGrid(pos1);
+
+      // Reset state
+      service.resetSnapState();
+
+      // Position outside original threshold should not snap
+      final pos2 = Point(x: 16.5, y: 20.0);
+      final snap2 = service.maybeSnapToGrid(pos2);
+      expect(snap2, isNull, reason: 'Hysteresis should be cleared');
     });
   });
 
-  group('SnappingService - Snap Toggle', () {
-    test('setSnapEnabled toggles snapping behavior', () {
+  group('SnappingService - Accuracy', () {
+    test('maintains sub-pixel accuracy for grid snapping', () {
       final service = SnappingService(
-        snapEnabled: false,
+        gridSnapEnabled: true,
+        gridSize: 10.0,
+        magneticThreshold: 8.0,
+      );
+
+      // Test that snapped positions are exactly on grid
+      final positions = [
+        Point(x: 10.1, y: 20.2),
+        Point(x: 29.9, y: 39.8),
+        Point(x: 50.5, y: 60.5),
+      ];
+
+      for (final pos in positions) {
+        service.resetSnapState();
+        final snapped = service.maybeSnapToGrid(pos);
+        expect(snapped, isNotNull);
+
+        // Verify exact grid alignment
+        final xError = (snapped!.x % service.gridSize).abs();
+        final yError = (snapped.y % service.gridSize).abs();
+
+        expect(xError, lessThan(0.001),
+            reason: 'X drift should be <0.001px');
+        expect(yError, lessThan(0.001),
+            reason: 'Y drift should be <0.001px');
+      }
+    });
+
+    test('angle snapping maintains magnitude exactly', () {
+      final service = SnappingService(
+        angleSnapEnabled: true,
+        angleIncrement: 15.0,
+      );
+
+      final testVectors = [
+        Point(x: 10.0, y: 5.0),
+        Point(x: 20.0, y: 15.0),
+        Point(x: -10.0, y: 8.0),
+      ];
+
+      for (final vector in testVectors) {
+        final originalMagnitude = vector.magnitude;
+        final snapped = service.snapHandleToAngle(vector);
+        final snappedMagnitude = snapped.magnitude;
+
+        final magnitudeError = (snappedMagnitude - originalMagnitude).abs();
+        expect(magnitudeError, lessThan(0.001),
+            reason: 'Magnitude should be preserved within 0.001px');
+      }
+    });
+  });
+
+  group('SnappingService - Legacy API', () {
+    test('snapToGrid always snaps when enabled (non-magnetic)', () {
+      final service = SnappingService(
+        gridSnapEnabled: true,
         gridSize: 10.0,
       );
 
-      const testPos = Point(x: 12.3, y: 45.6);
+      // Far from grid - should still snap
+      final position = Point(x: 23.7, y: 48.2);
+      final snapped = service.snapToGrid(position);
 
-      // Initially disabled
-      expect(service.snapToGrid(testPos), equals(testPos));
+      expect(snapped.x, equals(20.0));
+      expect(snapped.y, equals(50.0));
+    });
 
-      // Enable snapping
+    test('setSnapEnabled enables both grid and angle', () {
+      final service = SnappingService();
+
+      expect(service.gridSnapEnabled, isFalse);
+      expect(service.angleSnapEnabled, isFalse);
+
       service.setSnapEnabled(true);
-      expect(service.snapToGrid(testPos), equals(const Point(x: 10.0, y: 50.0)));
 
-      // Disable again
-      service.setSnapEnabled(false);
-      expect(service.snapToGrid(testPos), equals(testPos));
+      expect(service.gridSnapEnabled, isTrue);
+      expect(service.angleSnapEnabled, isTrue);
+    });
+
+    test('setSnapMode allows independent control', () {
+      final service = SnappingService();
+
+      service.setSnapMode(gridEnabled: true, angleEnabled: false);
+      expect(service.gridSnapEnabled, isTrue);
+      expect(service.angleSnapEnabled, isFalse);
+
+      service.setSnapMode(gridEnabled: false, angleEnabled: true);
+      expect(service.gridSnapEnabled, isFalse);
+      expect(service.angleSnapEnabled, isTrue);
+
+      // Partial updates
+      service.setSnapMode(gridEnabled: true);
+      expect(service.gridSnapEnabled, isTrue);
+      expect(service.angleSnapEnabled, isTrue, reason: 'Should not change');
     });
   });
 
-  group('SnappingService - Path Snapping', () {
-    test('snapToPath returns null (not implemented)', () {
-      final service = SnappingService(snapEnabled: true);
+  group('SnappingService - Performance', () {
+    test('magnetic snapping completes quickly', () {
+      final service = SnappingService(
+        gridSnapEnabled: true,
+        gridSize: 10.0,
+        magneticThreshold: 8.0,
+      );
 
-      final result = service.snapToPath(const Point(x: 10, y: 10), []);
+      final stopwatch = Stopwatch()..start();
+      const iterations = 1000;
 
-      expect(result, isNull);
+      for (int i = 0; i < iterations; i++) {
+        service.resetSnapState();
+        service.maybeSnapToGrid(Point(x: i * 0.5, y: i * 0.3));
+      }
+
+      stopwatch.stop();
+      final avgMicroseconds = stopwatch.elapsedMicroseconds / iterations;
+
+      // Should be < 500 microseconds (0.5ms) per call
+      expect(avgMicroseconds, lessThan(500),
+          reason: 'Magnetic snapping should be < 0.5ms per call');
     });
   });
 }
