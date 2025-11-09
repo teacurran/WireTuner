@@ -1,8 +1,11 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:app_shell/app_shell.dart';
 import 'package:wiretuner/presentation/history/history_view_model.dart';
+import 'package:wiretuner/presentation/history/history_transport_intents.dart';
+import 'package:wiretuner/presentation/history/history_transport_actions.dart';
 
 /// Scrubber widget for timeline playback and navigation.
 ///
@@ -12,7 +15,16 @@ import 'package:wiretuner/presentation/history/history_view_model.dart';
 /// - Step forward/backward buttons
 /// - Current position display with label
 /// - Playback speed control
+/// - Keyboard shortcuts (J/K/L/H style - video editing)
 /// - Throttled navigation to meet 5k events/sec target
+///
+/// **Keyboard Shortcuts:**
+/// - J: Play/Pause
+/// - K: Stop (pause and reset)
+/// - L: Step Forward (redo one operation)
+/// - H: Step Backward (undo one operation)
+/// - Shift+L: Increase playback speed
+/// - Shift+H: Decrease playback speed
 ///
 /// **Layout:**
 /// ```
@@ -27,7 +39,7 @@ import 'package:wiretuner/presentation/history/history_view_model.dart';
 /// - Target: 5k events/sec replay speed
 /// - Respects UndoProvider._isNavigating guard
 ///
-/// Related: Task I4.T4 (History Panel UI), Performance target 5k events/sec
+/// Related: Task I4.T8 (Transport Controls), Performance target 5k events/sec
 class HistoryScrubber extends StatefulWidget {
   /// Creates a history scrubber widget.
   const HistoryScrubber({super.key});
@@ -76,6 +88,90 @@ class _HistoryScrubberState extends State<HistoryScrubber>
     final currentIndex = viewModel.currentIndex;
     final maxIndex = viewModel.timeline.length - 1;
 
+    // Wrap with keyboard shortcuts
+    return Shortcuts(
+      shortcuts: _buildShortcuts(),
+      child: Actions(
+        actions: _buildActions(
+          undoProvider: undoProvider,
+          currentIndex: currentIndex,
+          maxIndex: maxIndex,
+        ),
+        child: Focus(
+          autofocus: true,
+          child: _buildTransportWidget(
+            undoProvider: undoProvider,
+            viewModel: viewModel,
+            currentIndex: currentIndex,
+            maxIndex: maxIndex,
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// Builds the keyboard shortcut map.
+  Map<ShortcutActivator, Intent> _buildShortcuts() {
+    return {
+      // J: Play/Pause
+      const SingleActivator(LogicalKeyboardKey.keyJ): const HistoryPlayPauseIntent(),
+
+      // K: Stop
+      const SingleActivator(LogicalKeyboardKey.keyK): const HistoryStopIntent(),
+
+      // L: Step Forward
+      const SingleActivator(LogicalKeyboardKey.keyL): const HistoryStepForwardIntent(),
+
+      // H: Step Backward
+      const SingleActivator(LogicalKeyboardKey.keyH): const HistoryStepBackwardIntent(),
+
+      // Shift+L: Speed Up
+      const SingleActivator(LogicalKeyboardKey.keyL, shift: true): const HistorySpeedUpIntent(),
+
+      // Shift+H: Speed Down
+      const SingleActivator(LogicalKeyboardKey.keyH, shift: true): const HistorySpeedDownIntent(),
+    };
+  }
+
+  /// Builds the action map.
+  Map<Type, Action<Intent>> _buildActions({
+    required UndoProvider undoProvider,
+    required int currentIndex,
+    required int maxIndex,
+  }) {
+    return {
+      HistoryPlayPauseIntent: HistoryPlayPauseAction(
+        onPlayPause: _togglePlayback,
+        enabledCallback: () => currentIndex < maxIndex,
+      ),
+      HistoryStopIntent: HistoryStopAction(
+        onStop: _stopPlayback,
+        enabledCallback: () => _isPlaying,
+      ),
+      HistoryStepForwardIntent: HistoryStepForwardAction(
+        onStepForward: () => _stepForward(undoProvider),
+        enabledCallback: () => currentIndex < maxIndex && !_isPlaying,
+      ),
+      HistoryStepBackwardIntent: HistoryStepBackwardAction(
+        onStepBackward: () => _stepBackward(undoProvider),
+        enabledCallback: () => currentIndex > 0 && !_isPlaying,
+      ),
+      HistorySpeedUpIntent: HistorySpeedUpAction(
+        onSpeedUp: _increaseSpeed,
+      ),
+      HistorySpeedDownIntent: HistorySpeedDownAction(
+        onSpeedDown: _decreaseSpeed,
+      ),
+    };
+  }
+
+  /// Builds the transport widget UI.
+  Widget _buildTransportWidget({
+    required UndoProvider undoProvider,
+    required HistoryViewModel viewModel,
+    required int currentIndex,
+    required int maxIndex,
+  }) {
     return Container(
       height: 60,
       decoration: BoxDecoration(
@@ -140,8 +236,8 @@ class _HistoryScrubberState extends State<HistoryScrubber>
         // Step backward
         IconButton(
           icon: const Icon(Icons.skip_previous, size: 20),
-          tooltip: 'Step Backward',
-          onPressed: currentIndex > 0
+          tooltip: 'Step Backward (H)',
+          onPressed: currentIndex > 0 && !_isPlaying
               ? () => _stepBackward(undoProvider)
               : null,
           padding: EdgeInsets.zero,
@@ -157,7 +253,7 @@ class _HistoryScrubberState extends State<HistoryScrubber>
             _isPlaying ? Icons.pause : Icons.play_arrow,
             size: 20,
           ),
-          tooltip: _isPlaying ? 'Pause' : 'Play',
+          tooltip: _isPlaying ? 'Pause (J)' : 'Play (J)',
           onPressed: currentIndex < maxIndex
               ? _togglePlayback
               : null,
@@ -171,8 +267,8 @@ class _HistoryScrubberState extends State<HistoryScrubber>
         // Step forward
         IconButton(
           icon: const Icon(Icons.skip_next, size: 20),
-          tooltip: 'Step Forward',
-          onPressed: currentIndex < maxIndex
+          tooltip: 'Step Forward (L)',
+          onPressed: currentIndex < maxIndex && !_isPlaying
               ? () => _stepForward(undoProvider)
               : null,
           padding: EdgeInsets.zero,
@@ -184,21 +280,27 @@ class _HistoryScrubberState extends State<HistoryScrubber>
 
         const SizedBox(width: 8),
 
-        // Speed control
-        PopupMenuButton<double>(
-          icon: const Icon(Icons.speed, size: 18),
-          tooltip: 'Playback Speed',
-          itemBuilder: (context) => [
-            _buildSpeedMenuItem(0.5, '0.5×'),
-            _buildSpeedMenuItem(1.0, '1.0×'),
-            _buildSpeedMenuItem(2.0, '2.0×'),
-            _buildSpeedMenuItem(5.0, '5.0×'),
+        // Speed control with indicator
+        Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            PopupMenuButton<double>(
+              icon: const Icon(Icons.speed, size: 18),
+              tooltip: 'Playback Speed (Shift+H/L)',
+              itemBuilder: (context) => _availableSpeeds
+                  .map((speed) => _buildSpeedMenuItem(speed, '${speed}×'))
+                  .toList(),
+              onSelected: (speed) {
+                setState(() {
+                  _playbackSpeed = speed;
+                });
+              },
+            ),
+            Text(
+              '${_playbackSpeed}×',
+              style: const TextStyle(fontSize: 9, height: 0.8),
+            ),
           ],
-          onSelected: (speed) {
-            setState(() {
-              _playbackSpeed = speed;
-            });
-          },
         ),
       ],
     );
@@ -332,6 +434,38 @@ class _HistoryScrubberState extends State<HistoryScrubber>
       } else {
         _playbackController.stop();
       }
+    });
+  }
+
+  /// Stops playback (K key).
+  void _stopPlayback() {
+    if (_isPlaying) {
+      setState(() {
+        _isPlaying = false;
+        _playbackController.stop();
+        _playbackController.reset();
+      });
+    }
+  }
+
+  /// Available playback speeds.
+  static const List<double> _availableSpeeds = [0.5, 1.0, 2.0, 5.0];
+
+  /// Increases playback speed (Shift+L).
+  void _increaseSpeed() {
+    setState(() {
+      final currentIndex = _availableSpeeds.indexOf(_playbackSpeed);
+      final nextIndex = (currentIndex + 1) % _availableSpeeds.length;
+      _playbackSpeed = _availableSpeeds[nextIndex];
+    });
+  }
+
+  /// Decreases playback speed (Shift+H).
+  void _decreaseSpeed() {
+    setState(() {
+      final currentIndex = _availableSpeeds.indexOf(_playbackSpeed);
+      final prevIndex = (currentIndex - 1 + _availableSpeeds.length) % _availableSpeeds.length;
+      _playbackSpeed = _availableSpeeds[prevIndex];
     });
   }
 
