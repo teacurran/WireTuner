@@ -477,10 +477,17 @@ class PenTool implements ITool {
       return;
     }
 
-    // Calculate handleOut as relative offset from anchor to drag end
+    // Apply angle constraint if Shift is pressed
+    Point constrainedDragEnd = dragEndPosition;
+    if (HardwareKeyboard.instance.isShiftPressed) {
+      constrainedDragEnd = _constrainToAngle(anchorPosition, dragEndPosition);
+      _logger.d('Shift pressed - constrained handle angle: $constrainedDragEnd');
+    }
+
+    // Calculate handleOut as relative offset from anchor to constrained drag end
     final handleOut = Point(
-      x: dragEndPosition.x - anchorPosition.x,
-      y: dragEndPosition.y - anchorPosition.y,
+      x: constrainedDragEnd.x - anchorPosition.x,
+      y: constrainedDragEnd.y - anchorPosition.y,
     );
 
     // Check Alt key to determine anchor type
@@ -664,6 +671,7 @@ class PenTool implements ITool {
   ///
   /// Behavior:
   /// - Calculates handleOut from drag end position
+  /// - If Shift pressed: constrains handle angle to 45° increments
   /// - If Alt pressed: independent handles (handleIn = null)
   /// - If Alt not pressed: symmetric handles (handleIn = -handleOut)
   /// - Emits ModifyAnchorEvent with updated handles
@@ -677,11 +685,20 @@ class PenTool implements ITool {
       return;
     }
 
-    // Calculate handleOut from drag end position
+    // Calculate drag end position
     final dragEndPosition = _currentDragPosition ?? _dragStartPosition!;
+
+    // Apply angle constraint if Shift is pressed
+    Point constrainedDragEnd = dragEndPosition;
+    if (HardwareKeyboard.instance.isShiftPressed) {
+      constrainedDragEnd = _constrainToAngle(_lastAnchorPosition!, dragEndPosition);
+      _logger.d('Shift pressed - constrained handle angle during adjustment');
+    }
+
+    // Calculate handleOut from constrained drag end position
     final handleOut = Point(
-      x: dragEndPosition.x - _lastAnchorPosition!.x,
-      y: dragEndPosition.y - _lastAnchorPosition!.y,
+      x: constrainedDragEnd.x - _lastAnchorPosition!.x,
+      y: constrainedDragEnd.y - _lastAnchorPosition!.y,
     );
 
     // Check Alt key to determine handle behavior

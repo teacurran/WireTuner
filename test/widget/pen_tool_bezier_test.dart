@@ -580,6 +580,183 @@ void main() {
       });
     });
 
+    group('Shift Key Angle Constraints', () {
+      setUp(() {
+        penTool.onActivate();
+        eventRecorder.clear();
+
+        // Start a path
+        penTool.onPointerDown(const PointerDownEvent(
+          position: ui.Offset(100, 100),
+        ),);
+        penTool.onPointerUp(const PointerUpEvent(
+          position: ui.Offset(100, 100),
+        ),);
+        eventRecorder.clear();
+      });
+
+      testWidgets('should constrain handle angles to 45° increments with Shift', (tester) async {
+        // Simulate Shift key pressed
+        await tester.sendKeyDownEvent(LogicalKeyboardKey.shift);
+
+        // Drag at arbitrary angle (e.g., 30 degrees)
+        // With Shift, should snap to nearest 45° increment (0°)
+        penTool.onPointerDown(const PointerDownEvent(
+          position: ui.Offset(200, 100),
+        ),);
+        penTool.onPointerMove(const PointerMoveEvent(
+          position: ui.Offset(250, 120), // Approx 21.8° angle
+        ),);
+        penTool.onPointerUp(const PointerUpEvent(
+          position: ui.Offset(250, 120),
+        ),);
+
+        final addAnchor = eventRecorder.recordedEvents[0] as AddAnchorEvent;
+
+        // Calculate handle angle
+        final dx = addAnchor.handleOut!.x;
+        final dy = addAnchor.handleOut!.y;
+        final angle = math.atan2(dy, dx) * 180 / math.pi;
+
+        // Should snap to 0° (horizontal)
+        expect(angle.abs(), lessThan(1.0)); // Near horizontal
+
+        await tester.sendKeyUpEvent(LogicalKeyboardKey.shift);
+      });
+
+      testWidgets('should constrain to diagonal with Shift', (tester) async {
+        // Simulate Shift key pressed
+        await tester.sendKeyDownEvent(LogicalKeyboardKey.shift);
+
+        // Drag at ~50° angle
+        // With Shift, should snap to 45°
+        penTool.onPointerDown(const PointerDownEvent(
+          position: ui.Offset(200, 100),
+        ),);
+        penTool.onPointerMove(const PointerMoveEvent(
+          position: ui.Offset(250, 140), // Approx 38.7° angle
+        ),);
+        penTool.onPointerUp(const PointerUpEvent(
+          position: ui.Offset(250, 140),
+        ),);
+
+        final addAnchor = eventRecorder.recordedEvents[0] as AddAnchorEvent;
+
+        // Calculate handle angle
+        final dx = addAnchor.handleOut!.x;
+        final dy = addAnchor.handleOut!.y;
+        final angle = math.atan2(dy, dx) * 180 / math.pi;
+
+        // Should snap to 45°
+        expect(angle, closeTo(45.0, 1.0));
+
+        await tester.sendKeyUpEvent(LogicalKeyboardKey.shift);
+      });
+    });
+
+    group('Handle Adjustment on Last Anchor', () {
+      setUp(() {
+        penTool.onActivate();
+        eventRecorder.clear();
+      });
+
+      testWidgets('should allow adjusting handles after anchor placement', (tester) async {
+        // Create path with first anchor
+        penTool.onPointerDown(const PointerDownEvent(
+          position: ui.Offset(100, 100),
+        ),);
+        penTool.onPointerUp(const PointerUpEvent(
+          position: ui.Offset(100, 100),
+        ),);
+
+        // Add second anchor with handles
+        penTool.onPointerDown(const PointerDownEvent(
+          position: ui.Offset(200, 100),
+        ),);
+        penTool.onPointerMove(const PointerMoveEvent(
+          position: ui.Offset(250, 100),
+        ),);
+        penTool.onPointerUp(const PointerUpEvent(
+          position: ui.Offset(250, 100),
+        ),);
+
+        eventRecorder.clear();
+
+        // Click on last anchor to enter handle adjustment mode
+        penTool.onPointerDown(const PointerDownEvent(
+          position: ui.Offset(200, 100),
+        ),);
+
+        // Drag to adjust handles
+        penTool.onPointerMove(const PointerMoveEvent(
+          position: ui.Offset(220, 150),
+        ),);
+        penTool.onPointerUp(const PointerUpEvent(
+          position: ui.Offset(220, 150),
+        ),);
+
+        // Should emit ModifyAnchorEvent
+        expect(eventRecorder.recordedEvents.length, equals(1));
+        final modifyEvent = eventRecorder.recordedEvents[0] as ModifyAnchorEvent;
+
+        expect(modifyEvent.eventType, equals('ModifyAnchorEvent'));
+        expect(modifyEvent.anchorIndex, equals(1)); // Second anchor (0-indexed)
+        expect(modifyEvent.handleOut, isNotNull);
+        expect(modifyEvent.handleOut!.x, equals(20.0)); // 220 - 200
+        expect(modifyEvent.handleOut!.y, equals(50.0)); // 150 - 100
+
+        // Symmetric handles by default
+        expect(modifyEvent.handleIn, isNotNull);
+        expect(modifyEvent.handleIn!.x, equals(-20.0));
+        expect(modifyEvent.handleIn!.y, equals(-50.0));
+      });
+
+      testWidgets('should support independent handle adjustment with Alt', (tester) async {
+        // Create path with first anchor
+        penTool.onPointerDown(const PointerDownEvent(
+          position: ui.Offset(100, 100),
+        ),);
+        penTool.onPointerUp(const PointerUpEvent(
+          position: ui.Offset(100, 100),
+        ),);
+
+        // Add second anchor
+        penTool.onPointerDown(const PointerDownEvent(
+          position: ui.Offset(200, 100),
+        ),);
+        penTool.onPointerMove(const PointerMoveEvent(
+          position: ui.Offset(250, 100),
+        ),);
+        penTool.onPointerUp(const PointerUpEvent(
+          position: ui.Offset(250, 100),
+        ),);
+
+        eventRecorder.clear();
+
+        // Press Alt for independent handles
+        await tester.sendKeyDownEvent(LogicalKeyboardKey.alt);
+
+        // Click on last anchor and adjust
+        penTool.onPointerDown(const PointerDownEvent(
+          position: ui.Offset(200, 100),
+        ),);
+        penTool.onPointerMove(const PointerMoveEvent(
+          position: ui.Offset(220, 150),
+        ),);
+        penTool.onPointerUp(const PointerUpEvent(
+          position: ui.Offset(220, 150),
+        ),);
+
+        final modifyEvent = eventRecorder.recordedEvents[0] as ModifyAnchorEvent;
+
+        // Should have handleOut but NOT handleIn (independent handles)
+        expect(modifyEvent.handleOut, isNotNull);
+        expect(modifyEvent.handleIn, isNull);
+
+        await tester.sendKeyUpEvent(LogicalKeyboardKey.alt);
+      });
+    });
+
     group('Deterministic Replay', () {
       test('should emit events that can be replayed deterministically', () {
         penTool.onActivate();
