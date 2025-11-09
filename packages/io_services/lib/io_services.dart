@@ -43,6 +43,7 @@ library io_services;
 export 'src/database_config.dart';
 export 'src/gateway/connection_factory.dart';
 export 'src/gateway/sqlite_event_gateway.dart';
+export 'src/importers/ai_importer.dart';
 export 'src/load_service.dart';
 export 'src/migrations/migration_runner.dart';
 export 'src/save_service.dart';
