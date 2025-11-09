@@ -419,6 +419,12 @@
       "file": "../../docs/reference/history_debug.md",
       "start_anchor": "<!-- anchor: history-debug-workflow -->",
       "description": "Dev-only history export/import feature for debugging, crash reproduction, and development workflows with CLI reference and security warnings."
+    },
+    {
+      "key": "qa-platform-parity",
+      "file": "../../docs/qa/platform_parity_checklist.md",
+      "start_anchor": "<!-- anchor: qa-platform-parity -->",
+      "description": "Platform parity QA checklist ensuring keyboard shortcuts, window chrome, file dialogs, and exporters behave identically on macOS/Windows with automated verification and manual test procedures."
     }
   ]
 }
