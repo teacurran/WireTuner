@@ -60,7 +60,6 @@ typedef SnapshotTelemetryCallback = void Function({
 /// }
 /// ```
 class SnapshotManager {
-
   /// Creates a SnapshotManager.
   ///
   /// Parameters:
@@ -172,7 +171,8 @@ class SnapshotManager {
 
       // Update counters
       _totalSnapshotsCreated++;
-      final eventsSinceLastSnapshot = eventSequence - _eventsProcessedSinceLastSnapshot;
+      final eventsSinceLastSnapshot =
+          eventSequence - _eventsProcessedSinceLastSnapshot;
       _eventsProcessedSinceLastSnapshot = eventSequence;
 
       _logger.i(

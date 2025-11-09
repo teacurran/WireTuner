@@ -77,23 +77,28 @@ void main() {
     group('Basic Drag Interaction', () {
       test('should create rectangle with correct dimensions on drag', () {
         // Drag from (100, 100) to (200, 150)
-        rectangleTool.onPointerDown(const PointerDownEvent(
-          position: ui.Offset(100, 100),
-        ),);
+        rectangleTool.onPointerDown(
+          const PointerDownEvent(
+            position: ui.Offset(100, 100),
+          ),
+        );
 
-        rectangleTool.onPointerMove(const PointerMoveEvent(
-          position: ui.Offset(200, 150),
-        ),);
+        rectangleTool.onPointerMove(
+          const PointerMoveEvent(
+            position: ui.Offset(200, 150),
+          ),
+        );
 
-        rectangleTool.onPointerUp(const PointerUpEvent(
-          position: ui.Offset(200, 150),
-        ),);
+        rectangleTool.onPointerUp(
+          const PointerUpEvent(
+            position: ui.Offset(200, 150),
+          ),
+        );
 
         // Should have emitted one CreateShapeEvent
         expect(eventRecorder.recordedEvents.length, equals(1));
 
-        final createShape =
-            eventRecorder.recordedEvents[0] as CreateShapeEvent;
+        final createShape = eventRecorder.recordedEvents[0] as CreateShapeEvent;
         expect(createShape.eventType, equals('CreateShapeEvent'));
         expect(createShape.shapeType, equals(ShapeType.rectangle));
 
@@ -112,16 +117,19 @@ void main() {
 
       test('should normalize dimensions when dragging in any direction', () {
         // Drag from bottom-right to top-left (reverse direction)
-        rectangleTool.onPointerDown(const PointerDownEvent(
-          position: ui.Offset(200, 150),
-        ),);
+        rectangleTool.onPointerDown(
+          const PointerDownEvent(
+            position: ui.Offset(200, 150),
+          ),
+        );
 
-        rectangleTool.onPointerUp(const PointerUpEvent(
-          position: ui.Offset(100, 100),
-        ),);
+        rectangleTool.onPointerUp(
+          const PointerUpEvent(
+            position: ui.Offset(100, 100),
+          ),
+        );
 
-        final createShape =
-            eventRecorder.recordedEvents[0] as CreateShapeEvent;
+        final createShape = eventRecorder.recordedEvents[0] as CreateShapeEvent;
         final params = createShape.parameters;
 
         // Dimensions should still be positive
@@ -134,13 +142,17 @@ void main() {
 
       test('should not create rectangle if drag distance below threshold', () {
         // Very small drag (< 5px)
-        rectangleTool.onPointerDown(const PointerDownEvent(
-          position: ui.Offset(100, 100),
-        ),);
+        rectangleTool.onPointerDown(
+          const PointerDownEvent(
+            position: ui.Offset(100, 100),
+          ),
+        );
 
-        rectangleTool.onPointerUp(const PointerUpEvent(
-          position: ui.Offset(102, 101),
-        ),);
+        rectangleTool.onPointerUp(
+          const PointerUpEvent(
+            position: ui.Offset(102, 101),
+          ),
+        );
 
         // Should not emit any events
         expect(eventRecorder.recordedEvents.length, equals(0));
@@ -152,16 +164,19 @@ void main() {
         // Simulate Shift key press
         await simulateKeyDownEvent(LogicalKeyboardKey.shiftLeft);
 
-        rectangleTool.onPointerDown(const PointerDownEvent(
-          position: ui.Offset(100, 100),
-        ),);
+        rectangleTool.onPointerDown(
+          const PointerDownEvent(
+            position: ui.Offset(100, 100),
+          ),
+        );
 
-        rectangleTool.onPointerUp(const PointerUpEvent(
-          position: ui.Offset(200, 150),
-        ),);
+        rectangleTool.onPointerUp(
+          const PointerUpEvent(
+            position: ui.Offset(200, 150),
+          ),
+        );
 
-        final createShape =
-            eventRecorder.recordedEvents[0] as CreateShapeEvent;
+        final createShape = eventRecorder.recordedEvents[0] as CreateShapeEvent;
         final params = createShape.parameters;
 
         // Should use the larger dimension (100) for both width and height
@@ -176,13 +191,17 @@ void main() {
         await simulateKeyDownEvent(LogicalKeyboardKey.shiftLeft);
 
         // Drag with height > width
-        rectangleTool.onPointerDown(const PointerDownEvent(
-          position: ui.Offset(100, 100),
-        ),);
+        rectangleTool.onPointerDown(
+          const PointerDownEvent(
+            position: ui.Offset(100, 100),
+          ),
+        );
 
-        rectangleTool.onPointerUp(const PointerUpEvent(
-          position: ui.Offset(130, 180),
-        ),);
+        rectangleTool.onPointerUp(
+          const PointerUpEvent(
+            position: ui.Offset(130, 180),
+          ),
+        );
 
         final params =
             (eventRecorder.recordedEvents[0] as CreateShapeEvent).parameters;
@@ -200,13 +219,17 @@ void main() {
         // Simulate Option/Alt key press
         await simulateKeyDownEvent(LogicalKeyboardKey.altLeft);
 
-        rectangleTool.onPointerDown(const PointerDownEvent(
-          position: ui.Offset(150, 150), // Center
-        ),);
+        rectangleTool.onPointerDown(
+          const PointerDownEvent(
+            position: ui.Offset(150, 150), // Center
+          ),
+        );
 
-        rectangleTool.onPointerUp(const PointerUpEvent(
-          position: ui.Offset(200, 175), // 50px right, 25px down
-        ),);
+        rectangleTool.onPointerUp(
+          const PointerUpEvent(
+            position: ui.Offset(200, 175), // 50px right, 25px down
+          ),
+        );
 
         final params =
             (eventRecorder.recordedEvents[0] as CreateShapeEvent).parameters;
@@ -228,13 +251,17 @@ void main() {
         await simulateKeyDownEvent(LogicalKeyboardKey.shiftLeft);
         await simulateKeyDownEvent(LogicalKeyboardKey.altLeft);
 
-        rectangleTool.onPointerDown(const PointerDownEvent(
-          position: ui.Offset(150, 150), // Center
-        ),);
+        rectangleTool.onPointerDown(
+          const PointerDownEvent(
+            position: ui.Offset(150, 150), // Center
+          ),
+        );
 
-        rectangleTool.onPointerUp(const PointerUpEvent(
-          position: ui.Offset(200, 175), // 50px right, 25px down
-        ),);
+        rectangleTool.onPointerUp(
+          const PointerUpEvent(
+            position: ui.Offset(200, 175), // 50px right, 25px down
+          ),
+        );
 
         final params =
             (eventRecorder.recordedEvents[0] as CreateShapeEvent).parameters;
@@ -253,15 +280,18 @@ void main() {
     });
 
     group('Escape Key Cancellation', () {
-      testWidgets('should cancel rectangle creation on Escape',
-          (tester) async {
-        rectangleTool.onPointerDown(const PointerDownEvent(
-          position: ui.Offset(100, 100),
-        ),);
+      testWidgets('should cancel rectangle creation on Escape', (tester) async {
+        rectangleTool.onPointerDown(
+          const PointerDownEvent(
+            position: ui.Offset(100, 100),
+          ),
+        );
 
-        rectangleTool.onPointerMove(const PointerMoveEvent(
-          position: ui.Offset(200, 150),
-        ),);
+        rectangleTool.onPointerMove(
+          const PointerMoveEvent(
+            position: ui.Offset(200, 150),
+          ),
+        );
 
         // Press Escape before pointer up
         await tester.sendKeyDownEvent(LogicalKeyboardKey.escape);
@@ -275,9 +305,11 @@ void main() {
           ),
         );
 
-        rectangleTool.onPointerUp(const PointerUpEvent(
-          position: ui.Offset(200, 150),
-        ),);
+        rectangleTool.onPointerUp(
+          const PointerUpEvent(
+            position: ui.Offset(200, 150),
+          ),
+        );
 
         // Should not emit any events (cancelled)
         expect(eventRecorder.recordedEvents.length, equals(0));
@@ -289,18 +321,22 @@ void main() {
 
     group('Tool Lifecycle', () {
       test('should reset state on deactivation', () {
-        rectangleTool.onPointerDown(const PointerDownEvent(
-          position: ui.Offset(100, 100),
-        ),);
+        rectangleTool.onPointerDown(
+          const PointerDownEvent(
+            position: ui.Offset(100, 100),
+          ),
+        );
 
         // Deactivate mid-drag
         rectangleTool.onDeactivate();
 
         // Reactivate and try to finish drag
         rectangleTool.onActivate();
-        rectangleTool.onPointerUp(const PointerUpEvent(
-          position: ui.Offset(200, 150),
-        ),);
+        rectangleTool.onPointerUp(
+          const PointerUpEvent(
+            position: ui.Offset(200, 150),
+          ),
+        );
 
         // Should not emit events (state was reset)
         expect(eventRecorder.recordedEvents.length, equals(0));
@@ -350,18 +386,21 @@ void main() {
 
     group('Basic Drag Interaction', () {
       test('should create ellipse with correct dimensions on drag', () {
-        ellipseTool.onPointerDown(const PointerDownEvent(
-          position: ui.Offset(100, 100),
-        ),);
+        ellipseTool.onPointerDown(
+          const PointerDownEvent(
+            position: ui.Offset(100, 100),
+          ),
+        );
 
-        ellipseTool.onPointerUp(const PointerUpEvent(
-          position: ui.Offset(200, 150),
-        ),);
+        ellipseTool.onPointerUp(
+          const PointerUpEvent(
+            position: ui.Offset(200, 150),
+          ),
+        );
 
         expect(eventRecorder.recordedEvents.length, equals(1));
 
-        final createShape =
-            eventRecorder.recordedEvents[0] as CreateShapeEvent;
+        final createShape = eventRecorder.recordedEvents[0] as CreateShapeEvent;
         expect(createShape.shapeType, equals(ShapeType.ellipse));
 
         final params = createShape.parameters;
@@ -374,13 +413,17 @@ void main() {
       });
 
       test('should not create ellipse if drag distance below threshold', () {
-        ellipseTool.onPointerDown(const PointerDownEvent(
-          position: ui.Offset(100, 100),
-        ),);
+        ellipseTool.onPointerDown(
+          const PointerDownEvent(
+            position: ui.Offset(100, 100),
+          ),
+        );
 
-        ellipseTool.onPointerUp(const PointerUpEvent(
-          position: ui.Offset(102, 101),
-        ),);
+        ellipseTool.onPointerUp(
+          const PointerUpEvent(
+            position: ui.Offset(102, 101),
+          ),
+        );
 
         expect(eventRecorder.recordedEvents.length, equals(0));
       });
@@ -390,13 +433,17 @@ void main() {
       test('should create circle when Shift is pressed', () async {
         await simulateKeyDownEvent(LogicalKeyboardKey.shiftLeft);
 
-        ellipseTool.onPointerDown(const PointerDownEvent(
-          position: ui.Offset(100, 100),
-        ),);
+        ellipseTool.onPointerDown(
+          const PointerDownEvent(
+            position: ui.Offset(100, 100),
+          ),
+        );
 
-        ellipseTool.onPointerUp(const PointerUpEvent(
-          position: ui.Offset(200, 150),
-        ),);
+        ellipseTool.onPointerUp(
+          const PointerUpEvent(
+            position: ui.Offset(200, 150),
+          ),
+        );
 
         final params =
             (eventRecorder.recordedEvents[0] as CreateShapeEvent).parameters;
@@ -413,13 +460,17 @@ void main() {
       test('should draw from center when Option key is pressed', () async {
         await simulateKeyDownEvent(LogicalKeyboardKey.altLeft);
 
-        ellipseTool.onPointerDown(const PointerDownEvent(
-          position: ui.Offset(150, 150),
-        ),);
+        ellipseTool.onPointerDown(
+          const PointerDownEvent(
+            position: ui.Offset(150, 150),
+          ),
+        );
 
-        ellipseTool.onPointerUp(const PointerUpEvent(
-          position: ui.Offset(200, 175),
-        ),);
+        ellipseTool.onPointerUp(
+          const PointerUpEvent(
+            position: ui.Offset(200, 175),
+          ),
+        );
 
         final params =
             (eventRecorder.recordedEvents[0] as CreateShapeEvent).parameters;
@@ -438,13 +489,17 @@ void main() {
         await simulateKeyDownEvent(LogicalKeyboardKey.shiftLeft);
         await simulateKeyDownEvent(LogicalKeyboardKey.altLeft);
 
-        ellipseTool.onPointerDown(const PointerDownEvent(
-          position: ui.Offset(150, 150),
-        ),);
+        ellipseTool.onPointerDown(
+          const PointerDownEvent(
+            position: ui.Offset(150, 150),
+          ),
+        );
 
-        ellipseTool.onPointerUp(const PointerUpEvent(
-          position: ui.Offset(200, 175),
-        ),);
+        ellipseTool.onPointerUp(
+          const PointerUpEvent(
+            position: ui.Offset(200, 175),
+          ),
+        );
 
         final params =
             (eventRecorder.recordedEvents[0] as CreateShapeEvent).parameters;
@@ -460,11 +515,12 @@ void main() {
     });
 
     group('Escape Key Cancellation', () {
-      testWidgets('should cancel ellipse creation on Escape',
-          (tester) async {
-        ellipseTool.onPointerDown(const PointerDownEvent(
-          position: ui.Offset(100, 100),
-        ),);
+      testWidgets('should cancel ellipse creation on Escape', (tester) async {
+        ellipseTool.onPointerDown(
+          const PointerDownEvent(
+            position: ui.Offset(100, 100),
+          ),
+        );
 
         await tester.sendKeyDownEvent(LogicalKeyboardKey.escape);
 
@@ -477,9 +533,11 @@ void main() {
           ),
         );
 
-        ellipseTool.onPointerUp(const PointerUpEvent(
-          position: ui.Offset(200, 150),
-        ),);
+        ellipseTool.onPointerUp(
+          const PointerUpEvent(
+            position: ui.Offset(200, 150),
+          ),
+        );
 
         expect(eventRecorder.recordedEvents.length, equals(0));
         expect(handled, isTrue);

@@ -7,12 +7,12 @@ import 'snapshot_serializer.dart';
 
 /// Result of a replay operation, including the final state and metadata about issues encountered.
 class ReplayResult {
-
   ReplayResult({
     required this.state,
     this.skippedSequences = const [],
     this.warnings = const [],
   });
+
   /// The reconstructed document state
   final dynamic state;
 
@@ -75,7 +75,6 @@ class ReplayResult {
 /// **Thread Safety**: Designed for single-threaded use on main isolate.
 /// All replay operations are async to avoid blocking the UI.
 class EventReplayer {
-
   /// Creates an [EventReplayer] with the specified dependencies.
   ///
   /// **Parameters:**
@@ -359,7 +358,8 @@ class EventReplayer {
           toSeq: targetSequence,
         );
 
-        _logger.d('Replaying ${events.length} events from $startSequence to $targetSequence');
+        _logger.d(
+            'Replaying ${events.length} events from $startSequence to $targetSequence');
 
         // Replay each event with error handling
         int currentSequence = startSequence;
@@ -368,7 +368,7 @@ class EventReplayer {
             currentState = _dispatcher.dispatch(currentState, event);
           } catch (e, stackTrace) {
             final errorMsg =
-              'Event at sequence $currentSequence failed to apply: $e';
+                'Event at sequence $currentSequence failed to apply: $e';
             _logger.w(errorMsg, error: e, stackTrace: stackTrace);
             warnings.add(errorMsg);
             skippedSequences.add(currentSequence);

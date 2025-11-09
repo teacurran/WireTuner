@@ -70,12 +70,12 @@ class EllipseTool extends ShapeToolBase {
 
   @override
   Map<String, double> createShapeParameters(Rect boundingBox) => {
-      'centerX': boundingBox.center.dx,
-      'centerY': boundingBox.center.dy,
-      'width': boundingBox.width,
-      'height': boundingBox.height,
-      // Note: Ellipse doesn't have cornerRadius parameter
-    };
+        'centerX': boundingBox.center.dx,
+        'centerY': boundingBox.center.dy,
+        'width': boundingBox.width,
+        'height': boundingBox.height,
+        // Note: Ellipse doesn't have cornerRadius parameter
+      };
 
   @override
   ShapeType getShapeType() => ShapeType.ellipse;

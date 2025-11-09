@@ -25,7 +25,8 @@ class Document with _$Document {
     DateTime? modifiedAt,
   }) = _Document;
 
-  factory Document.fromJson(Map<String, dynamic> json) => _$DocumentFromJson(json);
+  factory Document.fromJson(Map<String, dynamic> json) =>
+      _$DocumentFromJson(json);
 }
 
 void main() {
@@ -92,7 +93,8 @@ void main() {
         version: 1,
       );
 
-      final uncompressedSerializer = SnapshotSerializer(enableCompression: false);
+      final uncompressedSerializer =
+          SnapshotSerializer(enableCompression: false);
       final compressedSerializer = SnapshotSerializer(enableCompression: true);
 
       final uncompressedBytes = uncompressedSerializer.serialize(document);
@@ -100,11 +102,13 @@ void main() {
 
       expect(compressedBytes.length, lessThan(uncompressedBytes.length));
 
-      final compressionRatio = uncompressedBytes.length / compressedBytes.length;
+      final compressionRatio =
+          uncompressedBytes.length / compressedBytes.length;
       expect(compressionRatio, greaterThan(2.0));
 
-      print('Compression: ${uncompressedBytes.length} → ${compressedBytes.length} '
-            '(${compressionRatio.toStringAsFixed(2)}:1)');
+      print(
+          'Compression: ${uncompressedBytes.length} → ${compressedBytes.length} '
+          '(${compressionRatio.toStringAsFixed(2)}:1)');
     });
 
     test('compression ratio ~10:1 for realistic documents', () {
@@ -116,30 +120,37 @@ void main() {
         version: 100,
       );
 
-      final uncompressedSerializer = SnapshotSerializer(enableCompression: false);
+      final uncompressedSerializer =
+          SnapshotSerializer(enableCompression: false);
       final compressedSerializer = SnapshotSerializer(enableCompression: true);
 
       final uncompressedBytes = uncompressedSerializer.serialize(document);
       final compressedBytes = compressedSerializer.serialize(document);
 
-      final compressionRatio = uncompressedBytes.length / compressedBytes.length;
+      final compressionRatio =
+          uncompressedBytes.length / compressedBytes.length;
 
       // Verify significant compression (at least 5:1, aiming for 10:1)
       expect(compressionRatio, greaterThan(5.0));
 
-      print('Large document compression: ${uncompressedBytes.length} → ${compressedBytes.length} '
-            '(${compressionRatio.toStringAsFixed(2)}:1)');
+      print(
+          'Large document compression: ${uncompressedBytes.length} → ${compressedBytes.length} '
+          '(${compressionRatio.toStringAsFixed(2)}:1)');
     });
 
     test('deserialize handles both compressed and uncompressed', () {
       const document = Document(id: 'doc-1', title: 'Test');
 
-      final compressedBytes = SnapshotSerializer(enableCompression: true).serialize(document);
-      final uncompressedBytes = SnapshotSerializer(enableCompression: false).serialize(document);
+      final compressedBytes =
+          SnapshotSerializer(enableCompression: true).serialize(document);
+      final uncompressedBytes =
+          SnapshotSerializer(enableCompression: false).serialize(document);
 
       // Both should deserialize successfully
-      final fromCompressedMap = serializer.deserialize(compressedBytes) as Map<String, dynamic>;
-      final fromUncompressedMap = serializer.deserialize(uncompressedBytes) as Map<String, dynamic>;
+      final fromCompressedMap =
+          serializer.deserialize(compressedBytes) as Map<String, dynamic>;
+      final fromUncompressedMap =
+          serializer.deserialize(uncompressedBytes) as Map<String, dynamic>;
       final fromCompressed = Document.fromJson(fromCompressedMap);
       final fromUncompressed = Document.fromJson(fromUncompressedMap);
 

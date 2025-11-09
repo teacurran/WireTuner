@@ -124,7 +124,8 @@ void main() {
       expect(tester.takeException(), isNull);
     });
 
-    testWidgets('renders path with Bezier handles', (WidgetTester tester) async {
+    testWidgets('renders path with Bezier handles',
+        (WidgetTester tester) async {
       // Arrange: Path with Bezier curve and handles
       final path = domain.Path(
         anchors: const [
@@ -230,7 +231,8 @@ void main() {
       expect(tester.takeException(), isNull);
     });
 
-    testWidgets('renders multiple selected objects', (WidgetTester tester) async {
+    testWidgets('renders multiple selected objects',
+        (WidgetTester tester) async {
       // Arrange: Multiple paths
       final paths = {
         'path-1': domain.Path.line(

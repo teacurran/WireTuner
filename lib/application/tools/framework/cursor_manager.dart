@@ -8,7 +8,6 @@ import 'cursor_service.dart';
 /// Provides contextual information that affects which cursor should be
 /// displayed, such as hover state, modifier keys, and tool-specific modes.
 class CursorContext {
-
   /// Creates cursor context with the given parameters.
   const CursorContext({
     this.isHoveringHandle = false,
@@ -19,6 +18,7 @@ class CursorContext {
     this.isSnapping = false,
     this.customState,
   });
+
   /// Whether the cursor is hovering over a control handle.
   final bool isHoveringHandle;
 
@@ -49,15 +49,16 @@ class CursorContext {
     bool? isAngleLocked,
     bool? isSnapping,
     Map<String, dynamic>? customState,
-  }) => CursorContext(
-      isHoveringHandle: isHoveringHandle ?? this.isHoveringHandle,
-      isHoveringAnchor: isHoveringAnchor ?? this.isHoveringAnchor,
-      isHoveringObject: isHoveringObject ?? this.isHoveringObject,
-      isDragging: isDragging ?? this.isDragging,
-      isAngleLocked: isAngleLocked ?? this.isAngleLocked,
-      isSnapping: isSnapping ?? this.isSnapping,
-      customState: customState ?? this.customState,
-    );
+  }) =>
+      CursorContext(
+        isHoveringHandle: isHoveringHandle ?? this.isHoveringHandle,
+        isHoveringAnchor: isHoveringAnchor ?? this.isHoveringAnchor,
+        isHoveringObject: isHoveringObject ?? this.isHoveringObject,
+        isDragging: isDragging ?? this.isDragging,
+        isAngleLocked: isAngleLocked ?? this.isAngleLocked,
+        isSnapping: isSnapping ?? this.isSnapping,
+        customState: customState ?? this.customState,
+      );
 
   @override
   bool operator ==(Object other) {
@@ -137,7 +138,6 @@ class CursorContext {
 ///
 /// Related: I3.T5, Decision 6 (platform parity)
 class CursorManager extends ChangeNotifier {
-
   /// Creates a cursor manager wrapping the given cursor service.
   CursorManager({
     required CursorService cursorService,
@@ -146,6 +146,7 @@ class CursorManager extends ChangeNotifier {
         _platform = platform ?? defaultTargetPlatform {
     _logger.d('CursorManager initialized for platform: $_platform');
   }
+
   /// The underlying cursor service.
   final CursorService _cursorService;
 

@@ -116,8 +116,7 @@ class PerformanceOverlayWrapper extends StatefulWidget {
       _PerformanceOverlayWrapperState();
 }
 
-class _PerformanceOverlayWrapperState
-    extends State<PerformanceOverlayWrapper> {
+class _PerformanceOverlayWrapperState extends State<PerformanceOverlayWrapper> {
   late bool _enabled;
   final FocusNode _focusNode = FocusNode();
 
@@ -238,7 +237,8 @@ class _PerformancePanel extends StatelessWidget {
               ),
               const SizedBox(height: 4),
             ] else ...[
-              const Text('No metrics available', style: TextStyle(color: Colors.grey)),
+              const Text('No metrics available',
+                  style: TextStyle(color: Colors.grey)),
               const SizedBox(height: 4),
             ],
 
@@ -248,11 +248,13 @@ class _PerformancePanel extends StatelessWidget {
               const SizedBox(height: 8),
               _MetricRow(
                 label: 'Zoom',
-                value: '${(viewportController!.zoomLevel * 100).toStringAsFixed(0)}%',
+                value:
+                    '${(viewportController!.zoomLevel * 100).toStringAsFixed(0)}%',
               ),
               _MetricRow(
                 label: 'Pan',
-                value: '(${viewportController!.panOffset.dx.toStringAsFixed(0)}, '
+                value:
+                    '(${viewportController!.panOffset.dx.toStringAsFixed(0)}, '
                     '${viewportController!.panOffset.dy.toStringAsFixed(0)})',
               ),
             ],

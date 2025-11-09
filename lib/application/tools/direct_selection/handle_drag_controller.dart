@@ -51,12 +51,12 @@ import 'package:wiretuner/presentation/canvas/overlays/selection_overlay.dart';
 /// - Angle snapping adds < 1ms overhead per drag event
 /// - Total drag calculation: < 2ms (meets acceptance criteria)
 class HandleDragController {
-
   HandleDragController({
     required DragController baseDragController,
     required SnappingService snappingService,
   })  : _baseDragController = baseDragController,
         _snappingService = snappingService;
+
   /// Base drag controller for applying anchor type constraints.
   final DragController _baseDragController;
 
@@ -100,7 +100,8 @@ class HandleDragController {
 
     if (component == AnchorComponent.handleIn && baseResult.handleIn != null) {
       // Snap handleIn to angle
-      snappedHandleIn = _snappingService.snapHandleToAngle(baseResult.handleIn!);
+      snappedHandleIn =
+          _snappingService.snapHandleToAngle(baseResult.handleIn!);
 
       // Reapply anchor type constraints after snapping
       snappedHandleOut = _applyConstraintsToOppositeHandle(
@@ -216,5 +217,6 @@ class HandleDragController {
   }
 
   /// Calculates the length (magnitude) of a vector.
-  double _vectorLength(Point vector) => math.sqrt(vector.x * vector.x + vector.y * vector.y);
+  double _vectorLength(Point vector) =>
+      math.sqrt(vector.x * vector.x + vector.y * vector.y);
 }

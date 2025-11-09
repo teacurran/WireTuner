@@ -201,12 +201,15 @@ void main() {
       );
     });
 
-    test('should close path only when clicking within threshold of first anchor', () {
+    test(
+        'should close path only when clicking within threshold of first anchor',
+        () {
       // Create a path with 3 anchors, then click NEAR (but outside threshold) first anchor
       const pointA = ui.Offset(100, 100);
       const pointB = ui.Offset(200, 100);
       const pointC = ui.Offset(150, 200);
-      const pointNearA = ui.Offset(115, 115); // 15 units away from A (threshold is 10)
+      const pointNearA =
+          ui.Offset(115, 115); // 15 units away from A (threshold is 10)
 
       // Click at point A (start path)
       penTool.onPointerDown(const PointerDownEvent(

@@ -17,13 +17,13 @@ import 'event_handler_registry.dart';
 /// }
 /// ```
 class UnhandledEventException implements Exception {
-
   /// Creates an exception for an unhandled event type.
   ///
   /// **Parameters:**
   /// - [message]: Human-readable error description
   /// - [eventType]: The event type that caused the error
   UnhandledEventException(this.message, {required this.eventType});
+
   /// Descriptive error message explaining the issue.
   final String message;
 
@@ -87,7 +87,6 @@ class UnhandledEventException implements Exception {
 /// the return type to `Future<dynamic>` if handlers need async operations
 /// (e.g., loading external resources during state reconstruction).
 class EventDispatcher {
-
   /// Creates an [EventDispatcher] with the specified handler registry.
   ///
   /// **Parameters:**
@@ -100,6 +99,7 @@ class EventDispatcher {
   /// final dispatcher = EventDispatcher(registry);
   /// ```
   EventDispatcher(this._registry);
+
   /// The registry containing event type to handler mappings.
   final EventHandlerRegistry _registry;
 

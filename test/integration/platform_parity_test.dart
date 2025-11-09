@@ -59,7 +59,8 @@ void main() {
     late Directory tempDir;
 
     setUp(() {
-      tempDir = Directory.systemTemp.createTempSync('wiretuner_platform_parity_');
+      tempDir =
+          Directory.systemTemp.createTempSync('wiretuner_platform_parity_');
     });
 
     tearDown(() {
@@ -67,7 +68,8 @@ void main() {
     });
 
     group('Export Format Parity', () {
-      test('SVG export produces deterministic output across platforms', () async {
+      test('SVG export produces deterministic output across platforms',
+          () async {
         // Create a deterministic test document
         final document = _createTestDocument(
           id: 'parity-svg-test',
@@ -78,14 +80,16 @@ void main() {
         final svgContent = exporter.generateSvg(document);
 
         // Verify SVG structure is deterministic
-        expect(svgContent, startsWith('<?xml version="1.0" encoding="UTF-8"?>'));
+        expect(
+            svgContent, startsWith('<?xml version="1.0" encoding="UTF-8"?>'));
         expect(svgContent, contains('<svg'));
         expect(svgContent, contains('xmlns="http://www.w3.org/2000/svg"'));
         expect(svgContent, contains('</svg>'));
 
         // Calculate content hash (excluding timestamp metadata)
         final normalizedContent = _normalizeExportContent(svgContent);
-        final contentHash = md5.convert(utf8.encode(normalizedContent)).toString();
+        final contentHash =
+            md5.convert(utf8.encode(normalizedContent)).toString();
 
         // Store hash for cross-platform comparison
         final hashFile = File('${tempDir.path}/svg_content_hash.txt');
@@ -93,7 +97,8 @@ void main() {
 
         // Print hash for manual cross-platform verification
         print('SVG Export Hash (${Platform.operatingSystem}): $contentHash');
-        print('To verify parity: Compare this hash across macOS and Windows builds');
+        print(
+            'To verify parity: Compare this hash across macOS and Windows builds');
 
         // Verify SVG is valid XML
         expect(svgContent, contains('<g '));
@@ -101,7 +106,8 @@ void main() {
         expect(svgContent, contains('id="'));
       });
 
-      test('PDF export produces consistent structure across platforms', () async {
+      test('PDF export produces consistent structure across platforms',
+          () async {
         // Create a deterministic test document
         final document = _createTestDocument(
           id: 'parity-pdf-test',
@@ -109,7 +115,8 @@ void main() {
         );
 
         final exporter = PdfExporter();
-        final pdfPath = '${tempDir.path}/parity_test_${Platform.operatingSystem}.pdf';
+        final pdfPath =
+            '${tempDir.path}/parity_test_${Platform.operatingSystem}.pdf';
         await exporter.exportToFile(document, pdfPath);
 
         // Verify PDF exists and has content
@@ -137,14 +144,16 @@ void main() {
         await hashFile.writeAsString(structureHash);
 
         print('PDF Export Hash (${Platform.operatingSystem}): $structureHash');
-        print('Note: Exact byte match may vary due to metadata; validate structure instead');
+        print(
+            'Note: Exact byte match may vary due to metadata; validate structure instead');
 
         // Verify PDF file size is within reasonable bounds
         expect(fileSize, lessThan(1024 * 1024), // < 1 MB
             reason: 'Simple test document should produce small PDF');
       });
 
-      test('SVG export with complex paths produces identical results', () async {
+      test('SVG export with complex paths produces identical results',
+          () async {
         // Create document with various path types
         final document = Document(
           id: 'complex-path-test',
@@ -224,7 +233,8 @@ void main() {
 
         // Calculate normalized hash
         final normalizedContent = _normalizeExportContent(svgContent);
-        final contentHash = md5.convert(utf8.encode(normalizedContent)).toString();
+        final contentHash =
+            md5.convert(utf8.encode(normalizedContent)).toString();
 
         print('Complex SVG Hash (${Platform.operatingSystem}): $contentHash');
       });
@@ -284,7 +294,8 @@ void main() {
 
         // Document that both platforms should have identical behavior
         // for tool interactions (pen tool, selection tool, etc.)
-        expect(true, isTrue, reason: 'Modifier mapping documented for manual verification');
+        expect(true, isTrue,
+            reason: 'Modifier mapping documented for manual verification');
       });
     });
 
@@ -296,8 +307,11 @@ void main() {
           (i) => VectorObject.path(
             id: 'path-$i',
             path: Path.line(
-              start: Point(x: (i % 10).toDouble() * 10, y: (i ~/ 10).toDouble() * 10),
-              end: Point(x: (i % 10).toDouble() * 10 + 5, y: (i ~/ 10).toDouble() * 10 + 5),
+              start: Point(
+                  x: (i % 10).toDouble() * 10, y: (i ~/ 10).toDouble() * 10),
+              end: Point(
+                  x: (i % 10).toDouble() * 10 + 5,
+                  y: (i ~/ 10).toDouble() * 10 + 5),
             ),
           ),
         );
@@ -346,8 +360,11 @@ void main() {
           (i) => VectorObject.path(
             id: 'path-$i',
             path: Path.line(
-              start: Point(x: (i % 10).toDouble() * 10, y: (i ~/ 10).toDouble() * 10),
-              end: Point(x: (i % 10).toDouble() * 10 + 5, y: (i ~/ 10).toDouble() * 10 + 5),
+              start: Point(
+                  x: (i % 10).toDouble() * 10, y: (i ~/ 10).toDouble() * 10),
+              end: Point(
+                  x: (i % 10).toDouble() * 10 + 5,
+                  y: (i ~/ 10).toDouble() * 10 + 5),
             ),
           ),
         );
@@ -405,7 +422,8 @@ void main() {
         final jsonString = jsonEncode(documentJson);
 
         // Write to file
-        final filePath = '${tempDir.path}/roundtrip_test_${Platform.operatingSystem}.wiretuner';
+        final filePath =
+            '${tempDir.path}/roundtrip_test_${Platform.operatingSystem}.wiretuner';
         final file = File(filePath);
         await file.writeAsString(jsonString);
 
@@ -447,7 +465,8 @@ void main() {
 
         // Simulate saving on one platform
         final savePlatform = Platform.operatingSystem;
-        final saveFile = File('${tempDir.path}/cross_platform_${savePlatform}.wiretuner');
+        final saveFile =
+            File('${tempDir.path}/cross_platform_${savePlatform}.wiretuner');
         await saveFile.writeAsString(jsonString);
 
         // Simulate loading on "opposite" platform (same platform in test)
@@ -545,7 +564,8 @@ void main() {
         expect(pdfFile.existsSync(), isTrue);
 
         final fileSize = await pdfFile.length();
-        expect(fileSize, greaterThan(0), reason: 'Empty PDF should still have structure');
+        expect(fileSize, greaterThan(0),
+            reason: 'Empty PDF should still have structure');
 
         print('Empty Document Export (${Platform.operatingSystem}): PASS');
       });
@@ -632,7 +652,8 @@ String _normalizeExportContent(String content) {
   normalized = normalized.replaceAll(RegExp(r'<dc:date>[^<]*</dc:date>'), '');
 
   // Remove creator metadata (may include OS version)
-  normalized = normalized.replaceAll(RegExp(r'<dc:creator>[^<]*</dc:creator>'), '');
+  normalized =
+      normalized.replaceAll(RegExp(r'<dc:creator>[^<]*</dc:creator>'), '');
 
   // Collapse whitespace for consistent comparison
   normalized = normalized.replaceAll(RegExp(r'\s+'), ' ').trim();

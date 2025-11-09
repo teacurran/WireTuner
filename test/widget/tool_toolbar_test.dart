@@ -124,7 +124,8 @@ void main() {
 
       // Verify all 7 tool buttons are present by checking for their icons
       expect(find.byIcon(Icons.near_me), findsOneWidget); // Selection
-      expect(find.byIcon(Icons.control_point), findsOneWidget); // Direct Selection
+      expect(
+          find.byIcon(Icons.control_point), findsOneWidget); // Direct Selection
       expect(find.byIcon(Icons.edit), findsOneWidget); // Pen
       expect(find.byIcon(Icons.rectangle), findsOneWidget); // Rectangle
       expect(find.byIcon(Icons.circle_outlined), findsOneWidget); // Ellipse
@@ -132,7 +133,8 @@ void main() {
       expect(find.byIcon(Icons.star_outline), findsOneWidget); // Star
     });
 
-    testWidgets('clicking button activates corresponding tool', (WidgetTester tester) async {
+    testWidgets('clicking button activates corresponding tool',
+        (WidgetTester tester) async {
       // Build the toolbar
       await tester.pumpWidget(
         MaterialApp(
@@ -163,7 +165,8 @@ void main() {
       expect(toolManager.activeToolId, equals('ellipse'));
     });
 
-    testWidgets('active tool is visually highlighted', (WidgetTester tester) async {
+    testWidgets('active tool is visually highlighted',
+        (WidgetTester tester) async {
       // Activate the Pen tool before building
       toolManager.activateTool('pen');
 
@@ -234,7 +237,8 @@ void main() {
         expect(
           toolManager.activeToolId,
           equals(expectedToolId),
-          reason: 'Expected tool $expectedToolId to be active after tapping icon $icon',
+          reason:
+              'Expected tool $expectedToolId to be active after tapping icon $icon',
         );
       }
     });
@@ -265,7 +269,8 @@ void main() {
       expect(tooltip.message, equals('Selection Tool'));
     });
 
-    testWidgets('toolbar has correct layout dimensions', (WidgetTester tester) async {
+    testWidgets('toolbar has correct layout dimensions',
+        (WidgetTester tester) async {
       // Build the toolbar
       await tester.pumpWidget(
         MaterialApp(
@@ -286,7 +291,8 @@ void main() {
       expect(container.constraints?.maxWidth, equals(ToolToolbar.toolbarWidth));
     });
 
-    testWidgets('toolbar updates when tool manager changes', (WidgetTester tester) async {
+    testWidgets('toolbar updates when tool manager changes',
+        (WidgetTester tester) async {
       // Build the toolbar
       await tester.pumpWidget(
         MaterialApp(

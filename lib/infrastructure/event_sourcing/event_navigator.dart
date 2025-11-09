@@ -58,7 +58,6 @@ import 'event_replayer.dart';
 ///
 /// **Thread Safety**: Designed for single-threaded use on main isolate.
 class EventNavigator {
-
   /// Creates an [EventNavigator] for the specified document.
   ///
   /// **Parameters:**
@@ -195,7 +194,8 @@ class EventNavigator {
       throw StateError('Cannot undo: already at sequence 0');
     }
 
-    _logger.d('Undo: navigating from $_currentSequence to ${_currentSequence - 1}');
+    _logger.d(
+        'Undo: navigating from $_currentSequence to ${_currentSequence - 1}');
     return await navigateToSequence(_currentSequence - 1);
   }
 
@@ -222,7 +222,8 @@ class EventNavigator {
       throw StateError('Cannot redo: already at latest sequence');
     }
 
-    _logger.d('Redo: navigating from $_currentSequence to ${_currentSequence + 1}');
+    _logger.d(
+        'Redo: navigating from $_currentSequence to ${_currentSequence + 1}');
     return await navigateToSequence(_currentSequence + 1);
   }
 
@@ -258,7 +259,8 @@ class EventNavigator {
   Future<ReplayResult> navigateToSequence(int targetSequence) async {
     // Validate target sequence
     if (targetSequence < 0) {
-      throw ArgumentError('Target sequence cannot be negative: $targetSequence');
+      throw ArgumentError(
+          'Target sequence cannot be negative: $targetSequence');
     }
 
     // Refresh max sequence in case new events were added
@@ -369,10 +371,10 @@ class EventNavigator {
 
   /// Returns cache statistics for debugging.
   Map<String, dynamic> getCacheStats() => {
-      'size': _stateCache.length,
-      'capacity': _maxCacheSize,
-      'sequences': _stateCache.keys.toList(),
-      'currentSequence': _currentSequence,
-      'maxSequence': _maxSequence,
-    };
+        'size': _stateCache.length,
+        'capacity': _maxCacheSize,
+        'sequences': _stateCache.keys.toList(),
+        'currentSequence': _currentSequence,
+        'maxSequence': _maxSequence,
+      };
 }

@@ -16,7 +16,8 @@ void main() {
 
     setUp(() {
       snappingService = SnappingService(
-        gridSnapEnabled: true, angleSnapEnabled: true,
+        gridSnapEnabled: true,
+        angleSnapEnabled: true,
         gridSize: 10.0,
         angleIncrement: 15.0,
       );
@@ -109,7 +110,8 @@ void main() {
 
     setUp(() {
       snappingService = SnappingService(
-        gridSnapEnabled: true, angleSnapEnabled: true,
+        gridSnapEnabled: true,
+        angleSnapEnabled: true,
         gridSize: 10.0,
         angleIncrement: 15.0,
       );
@@ -169,12 +171,14 @@ void main() {
       expect(result.handleIn!.y, closeTo(-result.handleOut!.y, 0.01));
 
       // Verify magnitudes are equal
-      final handleOutMag =
-          math.sqrt(result.handleOut!.x * result.handleOut!.x +
-              result.handleOut!.y * result.handleOut!.y,);
+      final handleOutMag = math.sqrt(
+        result.handleOut!.x * result.handleOut!.x +
+            result.handleOut!.y * result.handleOut!.y,
+      );
       final handleInMag = math.sqrt(
-          result.handleIn!.x * result.handleIn!.x +
-              result.handleIn!.y * result.handleIn!.y,);
+        result.handleIn!.x * result.handleIn!.x +
+            result.handleIn!.y * result.handleIn!.y,
+      );
       expect(handleOutMag, closeTo(handleInMag, 0.01));
     });
 
@@ -203,8 +207,9 @@ void main() {
 
       // HandleIn length should be preserved (30)
       final handleInMag = math.sqrt(
-          result.handleIn!.x * result.handleIn!.x +
-              result.handleIn!.y * result.handleIn!.y,);
+        result.handleIn!.x * result.handleIn!.x +
+            result.handleIn!.y * result.handleIn!.y,
+      );
       expect(handleInMag, closeTo(30.0, 0.1));
     });
 
@@ -313,7 +318,8 @@ void main() {
 
     setUp(() {
       snappingService = SnappingService(
-        gridSnapEnabled: true, angleSnapEnabled: true,
+        gridSnapEnabled: true,
+        angleSnapEnabled: true,
         gridSize: 10.0,
         angleIncrement: 15.0,
       );

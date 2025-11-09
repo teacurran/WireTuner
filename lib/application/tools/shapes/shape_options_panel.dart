@@ -42,48 +42,48 @@ class ShapeOptionsPanel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Container(
-      padding: const EdgeInsets.all(16.0),
-      decoration: BoxDecoration(
-        color: Colors.grey[100],
-        border: Border.all(color: Colors.grey[300]!),
-        borderRadius: BorderRadius.circular(8.0),
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'Shape Options',
-            style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.bold,
-                ),
-          ),
-          const SizedBox(height: 16),
-          const Placeholder(
-            fallbackHeight: 100,
-            fallbackWidth: 200,
-            color: Colors.blue,
-            child: Center(
-              child: Text(
-                'Shape Options Panel\nTODO: Implement UI',
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.bold,
+        padding: const EdgeInsets.all(16.0),
+        decoration: BoxDecoration(
+          color: Colors.grey[100],
+          border: Border.all(color: Colors.grey[300]!),
+          borderRadius: BorderRadius.circular(8.0),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Shape Options',
+              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
+            ),
+            const SizedBox(height: 16),
+            const Placeholder(
+              fallbackHeight: 100,
+              fallbackWidth: 200,
+              color: Colors.blue,
+              child: Center(
+                child: Text(
+                  'Shape Options Panel\nTODO: Implement UI',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
               ),
             ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            'Planned features:\n'
-            '• Polygon: side count (3-20), rotation\n'
-            '• Star: point count (3-20), inner radius ratio (0.1-0.9), rotation',
-            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: Colors.grey[700],
-                ),
-          ),
-        ],
-      ),
-    );
+            const SizedBox(height: 8),
+            Text(
+              'Planned features:\n'
+              '• Polygon: side count (3-20), rotation\n'
+              '• Star: point count (3-20), inner radius ratio (0.1-0.9), rotation',
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: Colors.grey[700],
+                  ),
+            ),
+          ],
+        ),
+      );
 }

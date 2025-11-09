@@ -13,7 +13,8 @@ class LoadException implements Exception {
   final Object? cause;
 
   @override
-  String toString() => 'LoadException: $message${cause != null ? ' (cause: $cause)' : ''}';
+  String toString() =>
+      'LoadException: $message${cause != null ? ' (cause: $cause)' : ''}';
 }
 
 /// Thrown when the user cancels a file picker dialog during load.

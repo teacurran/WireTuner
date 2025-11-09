@@ -442,8 +442,7 @@ void _registerEventHandlers(EventHandlerRegistry registry) {
         layers.indexWhere((layer) => layer['id'] == anchorEvent.pathId);
     if (pathIndex != -1) {
       final path = Map<String, dynamic>.from(layers[pathIndex]);
-      final anchors =
-          List<Map<String, dynamic>>.from(path['anchors'] as List);
+      final anchors = List<Map<String, dynamic>>.from(path['anchors'] as List);
       anchors.add(anchorEvent.position.toJson());
       path['anchors'] = anchors;
       layers[pathIndex] = path;

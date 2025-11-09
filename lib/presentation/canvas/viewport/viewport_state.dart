@@ -48,7 +48,6 @@ import 'package:wiretuner/presentation/canvas/viewport/viewport_controller.dart'
 /// onPanEnd: state.onPanEnd,
 /// ```
 class ViewportState extends ChangeNotifier {
-
   /// Creates a viewport state manager.
   ///
   /// The [controller] is required and manages the actual transformations.
@@ -64,6 +63,7 @@ class ViewportState extends ChangeNotifier {
     // Listen to controller changes to notify our listeners
     controller.addListener(_onControllerChanged);
   }
+
   /// The viewport controller managing transformations.
   final ViewportController controller;
 
@@ -363,17 +363,19 @@ class ViewportState extends ChangeNotifier {
   }) {
     if (onTelemetry == null) return;
 
-    onTelemetry!(ViewportTelemetry(
-      timestamp: DateTime.now(),
-      eventType: eventType,
-      fps: _lastFps,
-      panOffset: controller.panOffset,
-      panDelta: panDelta,
-      zoomLevel: controller.zoomLevel,
-      zoomFactor: zoomFactor,
-      focalPoint: focalPoint,
-      velocity: velocity,
-    ),);
+    onTelemetry!(
+      ViewportTelemetry(
+        timestamp: DateTime.now(),
+        eventType: eventType,
+        fps: _lastFps,
+        panOffset: controller.panOffset,
+        panDelta: panDelta,
+        zoomLevel: controller.zoomLevel,
+        zoomFactor: zoomFactor,
+        focalPoint: focalPoint,
+        velocity: velocity,
+      ),
+    );
   }
 
   /// Syncs the current controller state back to the domain model.
@@ -404,7 +406,6 @@ class ViewportState extends ChangeNotifier {
 /// - [TelemetryService] for collecting and analyzing telemetry data
 /// - [ViewportState.onTelemetry] for receiving telemetry callbacks
 class ViewportTelemetry {
-
   /// Creates a telemetry data record.
   const ViewportTelemetry({
     required this.timestamp,
@@ -417,6 +418,7 @@ class ViewportTelemetry {
     this.focalPoint,
     this.velocity,
   });
+
   /// Timestamp when the telemetry was recorded.
   final DateTime timestamp;
 

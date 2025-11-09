@@ -10,7 +10,6 @@ import 'package:wiretuner/application/tools/framework/tool_manager.dart';
 ///
 /// Records all lifecycle and event handling calls for verification.
 class FakeTool implements ITool {
-
   FakeTool(
     this._toolId, {
     MouseCursor cursor = SystemMouseCursors.basic,
@@ -105,7 +104,6 @@ class MockEventRecorder with ChangeNotifier {
   }
 
   bool get isPaused => _isPaused;
-
 }
 
 void main() {
@@ -320,7 +318,8 @@ void main() {
         );
 
         expect(toolManager.handlePointerDown(pointerEvent), isFalse);
-        expect(toolManager.handlePointerMove(const PointerMoveEvent()), isFalse);
+        expect(
+            toolManager.handlePointerMove(const PointerMoveEvent()), isFalse);
         expect(toolManager.handlePointerUp(const PointerUpEvent()), isFalse);
         expect(toolManager.handleKeyPress(keyEvent), isFalse);
       });

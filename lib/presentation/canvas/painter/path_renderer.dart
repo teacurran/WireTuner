@@ -10,12 +10,12 @@ import 'package:wiretuner/domain/models/shape.dart';
 /// Contains the converted ui.Path along with metadata used for cache
 /// invalidation decisions.
 class _CachedPathData {
-
   _CachedPathData({
     required this.path,
     required this.zoomLevel,
     required this.domainHash,
   });
+
   /// The converted dart:ui Path ready for rendering.
   final ui.Path path;
 
@@ -81,7 +81,6 @@ class _CachedPathData {
 /// The returned ui.Path is in **world coordinates**. The viewport
 /// transformation should be applied to the canvas before rendering.
 class PathRenderer {
-
   /// Creates a PathRenderer with optional configuration.
   ///
   /// The [zoomInvalidationThreshold] controls how sensitive the cache is
@@ -90,6 +89,7 @@ class PathRenderer {
   PathRenderer({
     this.zoomInvalidationThreshold = 0.1,
   });
+
   /// Cache of converted paths indexed by object ID.
   final Map<String, _CachedPathData> _cache = {};
 

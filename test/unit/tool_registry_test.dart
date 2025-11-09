@@ -133,7 +133,8 @@ void main() {
         expect(registry.getDefinition('pen'), isNull);
       });
 
-      test('should handle unregistering non-existent definition gracefully', () {
+      test('should handle unregistering non-existent definition gracefully',
+          () {
         // Should not throw
         registry.unregisterDefinition('nonexistent');
       });
@@ -220,7 +221,8 @@ void main() {
       });
 
       test('should filter definitions by category', () {
-        final drawingTools = registry.getDefinitionsByCategory(ToolCategory.drawing);
+        final drawingTools =
+            registry.getDefinitionsByCategory(ToolCategory.drawing);
 
         expect(drawingTools, hasLength(1));
         expect(drawingTools.first.toolId, equals('pen'));
@@ -243,7 +245,8 @@ void main() {
           ),
         );
 
-        final shapeTools = registry.getDefinitionsByCategory(ToolCategory.shapes);
+        final shapeTools =
+            registry.getDefinitionsByCategory(ToolCategory.shapes);
 
         expect(shapeTools, hasLength(2));
         expect(

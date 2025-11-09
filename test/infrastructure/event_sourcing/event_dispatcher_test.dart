@@ -214,7 +214,8 @@ void main() {
 
     test('dispatch returns handler return value', () {
       // Arrange
-      registry.registerHandler('CreatePathEvent', (state, event) => 'transformed state');
+      registry.registerHandler(
+          'CreatePathEvent', (state, event) => 'transformed state');
 
       final event = CreatePathEvent(
         eventId: 'evt-1',
@@ -364,9 +365,11 @@ void main() {
     group('dispatchAll', () {
       test('dispatches multiple events in sequence', () {
         // Arrange
-        registry.registerHandler('CreatePathEvent', (state, event) => (state as int) + 1);
+        registry.registerHandler(
+            'CreatePathEvent', (state, event) => (state as int) + 1);
 
-        registry.registerHandler('AddAnchorEvent', (state, event) => (state as int) + 10);
+        registry.registerHandler(
+            'AddAnchorEvent', (state, event) => (state as int) + 10);
 
         final events = [
           CreatePathEvent(
@@ -407,7 +410,8 @@ void main() {
 
       test('dispatchAll stops on unhandled event', () {
         // Arrange
-        registry.registerHandler('CreatePathEvent', (state, event) => (state as int) + 1);
+        registry.registerHandler(
+            'CreatePathEvent', (state, event) => (state as int) + 1);
 
         final events = [
           CreatePathEvent(

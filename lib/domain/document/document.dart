@@ -191,21 +191,23 @@ class Layer with _$Layer {
   /// This is useful for hit testing during selection operations.
   /// Objects are returned in reverse order (top-most first) so the
   /// topmost object can be selected.
-  List<VectorObject> objectsAtPoint(Point point) => objects.reversed.where((obj) => obj.hitTest(point)).toList();
+  List<VectorObject> objectsAtPoint(Point point) =>
+      objects.reversed.where((obj) => obj.hitTest(point)).toList();
 
   /// Returns objects whose bounds intersect the given rectangle.
   ///
   /// This is useful for marquee selection and viewport culling.
   List<VectorObject> objectsInBounds(Rectangle bounds) => objects.where((obj) {
-      final objBounds = obj.getBounds();
-      return _rectanglesIntersect(objBounds, bounds);
-    }).toList();
+        final objBounds = obj.getBounds();
+        return _rectanglesIntersect(objBounds, bounds);
+      }).toList();
 
   /// Helper to check if two rectangles intersect.
-  bool _rectanglesIntersect(Rectangle a, Rectangle b) => a.x < b.x + b.width &&
-        a.x + a.width > b.x &&
-        a.y < b.y + b.height &&
-        a.y + a.height > b.y;
+  bool _rectanglesIntersect(Rectangle a, Rectangle b) =>
+      a.x < b.x + b.width &&
+      a.x + a.width > b.x &&
+      a.y < b.y + b.height &&
+      a.y + a.height > b.y;
 }
 
 /// Represents the viewport state for the document.
@@ -260,17 +262,17 @@ class Viewport with _$Viewport {
   ///
   /// Applies zoom and pan transformations.
   Point toScreen(Point worldPoint) => Point(
-      x: (worldPoint.x - pan.x) * zoom + canvasSize.width / 2,
-      y: (worldPoint.y - pan.y) * zoom + canvasSize.height / 2,
-    );
+        x: (worldPoint.x - pan.x) * zoom + canvasSize.width / 2,
+        y: (worldPoint.y - pan.y) * zoom + canvasSize.height / 2,
+      );
 
   /// Converts a point from screen coordinates to world coordinates.
   ///
   /// Inverse of toScreen transformation.
   Point toWorld(Point screenPoint) => Point(
-      x: (screenPoint.x - canvasSize.width / 2) / zoom + pan.x,
-      y: (screenPoint.y - canvasSize.height / 2) / zoom + pan.y,
-    );
+        x: (screenPoint.x - canvasSize.width / 2) / zoom + pan.x,
+        y: (screenPoint.y - canvasSize.height / 2) / zoom + pan.y,
+      );
 }
 
 /// Represents a 2D size with width and height.
@@ -380,7 +382,8 @@ class Document with _$Document {
   ///
   /// Objects are returned bottom-to-top: first layer's objects appear first,
   /// within each layer objects are in their layer order.
-  List<VectorObject> getAllObjects() => layers.expand((layer) => layer.objects).toList();
+  List<VectorObject> getAllObjects() =>
+      layers.expand((layer) => layer.objects).toList();
 
   /// Finds an object by ID across all layers.
   ///
@@ -436,9 +439,8 @@ class Document with _$Document {
   /// Returns all selected objects.
   ///
   /// Objects are returned in rendering order (bottom-to-top).
-  List<VectorObject> getSelectedObjects() => getAllObjects()
-        .where((obj) => selection.contains(obj.id))
-        .toList();
+  List<VectorObject> getSelectedObjects() =>
+      getAllObjects().where((obj) => selection.contains(obj.id)).toList();
 
   /// Returns true if the document has any unsaved changes.
   ///

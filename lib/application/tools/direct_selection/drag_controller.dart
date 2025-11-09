@@ -195,18 +195,19 @@ class DragController {
   }
 
   /// Calculates the length (magnitude) of a vector.
-  double _vectorLength(Point vector) => math.sqrt(vector.x * vector.x + vector.y * vector.y);
+  double _vectorLength(Point vector) =>
+      math.sqrt(vector.x * vector.x + vector.y * vector.y);
 }
 
 /// Result of a drag calculation.
 class DragResult {
-
   DragResult({
     this.position,
     this.handleIn,
     this.handleOut,
     required this.anchorType,
   });
+
   /// The new anchor position (null if position unchanged).
   final Point? position;
 

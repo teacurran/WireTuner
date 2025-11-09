@@ -245,8 +245,10 @@ void main() {
 
         final fullDoc = fullState as Map<String, dynamic>;
         final fullLayers = fullDoc['layers'] as List;
-        final pathInFull = fullLayers.where((l) => l['id'] == 'path-new').toList();
-        expect(pathInFull, isNotEmpty, reason: 'Path should exist in full state');
+        final pathInFull =
+            fullLayers.where((l) => l['id'] == 'path-new').toList();
+        expect(pathInFull, isNotEmpty,
+            reason: 'Path should exist in full state');
 
         // Simulate undo: Replay to sequence 0 (before pen tool)
         final undoState = await replayer.replayFromSnapshot(
@@ -256,7 +258,8 @@ void main() {
 
         final undoDoc = undoState as Map<String, dynamic>;
         final undoLayers = undoDoc['layers'] as List;
-        final pathAfterUndo = undoLayers.where((l) => l['id'] == 'path-new').toList();
+        final pathAfterUndo =
+            undoLayers.where((l) => l['id'] == 'path-new').toList();
 
         expect(pathAfterUndo, isEmpty,
             reason: 'Path should not exist after undo to earlier state');
@@ -444,8 +447,7 @@ void _registerEventHandlers(EventHandlerRegistry registry) {
         layers.indexWhere((layer) => layer['id'] == anchorEvent.pathId);
     if (pathIndex != -1) {
       final path = Map<String, dynamic>.from(layers[pathIndex]);
-      final anchors =
-          List<Map<String, dynamic>>.from(path['anchors'] as List);
+      final anchors = List<Map<String, dynamic>>.from(path['anchors'] as List);
 
       final anchorData = <String, dynamic>{
         'x': anchorEvent.position.x,

@@ -66,12 +66,12 @@ class RectangleTool extends ShapeToolBase {
 
   @override
   Map<String, double> createShapeParameters(Rect boundingBox) => {
-      'centerX': boundingBox.center.dx,
-      'centerY': boundingBox.center.dy,
-      'width': boundingBox.width,
-      'height': boundingBox.height,
-      'cornerRadius': 0.0, // No rounded corners for basic rectangle tool
-    };
+        'centerX': boundingBox.center.dx,
+        'centerY': boundingBox.center.dy,
+        'width': boundingBox.width,
+        'height': boundingBox.height,
+        'cornerRadius': 0.0, // No rounded corners for basic rectangle tool
+      };
 
   @override
   ShapeType getShapeType() => ShapeType.rectangle;

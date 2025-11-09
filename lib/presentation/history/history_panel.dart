@@ -362,7 +362,8 @@ class _HistoryEntryTileState extends State<_HistoryEntryTile> {
                       entry.group.label,
                       style: TextStyle(
                         fontSize: 13,
-                        fontWeight: isCurrent ? FontWeight.w600 : FontWeight.w400,
+                        fontWeight:
+                            isCurrent ? FontWeight.w600 : FontWeight.w400,
                         color: Colors.black87,
                       ),
                       maxLines: 1,

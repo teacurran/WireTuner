@@ -78,7 +78,6 @@ enum SegmentType {
 /// ```
 @immutable
 class Segment {
-
   /// Creates a segment connecting two anchors.
   ///
   /// The [startAnchorIndex] and [endAnchorIndex] must be valid indices
@@ -141,6 +140,7 @@ class Segment {
         endAnchorIndex: endIndex,
         segmentType: SegmentType.bezier,
       );
+
   /// Index of the start anchor in the path's anchor list.
   ///
   /// This index must be valid (within bounds) for the path that owns

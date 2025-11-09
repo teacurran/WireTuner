@@ -32,7 +32,8 @@ void main() {
 
     setUp(() {
       exporter = PdfExporter();
-      tempDir = Directory.systemTemp.createTempSync('wiretuner_pdf_integration_');
+      tempDir =
+          Directory.systemTemp.createTempSync('wiretuner_pdf_integration_');
     });
 
     tearDown(() {
@@ -100,17 +101,22 @@ void main() {
 
       // Parse pdfinfo output
       final output = result.stdout as String;
-      expect(output, contains('Title:'), reason: 'PDF should have title metadata');
-      expect(output, contains('Creator:'), reason: 'PDF should have creator metadata');
-      expect(output, contains('Producer:'), reason: 'PDF should have producer metadata');
-      expect(output, contains('PDF version:'), reason: 'PDF should specify version');
+      expect(output, contains('Title:'),
+          reason: 'PDF should have title metadata');
+      expect(output, contains('Creator:'),
+          reason: 'PDF should have creator metadata');
+      expect(output, contains('Producer:'),
+          reason: 'PDF should have producer metadata');
+      expect(output, contains('PDF version:'),
+          reason: 'PDF should specify version');
       expect(output, contains('Pages:'), reason: 'PDF should have page count');
 
       // Verify page count
       final pagesMatch = RegExp(r'Pages:\s+(\d+)').firstMatch(output);
       expect(pagesMatch, isNotNull, reason: 'Should extract page count');
       final pageCount = int.parse(pagesMatch!.group(1)!);
-      expect(pageCount, equals(1), reason: 'Document should have exactly 1 page');
+      expect(pageCount, equals(1),
+          reason: 'Document should have exactly 1 page');
 
       // Verify PDF version
       expect(
@@ -166,16 +172,19 @@ void main() {
       final output = result.stdout as String;
 
       // Extract page size (format: "Page size: WIDTHxHEIGHT pts")
-      final pageSizeMatch = RegExp(r'Page size:\s+([\d.]+)\s+x\s+([\d.]+)\s+pts')
-          .firstMatch(output);
+      final pageSizeMatch =
+          RegExp(r'Page size:\s+([\d.]+)\s+x\s+([\d.]+)\s+pts')
+              .firstMatch(output);
 
       if (pageSizeMatch != null) {
         final width = double.parse(pageSizeMatch.group(1)!);
         final height = double.parse(pageSizeMatch.group(2)!);
 
         // Document bounds are 400x300, verify PDF matches
-        expect(width, equals(400.0), reason: 'PDF width should match document bounds');
-        expect(height, equals(300.0), reason: 'PDF height should match document bounds');
+        expect(width, equals(400.0),
+            reason: 'PDF width should match document bounds');
+        expect(height, equals(300.0),
+            reason: 'PDF height should match document bounds');
       } else {
         print('⚠️  Could not parse page size from pdfinfo output');
       }
@@ -270,10 +279,12 @@ void main() {
 
       // Validate with pdfinfo
       final result = await Process.run('pdfinfo', [pdfPath]);
-      expect(result.exitCode, equals(0), reason: 'pdfinfo should parse complex PDF');
+      expect(result.exitCode, equals(0),
+          reason: 'pdfinfo should parse complex PDF');
 
       final output = result.stdout as String;
-      expect(output, contains('Complex Test Document'), reason: 'Title should be embedded');
+      expect(output, contains('Complex Test Document'),
+          reason: 'Title should be embedded');
     });
 
     test('PDF with invisible layers excludes hidden content', () async {
@@ -369,7 +380,8 @@ void main() {
       expect(int.parse(pagesMatch!.group(1)!), equals(1));
     });
 
-    test('PDF opens in Preview without warnings (manual verification)', () async {
+    test('PDF opens in Preview without warnings (manual verification)',
+        () async {
       // This is a semi-automated test - export PDF for manual verification
       final document = Document(
         id: 'doc-preview',
@@ -445,8 +457,11 @@ void main() {
         (i) => VectorObject.path(
           id: 'path-$i',
           path: Path.line(
-            start: Point(x: (i % 100).toDouble() * 10, y: (i ~/ 100).toDouble() * 10),
-            end: Point(x: (i % 100).toDouble() * 10 + 5, y: (i ~/ 100).toDouble() * 10 + 5),
+            start: Point(
+                x: (i % 100).toDouble() * 10, y: (i ~/ 100).toDouble() * 10),
+            end: Point(
+                x: (i % 100).toDouble() * 10 + 5,
+                y: (i ~/ 100).toDouble() * 10 + 5),
           ),
         ),
       );

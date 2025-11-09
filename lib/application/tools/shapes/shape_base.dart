@@ -44,7 +44,6 @@ enum ShapeState {
 /// - [createShapeParameters]: Convert bounding box to parameter map
 /// - [getShapeType]: Return appropriate ShapeType enum value
 abstract class ShapeToolBase implements ITool {
-
   ShapeToolBase({
     required Document document,
     required ViewportController viewportController,

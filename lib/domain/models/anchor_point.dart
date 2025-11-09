@@ -82,7 +82,6 @@ enum AnchorType {
 /// ```
 @immutable
 class AnchorPoint {
-
   /// Creates an anchor point with the specified position and optional handles.
   ///
   /// The [position] is required and specifies the anchor's location on the canvas.
@@ -139,6 +138,7 @@ class AnchorPoint {
         handleOut: handleOut,
         anchorType: AnchorType.smooth,
       );
+
   /// The position of this anchor on the canvas.
   final Point position;
 
@@ -228,7 +228,6 @@ class AnchorPoint {
   int get hashCode => Object.hash(position, handleIn, handleOut, anchorType);
 
   @override
-  String toString() =>
-      'AnchorPoint(position: $position, handleIn: $handleIn, '
+  String toString() => 'AnchorPoint(position: $position, handleIn: $handleIn, '
       'handleOut: $handleOut, anchorType: $anchorType)';
 }

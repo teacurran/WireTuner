@@ -114,22 +114,27 @@ class _HistoryScrubberState extends State<HistoryScrubber>
   Map<ShortcutActivator, Intent> _buildShortcuts() {
     return {
       // J: Play/Pause
-      const SingleActivator(LogicalKeyboardKey.keyJ): const HistoryPlayPauseIntent(),
+      const SingleActivator(LogicalKeyboardKey.keyJ):
+          const HistoryPlayPauseIntent(),
 
       // K: Stop
       const SingleActivator(LogicalKeyboardKey.keyK): const HistoryStopIntent(),
 
       // L: Step Forward
-      const SingleActivator(LogicalKeyboardKey.keyL): const HistoryStepForwardIntent(),
+      const SingleActivator(LogicalKeyboardKey.keyL):
+          const HistoryStepForwardIntent(),
 
       // H: Step Backward
-      const SingleActivator(LogicalKeyboardKey.keyH): const HistoryStepBackwardIntent(),
+      const SingleActivator(LogicalKeyboardKey.keyH):
+          const HistoryStepBackwardIntent(),
 
       // Shift+L: Speed Up
-      const SingleActivator(LogicalKeyboardKey.keyL, shift: true): const HistorySpeedUpIntent(),
+      const SingleActivator(LogicalKeyboardKey.keyL, shift: true):
+          const HistorySpeedUpIntent(),
 
       // Shift+H: Speed Down
-      const SingleActivator(LogicalKeyboardKey.keyH, shift: true): const HistorySpeedDownIntent(),
+      const SingleActivator(LogicalKeyboardKey.keyH, shift: true):
+          const HistorySpeedDownIntent(),
     };
   }
 
@@ -254,9 +259,7 @@ class _HistoryScrubberState extends State<HistoryScrubber>
             size: 20,
           ),
           tooltip: _isPlaying ? 'Pause (J)' : 'Play (J)',
-          onPressed: currentIndex < maxIndex
-              ? _togglePlayback
-              : null,
+          onPressed: currentIndex < maxIndex ? _togglePlayback : null,
           padding: EdgeInsets.zero,
           constraints: const BoxConstraints(
             minWidth: 32,
@@ -464,7 +467,8 @@ class _HistoryScrubberState extends State<HistoryScrubber>
   void _decreaseSpeed() {
     setState(() {
       final currentIndex = _availableSpeeds.indexOf(_playbackSpeed);
-      final prevIndex = (currentIndex - 1 + _availableSpeeds.length) % _availableSpeeds.length;
+      final prevIndex = (currentIndex - 1 + _availableSpeeds.length) %
+          _availableSpeeds.length;
       _playbackSpeed = _availableSpeeds[prevIndex];
     });
   }

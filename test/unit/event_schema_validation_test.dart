@@ -84,7 +84,8 @@ void main() {
       // Validate required fields
       expect(json['eventId'], isNotNull);
       expect(json['timestamp'], isNotNull);
-      expect(event.eventType, equals('CreatePathEvent')); // eventType is a getter, not in JSON
+      expect(event.eventType,
+          equals('CreatePathEvent')); // eventType is a getter, not in JSON
       expect(json['pathId'], isNotNull);
       expect(json['startAnchor'], isNotNull);
       expect(json['startAnchor']['x'], isA<num>());
@@ -644,7 +645,8 @@ void main() {
       expect(
         json.keys.toSet(),
         equals(expectedKeys),
-        reason: 'If this fails, a new field was added without updating the schema',
+        reason:
+            'If this fails, a new field was added without updating the schema',
       );
     });
 
@@ -667,7 +669,8 @@ void main() {
       expect(
         json.keys.toSet(),
         equals(expectedKeys),
-        reason: 'If this fails, a new field was added without updating the schema',
+        reason:
+            'If this fails, a new field was added without updating the schema',
       );
     });
 
@@ -689,7 +692,8 @@ void main() {
       expect(
         json.keys.toSet(),
         equals(expectedKeys),
-        reason: 'If this fails, a new field was added without updating the schema',
+        reason:
+            'If this fails, a new field was added without updating the schema',
       );
     });
 
@@ -712,7 +716,8 @@ void main() {
       expect(
         json.keys.toSet(),
         equals(expectedKeys),
-        reason: 'If this fails, a new field was added without updating the schema',
+        reason:
+            'If this fails, a new field was added without updating the schema',
       );
     });
   });
@@ -723,7 +728,8 @@ void main() {
       expect(
         schemaFile.existsSync(),
         isTrue,
-        reason: 'Schema file must exist at docs/specs/event_payload.schema.json',
+        reason:
+            'Schema file must exist at docs/specs/event_payload.schema.json',
       );
     });
 
@@ -751,7 +757,8 @@ void main() {
 
     test('schema defines all event types in oneOf', () {
       final schemaFile = File('docs/specs/event_payload.schema.json');
-      final schemaJson = jsonDecode(schemaFile.readAsStringSync()) as Map<String, dynamic>;
+      final schemaJson =
+          jsonDecode(schemaFile.readAsStringSync()) as Map<String, dynamic>;
 
       final oneOf = schemaJson['oneOf'] as List?;
       expect(oneOf, isNotNull, reason: 'Schema must have oneOf discriminator');

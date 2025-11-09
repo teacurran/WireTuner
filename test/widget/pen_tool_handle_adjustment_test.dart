@@ -90,42 +90,58 @@ void main() {
         eventRecorder.clear();
 
         // Start a path (first click)
-        penTool.onPointerDown(const PointerDownEvent(
-          position: ui.Offset(100, 100),
-        ),);
-        penTool.onPointerUp(const PointerUpEvent(
-          position: ui.Offset(100, 100),
-        ),);
+        penTool.onPointerDown(
+          const PointerDownEvent(
+            position: ui.Offset(100, 100),
+          ),
+        );
+        penTool.onPointerUp(
+          const PointerUpEvent(
+            position: ui.Offset(100, 100),
+          ),
+        );
         eventRecorder.clear();
 
         // Add Bezier anchor with initial handles (drag)
-        penTool.onPointerDown(const PointerDownEvent(
-          position: ui.Offset(200, 100),
-        ),);
-        penTool.onPointerMove(const PointerMoveEvent(
-          position: ui.Offset(250, 150),
-        ),);
-        penTool.onPointerUp(const PointerUpEvent(
-          position: ui.Offset(250, 150),
-        ),);
+        penTool.onPointerDown(
+          const PointerDownEvent(
+            position: ui.Offset(200, 100),
+          ),
+        );
+        penTool.onPointerMove(
+          const PointerMoveEvent(
+            position: ui.Offset(250, 150),
+          ),
+        );
+        penTool.onPointerUp(
+          const PointerUpEvent(
+            position: ui.Offset(250, 150),
+          ),
+        );
         eventRecorder.clear();
       });
 
       test('should emit ModifyAnchorEvent when adjusting handles', () {
         // Click last anchor to enter adjustment mode
-        penTool.onPointerDown(const PointerDownEvent(
-          position: ui.Offset(200, 100),
-        ),);
+        penTool.onPointerDown(
+          const PointerDownEvent(
+            position: ui.Offset(200, 100),
+          ),
+        );
 
         // Drag to adjust handles
-        penTool.onPointerMove(const PointerMoveEvent(
-          position: ui.Offset(240, 120),
-        ),);
+        penTool.onPointerMove(
+          const PointerMoveEvent(
+            position: ui.Offset(240, 120),
+          ),
+        );
 
         // Release to commit adjustment
-        penTool.onPointerUp(const PointerUpEvent(
-          position: ui.Offset(240, 120),
-        ),);
+        penTool.onPointerUp(
+          const PointerUpEvent(
+            position: ui.Offset(240, 120),
+          ),
+        );
 
         // Should have emitted one ModifyAnchorEvent
         expect(eventRecorder.recordedEvents.length, equals(1));
@@ -140,18 +156,24 @@ void main() {
 
       test('should calculate handleOut as relative offset', () {
         // Click last anchor at (200, 100)
-        penTool.onPointerDown(const PointerDownEvent(
-          position: ui.Offset(200, 100),
-        ),);
+        penTool.onPointerDown(
+          const PointerDownEvent(
+            position: ui.Offset(200, 100),
+          ),
+        );
 
         // Drag to (240, 120)
-        penTool.onPointerMove(const PointerMoveEvent(
-          position: ui.Offset(240, 120),
-        ),);
+        penTool.onPointerMove(
+          const PointerMoveEvent(
+            position: ui.Offset(240, 120),
+          ),
+        );
 
-        penTool.onPointerUp(const PointerUpEvent(
-          position: ui.Offset(240, 120),
-        ),);
+        penTool.onPointerUp(
+          const PointerUpEvent(
+            position: ui.Offset(240, 120),
+          ),
+        );
 
         final modify = eventRecorder.recordedEvents[0] as ModifyAnchorEvent;
 
@@ -160,17 +182,24 @@ void main() {
         expect(modify.handleOut!.y, equals(20.0));
       });
 
-      test('should create symmetric handles with mirrored handleIn by default', () {
+      test('should create symmetric handles with mirrored handleIn by default',
+          () {
         // Adjust handles without Alt key
-        penTool.onPointerDown(const PointerDownEvent(
-          position: ui.Offset(200, 100),
-        ),);
-        penTool.onPointerMove(const PointerMoveEvent(
-          position: ui.Offset(240, 120),
-        ),);
-        penTool.onPointerUp(const PointerUpEvent(
-          position: ui.Offset(240, 120),
-        ),);
+        penTool.onPointerDown(
+          const PointerDownEvent(
+            position: ui.Offset(200, 100),
+          ),
+        );
+        penTool.onPointerMove(
+          const PointerMoveEvent(
+            position: ui.Offset(240, 120),
+          ),
+        );
+        penTool.onPointerUp(
+          const PointerUpEvent(
+            position: ui.Offset(240, 120),
+          ),
+        );
 
         final modify = eventRecorder.recordedEvents[0] as ModifyAnchorEvent;
 
@@ -185,25 +214,35 @@ void main() {
 
       test('should use correct anchor index', () {
         // Add another anchor before adjusting
-        penTool.onPointerDown(const PointerDownEvent(
-          position: ui.Offset(300, 200),
-        ),);
-        penTool.onPointerUp(const PointerUpEvent(
-          position: ui.Offset(300, 200),
-        ),);
+        penTool.onPointerDown(
+          const PointerDownEvent(
+            position: ui.Offset(300, 200),
+          ),
+        );
+        penTool.onPointerUp(
+          const PointerUpEvent(
+            position: ui.Offset(300, 200),
+          ),
+        );
 
         eventRecorder.clear();
 
         // Now adjust last anchor (index 2)
-        penTool.onPointerDown(const PointerDownEvent(
-          position: ui.Offset(300, 200),
-        ),);
-        penTool.onPointerMove(const PointerMoveEvent(
-          position: ui.Offset(320, 220),
-        ),);
-        penTool.onPointerUp(const PointerUpEvent(
-          position: ui.Offset(320, 220),
-        ),);
+        penTool.onPointerDown(
+          const PointerDownEvent(
+            position: ui.Offset(300, 200),
+          ),
+        );
+        penTool.onPointerMove(
+          const PointerMoveEvent(
+            position: ui.Offset(320, 220),
+          ),
+        );
+        penTool.onPointerUp(
+          const PointerUpEvent(
+            position: ui.Offset(320, 220),
+          ),
+        );
 
         final modify = eventRecorder.recordedEvents[0] as ModifyAnchorEvent;
 
@@ -213,25 +252,35 @@ void main() {
 
       test('should return to creating path state after adjustment', () {
         // Click last anchor
-        penTool.onPointerDown(const PointerDownEvent(
-          position: ui.Offset(200, 100),
-        ),);
-        penTool.onPointerMove(const PointerMoveEvent(
-          position: ui.Offset(240, 120),
-        ),);
-        penTool.onPointerUp(const PointerUpEvent(
-          position: ui.Offset(240, 120),
-        ),);
+        penTool.onPointerDown(
+          const PointerDownEvent(
+            position: ui.Offset(200, 100),
+          ),
+        );
+        penTool.onPointerMove(
+          const PointerMoveEvent(
+            position: ui.Offset(240, 120),
+          ),
+        );
+        penTool.onPointerUp(
+          const PointerUpEvent(
+            position: ui.Offset(240, 120),
+          ),
+        );
 
         eventRecorder.clear();
 
         // Should be able to add another anchor
-        penTool.onPointerDown(const PointerDownEvent(
-          position: ui.Offset(300, 100),
-        ),);
-        penTool.onPointerUp(const PointerUpEvent(
-          position: ui.Offset(300, 100),
-        ),);
+        penTool.onPointerDown(
+          const PointerDownEvent(
+            position: ui.Offset(300, 100),
+          ),
+        );
+        penTool.onPointerUp(
+          const PointerUpEvent(
+            position: ui.Offset(300, 100),
+          ),
+        );
 
         // Should have emitted AddAnchorEvent (not ModifyAnchorEvent)
         expect(eventRecorder.recordedEvents.length, equals(1));
@@ -245,41 +294,58 @@ void main() {
         eventRecorder.clear();
 
         // Start a path with Bezier anchor
-        penTool.onPointerDown(const PointerDownEvent(
-          position: ui.Offset(100, 100),
-        ),);
-        penTool.onPointerUp(const PointerUpEvent(
-          position: ui.Offset(100, 100),
-        ),);
+        penTool.onPointerDown(
+          const PointerDownEvent(
+            position: ui.Offset(100, 100),
+          ),
+        );
+        penTool.onPointerUp(
+          const PointerUpEvent(
+            position: ui.Offset(100, 100),
+          ),
+        );
 
-        penTool.onPointerDown(const PointerDownEvent(
-          position: ui.Offset(200, 100),
-        ),);
-        penTool.onPointerMove(const PointerMoveEvent(
-          position: ui.Offset(250, 150),
-        ),);
-        penTool.onPointerUp(const PointerUpEvent(
-          position: ui.Offset(250, 150),
-        ),);
+        penTool.onPointerDown(
+          const PointerDownEvent(
+            position: ui.Offset(200, 100),
+          ),
+        );
+        penTool.onPointerMove(
+          const PointerMoveEvent(
+            position: ui.Offset(250, 150),
+          ),
+        );
+        penTool.onPointerUp(
+          const PointerUpEvent(
+            position: ui.Offset(250, 150),
+          ),
+        );
 
         eventRecorder.clear();
       });
 
-      testWidgets('should create independent handles when Alt pressed during adjustment',
+      testWidgets(
+          'should create independent handles when Alt pressed during adjustment',
           (tester) async {
         // Simulate Alt key pressed
         await tester.sendKeyDownEvent(LogicalKeyboardKey.alt);
 
         // Adjust handles with Alt key
-        penTool.onPointerDown(const PointerDownEvent(
-          position: ui.Offset(200, 100),
-        ),);
-        penTool.onPointerMove(const PointerMoveEvent(
-          position: ui.Offset(240, 120),
-        ),);
-        penTool.onPointerUp(const PointerUpEvent(
-          position: ui.Offset(240, 120),
-        ),);
+        penTool.onPointerDown(
+          const PointerDownEvent(
+            position: ui.Offset(200, 100),
+          ),
+        );
+        penTool.onPointerMove(
+          const PointerMoveEvent(
+            position: ui.Offset(240, 120),
+          ),
+        );
+        penTool.onPointerUp(
+          const PointerUpEvent(
+            position: ui.Offset(240, 120),
+          ),
+        );
 
         final modify = eventRecorder.recordedEvents[0] as ModifyAnchorEvent;
 
@@ -296,15 +362,21 @@ void main() {
       testWidgets('should create symmetric handles when Alt not pressed',
           (tester) async {
         // Adjust handles without Alt key
-        penTool.onPointerDown(const PointerDownEvent(
-          position: ui.Offset(200, 100),
-        ),);
-        penTool.onPointerMove(const PointerMoveEvent(
-          position: ui.Offset(240, 120),
-        ),);
-        penTool.onPointerUp(const PointerUpEvent(
-          position: ui.Offset(240, 120),
-        ),);
+        penTool.onPointerDown(
+          const PointerDownEvent(
+            position: ui.Offset(200, 100),
+          ),
+        );
+        penTool.onPointerMove(
+          const PointerMoveEvent(
+            position: ui.Offset(240, 120),
+          ),
+        );
+        penTool.onPointerUp(
+          const PointerUpEvent(
+            position: ui.Offset(240, 120),
+          ),
+        );
 
         final modify = eventRecorder.recordedEvents[0] as ModifyAnchorEvent;
 
@@ -322,47 +394,69 @@ void main() {
         eventRecorder.clear();
 
         // Create path with multiple anchors
-        penTool.onPointerDown(const PointerDownEvent(
-          position: ui.Offset(100, 100),
-        ),);
-        penTool.onPointerUp(const PointerUpEvent(
-          position: ui.Offset(100, 100),
-        ),);
+        penTool.onPointerDown(
+          const PointerDownEvent(
+            position: ui.Offset(100, 100),
+          ),
+        );
+        penTool.onPointerUp(
+          const PointerUpEvent(
+            position: ui.Offset(100, 100),
+          ),
+        );
 
-        penTool.onPointerDown(const PointerDownEvent(
-          position: ui.Offset(200, 100),
-        ),);
-        penTool.onPointerMove(const PointerMoveEvent(
-          position: ui.Offset(250, 150),
-        ),);
-        penTool.onPointerUp(const PointerUpEvent(
-          position: ui.Offset(250, 150),
-        ),);
+        penTool.onPointerDown(
+          const PointerDownEvent(
+            position: ui.Offset(200, 100),
+          ),
+        );
+        penTool.onPointerMove(
+          const PointerMoveEvent(
+            position: ui.Offset(250, 150),
+          ),
+        );
+        penTool.onPointerUp(
+          const PointerUpEvent(
+            position: ui.Offset(250, 150),
+          ),
+        );
 
-        penTool.onPointerDown(const PointerDownEvent(
-          position: ui.Offset(300, 100),
-        ),);
-        penTool.onPointerMove(const PointerMoveEvent(
-          position: ui.Offset(350, 150),
-        ),);
-        penTool.onPointerUp(const PointerUpEvent(
-          position: ui.Offset(350, 150),
-        ),);
+        penTool.onPointerDown(
+          const PointerDownEvent(
+            position: ui.Offset(300, 100),
+          ),
+        );
+        penTool.onPointerMove(
+          const PointerMoveEvent(
+            position: ui.Offset(350, 150),
+          ),
+        );
+        penTool.onPointerUp(
+          const PointerUpEvent(
+            position: ui.Offset(350, 150),
+          ),
+        );
 
         eventRecorder.clear();
       });
 
       test('should allow multiple adjustments on same anchor', () {
         // First adjustment
-        penTool.onPointerDown(const PointerDownEvent(
-          position: ui.Offset(300, 100),
-        ),);
-        penTool.onPointerMove(const PointerMoveEvent(
-          position: ui.Offset(320, 120),
-        ),);
-        penTool.onPointerUp(const PointerUpEvent(
-          position: ui.Offset(320, 120),
-        ),);
+        penTool.onPointerDown(
+          const PointerDownEvent(
+            position: ui.Offset(300, 100),
+          ),
+        );
+        penTool.onPointerMove(
+          const PointerMoveEvent(
+            position: ui.Offset(320, 120),
+          ),
+        );
+        penTool.onPointerUp(
+          const PointerUpEvent(
+            position: ui.Offset(320, 120),
+          ),
+        );
 
         expect(eventRecorder.recordedEvents.length, equals(1));
         final modify1 = eventRecorder.recordedEvents[0] as ModifyAnchorEvent;
@@ -373,15 +467,21 @@ void main() {
         eventRecorder.clear();
 
         // Second adjustment on same anchor
-        penTool.onPointerDown(const PointerDownEvent(
-          position: ui.Offset(300, 100),
-        ),);
-        penTool.onPointerMove(const PointerMoveEvent(
-          position: ui.Offset(330, 110),
-        ),);
-        penTool.onPointerUp(const PointerUpEvent(
-          position: ui.Offset(330, 110),
-        ),);
+        penTool.onPointerDown(
+          const PointerDownEvent(
+            position: ui.Offset(300, 100),
+          ),
+        );
+        penTool.onPointerMove(
+          const PointerMoveEvent(
+            position: ui.Offset(330, 110),
+          ),
+        );
+        penTool.onPointerUp(
+          const PointerUpEvent(
+            position: ui.Offset(330, 110),
+          ),
+        );
 
         expect(eventRecorder.recordedEvents.length, equals(1));
         final modify2 = eventRecorder.recordedEvents[0] as ModifyAnchorEvent;
@@ -392,31 +492,45 @@ void main() {
 
       test('should track each adjustment as separate event', () {
         // First adjustment
-        penTool.onPointerDown(const PointerDownEvent(
-          position: ui.Offset(300, 100),
-        ),);
-        penTool.onPointerMove(const PointerMoveEvent(
-          position: ui.Offset(320, 120),
-        ),);
-        penTool.onPointerUp(const PointerUpEvent(
-          position: ui.Offset(320, 120),
-        ),);
+        penTool.onPointerDown(
+          const PointerDownEvent(
+            position: ui.Offset(300, 100),
+          ),
+        );
+        penTool.onPointerMove(
+          const PointerMoveEvent(
+            position: ui.Offset(320, 120),
+          ),
+        );
+        penTool.onPointerUp(
+          const PointerUpEvent(
+            position: ui.Offset(320, 120),
+          ),
+        );
 
         // Second adjustment
-        penTool.onPointerDown(const PointerDownEvent(
-          position: ui.Offset(300, 100),
-        ),);
-        penTool.onPointerMove(const PointerMoveEvent(
-          position: ui.Offset(330, 110),
-        ),);
-        penTool.onPointerUp(const PointerUpEvent(
-          position: ui.Offset(330, 110),
-        ),);
+        penTool.onPointerDown(
+          const PointerDownEvent(
+            position: ui.Offset(300, 100),
+          ),
+        );
+        penTool.onPointerMove(
+          const PointerMoveEvent(
+            position: ui.Offset(330, 110),
+          ),
+        );
+        penTool.onPointerUp(
+          const PointerUpEvent(
+            position: ui.Offset(330, 110),
+          ),
+        );
 
         // Should have 2 ModifyAnchorEvent events
         expect(eventRecorder.recordedEvents.length, equals(2));
-        expect(eventRecorder.recordedEvents.every((e) => e is ModifyAnchorEvent),
-            isTrue,);
+        expect(
+          eventRecorder.recordedEvents.every((e) => e is ModifyAnchorEvent),
+          isTrue,
+        );
       });
     });
 
@@ -426,37 +540,54 @@ void main() {
         eventRecorder.clear();
 
         // Create path with Bezier anchor
-        penTool.onPointerDown(const PointerDownEvent(
-          position: ui.Offset(100, 100),
-        ),);
-        penTool.onPointerUp(const PointerUpEvent(
-          position: ui.Offset(100, 100),
-        ),);
+        penTool.onPointerDown(
+          const PointerDownEvent(
+            position: ui.Offset(100, 100),
+          ),
+        );
+        penTool.onPointerUp(
+          const PointerUpEvent(
+            position: ui.Offset(100, 100),
+          ),
+        );
 
-        penTool.onPointerDown(const PointerDownEvent(
-          position: ui.Offset(200, 100),
-        ),);
-        penTool.onPointerMove(const PointerMoveEvent(
-          position: ui.Offset(250, 150),
-        ),);
-        penTool.onPointerUp(const PointerUpEvent(
-          position: ui.Offset(250, 150),
-        ),);
+        penTool.onPointerDown(
+          const PointerDownEvent(
+            position: ui.Offset(200, 100),
+          ),
+        );
+        penTool.onPointerMove(
+          const PointerMoveEvent(
+            position: ui.Offset(250, 150),
+          ),
+        );
+        penTool.onPointerUp(
+          const PointerUpEvent(
+            position: ui.Offset(250, 150),
+          ),
+        );
 
         eventRecorder.clear();
       });
 
-      test('should enter adjustment mode when clicking within threshold (10px)', () {
+      test('should enter adjustment mode when clicking within threshold (10px)',
+          () {
         // Click 5px away from anchor (within threshold)
-        penTool.onPointerDown(const PointerDownEvent(
-          position: ui.Offset(205, 100),
-        ),);
-        penTool.onPointerMove(const PointerMoveEvent(
-          position: ui.Offset(240, 120),
-        ),);
-        penTool.onPointerUp(const PointerUpEvent(
-          position: ui.Offset(240, 120),
-        ),);
+        penTool.onPointerDown(
+          const PointerDownEvent(
+            position: ui.Offset(205, 100),
+          ),
+        );
+        penTool.onPointerMove(
+          const PointerMoveEvent(
+            position: ui.Offset(240, 120),
+          ),
+        );
+        penTool.onPointerUp(
+          const PointerUpEvent(
+            position: ui.Offset(240, 120),
+          ),
+        );
 
         // Should emit ModifyAnchorEvent
         expect(eventRecorder.recordedEvents.length, equals(1));
@@ -465,12 +596,16 @@ void main() {
 
       test('should create new anchor when clicking outside threshold', () {
         // Click 20px away from anchor (outside threshold)
-        penTool.onPointerDown(const PointerDownEvent(
-          position: ui.Offset(220, 100),
-        ),);
-        penTool.onPointerUp(const PointerUpEvent(
-          position: ui.Offset(220, 100),
-        ),);
+        penTool.onPointerDown(
+          const PointerDownEvent(
+            position: ui.Offset(220, 100),
+          ),
+        );
+        penTool.onPointerUp(
+          const PointerUpEvent(
+            position: ui.Offset(220, 100),
+          ),
+        );
 
         // Should emit AddAnchorEvent (new anchor)
         expect(eventRecorder.recordedEvents.length, equals(1));
@@ -479,54 +614,77 @@ void main() {
     });
 
     group('Integration with Path Creation', () {
-      test('should integrate handle adjustment into path creation workflow', () {
+      test('should integrate handle adjustment into path creation workflow',
+          () {
         penTool.onActivate();
         eventRecorder.clear();
 
         // Start path
-        penTool.onPointerDown(const PointerDownEvent(
-          position: ui.Offset(100, 100),
-        ),);
-        penTool.onPointerUp(const PointerUpEvent(
-          position: ui.Offset(100, 100),
-        ),);
+        penTool.onPointerDown(
+          const PointerDownEvent(
+            position: ui.Offset(100, 100),
+          ),
+        );
+        penTool.onPointerUp(
+          const PointerUpEvent(
+            position: ui.Offset(100, 100),
+          ),
+        );
 
         // Add Bezier anchor
-        penTool.onPointerDown(const PointerDownEvent(
-          position: ui.Offset(200, 100),
-        ),);
-        penTool.onPointerMove(const PointerMoveEvent(
-          position: ui.Offset(250, 150),
-        ),);
-        penTool.onPointerUp(const PointerUpEvent(
-          position: ui.Offset(250, 150),
-        ),);
+        penTool.onPointerDown(
+          const PointerDownEvent(
+            position: ui.Offset(200, 100),
+          ),
+        );
+        penTool.onPointerMove(
+          const PointerMoveEvent(
+            position: ui.Offset(250, 150),
+          ),
+        );
+        penTool.onPointerUp(
+          const PointerUpEvent(
+            position: ui.Offset(250, 150),
+          ),
+        );
 
         // Adjust handles on last anchor
-        penTool.onPointerDown(const PointerDownEvent(
-          position: ui.Offset(200, 100),
-        ),);
-        penTool.onPointerMove(const PointerMoveEvent(
-          position: ui.Offset(240, 120),
-        ),);
-        penTool.onPointerUp(const PointerUpEvent(
-          position: ui.Offset(240, 120),
-        ),);
+        penTool.onPointerDown(
+          const PointerDownEvent(
+            position: ui.Offset(200, 100),
+          ),
+        );
+        penTool.onPointerMove(
+          const PointerMoveEvent(
+            position: ui.Offset(240, 120),
+          ),
+        );
+        penTool.onPointerUp(
+          const PointerUpEvent(
+            position: ui.Offset(240, 120),
+          ),
+        );
 
         // Add another anchor
-        penTool.onPointerDown(const PointerDownEvent(
-          position: ui.Offset(300, 100),
-        ),);
-        penTool.onPointerUp(const PointerUpEvent(
-          position: ui.Offset(300, 100),
-        ),);
+        penTool.onPointerDown(
+          const PointerDownEvent(
+            position: ui.Offset(300, 100),
+          ),
+        );
+        penTool.onPointerUp(
+          const PointerUpEvent(
+            position: ui.Offset(300, 100),
+          ),
+        );
 
         // Finish path
-        penTool.onKeyPress(const KeyDownEvent(
-          logicalKey: LogicalKeyboardKey.enter,
-          timeStamp: Duration.zero,
-          physicalKey: PhysicalKeyboardKey.enter,
-        ),);
+        penTool.onKeyPress(
+          const KeyDownEvent(
+            logicalKey: LogicalKeyboardKey.enter,
+            timeStamp: Duration.zero,
+            physicalKey: PhysicalKeyboardKey.enter,
+          ),
+        );
 
         // Event sequence:
         // 1. StartGroupEvent
@@ -558,45 +716,67 @@ void main() {
         eventRecorder.clear();
 
         // Create path with 3 anchors
-        penTool.onPointerDown(const PointerDownEvent(
-          position: ui.Offset(100, 100),
-        ),);
-        penTool.onPointerUp(const PointerUpEvent(
-          position: ui.Offset(100, 100),
-        ),);
+        penTool.onPointerDown(
+          const PointerDownEvent(
+            position: ui.Offset(100, 100),
+          ),
+        );
+        penTool.onPointerUp(
+          const PointerUpEvent(
+            position: ui.Offset(100, 100),
+          ),
+        );
 
-        penTool.onPointerDown(const PointerDownEvent(
-          position: ui.Offset(200, 100),
-        ),);
-        penTool.onPointerMove(const PointerMoveEvent(
-          position: ui.Offset(250, 150),
-        ),);
-        penTool.onPointerUp(const PointerUpEvent(
-          position: ui.Offset(250, 150),
-        ),);
+        penTool.onPointerDown(
+          const PointerDownEvent(
+            position: ui.Offset(200, 100),
+          ),
+        );
+        penTool.onPointerMove(
+          const PointerMoveEvent(
+            position: ui.Offset(250, 150),
+          ),
+        );
+        penTool.onPointerUp(
+          const PointerUpEvent(
+            position: ui.Offset(250, 150),
+          ),
+        );
 
-        penTool.onPointerDown(const PointerDownEvent(
-          position: ui.Offset(300, 100),
-        ),);
-        penTool.onPointerMove(const PointerMoveEvent(
-          position: ui.Offset(350, 150),
-        ),);
-        penTool.onPointerUp(const PointerUpEvent(
-          position: ui.Offset(350, 150),
-        ),);
+        penTool.onPointerDown(
+          const PointerDownEvent(
+            position: ui.Offset(300, 100),
+          ),
+        );
+        penTool.onPointerMove(
+          const PointerMoveEvent(
+            position: ui.Offset(350, 150),
+          ),
+        );
+        penTool.onPointerUp(
+          const PointerUpEvent(
+            position: ui.Offset(350, 150),
+          ),
+        );
 
         eventRecorder.clear();
 
         // Adjust second anchor (index 1)
-        penTool.onPointerDown(const PointerDownEvent(
-          position: ui.Offset(200, 100),
-        ),);
-        penTool.onPointerMove(const PointerMoveEvent(
-          position: ui.Offset(220, 110),
-        ),);
-        penTool.onPointerUp(const PointerUpEvent(
-          position: ui.Offset(220, 110),
-        ),);
+        penTool.onPointerDown(
+          const PointerDownEvent(
+            position: ui.Offset(200, 100),
+          ),
+        );
+        penTool.onPointerMove(
+          const PointerMoveEvent(
+            position: ui.Offset(220, 110),
+          ),
+        );
+        penTool.onPointerUp(
+          const PointerUpEvent(
+            position: ui.Offset(220, 110),
+          ),
+        );
 
         // Note: Currently can only adjust last anchor during path creation
         // This test documents expected behavior (should create new anchor instead)

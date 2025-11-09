@@ -164,7 +164,8 @@ void main() {
       expect(controller.zoomLevel, lessThan(initialZoom));
     });
 
-    testWidgets('reset viewport with Cmd+0 on Mac', (WidgetTester tester) async {
+    testWidgets('reset viewport with Cmd+0 on Mac',
+        (WidgetTester tester) async {
       await tester.pumpWidget(
         MaterialApp(
           home: Scaffold(
@@ -285,7 +286,8 @@ void main() {
       expect(controller.zoomLevel, closeTo(1.08, 0.01));
     });
 
-    testWidgets('zoom respects min/max constraints', (WidgetTester tester) async {
+    testWidgets('zoom respects min/max constraints',
+        (WidgetTester tester) async {
       await tester.pumpWidget(
         MaterialApp(
           home: Scaffold(

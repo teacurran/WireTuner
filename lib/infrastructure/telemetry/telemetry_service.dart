@@ -32,7 +32,6 @@ import 'package:wiretuner/presentation/canvas/viewport/viewport_state.dart';
 /// telemetry.printSummary();
 /// ```
 class TelemetryService {
-
   /// Creates a telemetry service.
   ///
   /// [enabled] controls whether metrics are recorded (default: debug mode).
@@ -45,6 +44,7 @@ class TelemetryService {
     this.fpsWarningThreshold = 55.0,
     this.maxMetricsHistory = 1000,
   }) : enabled = enabled ?? kDebugMode;
+
   /// Whether telemetry logging is enabled.
   bool enabled;
 
@@ -137,8 +137,8 @@ class TelemetryService {
 
   /// Gets the total pan distance in pixels.
   double get totalPanDistance => _viewportMetrics
-        .where((m) => m.panDelta != null)
-        .fold<double>(0.0, (sum, m) => sum + m.panDelta!.distance);
+      .where((m) => m.panDelta != null)
+      .fold<double>(0.0, (sum, m) => sum + m.panDelta!.distance);
 
   /// Gets the average pan delta per pan event.
   double get averagePanDelta {
@@ -182,8 +182,10 @@ class TelemetryService {
   /// Returns a read-only view of recent metrics.
   ///
   /// [count] limits how many recent metrics to return (default: 100).
-  List<ViewportTelemetry> getRecentMetrics({int count = 100}) => _viewportMetrics.reversed.take(count).toList();
+  List<ViewportTelemetry> getRecentMetrics({int count = 100}) =>
+      _viewportMetrics.reversed.take(count).toList();
 
   /// Returns metrics matching a specific event type.
-  List<ViewportTelemetry> getMetricsByType(String eventType) => _viewportMetrics.where((m) => m.eventType == eventType).toList();
+  List<ViewportTelemetry> getMetricsByType(String eventType) =>
+      _viewportMetrics.where((m) => m.eventType == eventType).toList();
 }

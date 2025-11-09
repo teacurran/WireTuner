@@ -61,11 +61,13 @@ class InertiaController {
     this.maxDurationMs = 300,
     this.maxSamples = 5,
     this.samplingIntervalMs = 50,
-  }) : assert(velocityThreshold >= 0, 'velocityThreshold must be non-negative'),
-       assert(decayFactor > 0 && decayFactor < 1, 'decayFactor must be in (0, 1)'),
-       assert(maxDurationMs > 0, 'maxDurationMs must be positive'),
-       assert(maxSamples >= 2, 'maxSamples must be at least 2'),
-       assert(samplingIntervalMs > 0, 'samplingIntervalMs must be positive');
+  })  : assert(
+            velocityThreshold >= 0, 'velocityThreshold must be non-negative'),
+        assert(decayFactor > 0 && decayFactor < 1,
+            'decayFactor must be in (0, 1)'),
+        assert(maxDurationMs > 0, 'maxDurationMs must be positive'),
+        assert(maxSamples >= 2, 'maxSamples must be at least 2'),
+        assert(samplingIntervalMs > 0, 'samplingIntervalMs must be positive');
 
   /// Minimum velocity threshold to activate inertia (world units/ms).
   ///

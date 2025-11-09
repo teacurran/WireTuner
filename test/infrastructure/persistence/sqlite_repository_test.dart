@@ -118,8 +118,7 @@ void main() {
 
       test('should return null when retrieving non-existent document',
           () async {
-        final metadata =
-            await repository.getDocumentMetadata('non-existent');
+        final metadata = await repository.getDocumentMetadata('non-existent');
 
         expect(metadata, isNull);
       });
@@ -337,7 +336,8 @@ void main() {
         expect(await repository.getMaxSequence('event-doc'), equals(1));
       });
 
-      test('should throw StateError when inserting event for non-existent document',
+      test(
+          'should throw StateError when inserting event for non-existent document',
           () async {
         final event = CreatePathEvent(
           eventId: 'evt-orphan',
@@ -505,7 +505,8 @@ void main() {
         expect(pruneCount, equals(0));
       });
 
-      test('should throw StateError when creating snapshot for non-existent document',
+      test(
+          'should throw StateError when creating snapshot for non-existent document',
           () async {
         await expectLater(
           repository.createSnapshot(
@@ -539,7 +540,8 @@ void main() {
             'document_id': 'txn-doc',
             'event_sequence': 0,
             'event_type': 'CreatePathEvent',
-            'event_payload': '{"eventType":"CreatePathEvent","eventId":"evt-1","timestamp":${DateTime.now().millisecondsSinceEpoch},"pathId":"path-1","startAnchor":{"x":100.0,"y":200.0}}',
+            'event_payload':
+                '{"eventType":"CreatePathEvent","eventId":"evt-1","timestamp":${DateTime.now().millisecondsSinceEpoch},"pathId":"path-1","startAnchor":{"x":100.0,"y":200.0}}',
             'timestamp': DateTime.now().millisecondsSinceEpoch,
           });
         });

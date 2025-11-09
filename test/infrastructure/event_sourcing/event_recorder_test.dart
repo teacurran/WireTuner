@@ -61,8 +61,11 @@ class MockEventStore implements EventStore {
   }
 
   /// Verifies that insertEvent was called with the specified parameters.
-  bool wasCalledWith(String documentId, EventBase event) => calls.any((call) =>
-        call.documentId == documentId && call.event.eventId == event.eventId,);
+  bool wasCalledWith(String documentId, EventBase event) => calls.any(
+        (call) =>
+            call.documentId == documentId &&
+            call.event.eventId == event.eventId,
+      );
 
   /// Returns the number of times insertEvent was called.
   int get callCount => calls.length;
@@ -79,7 +82,6 @@ class MockEventStore implements EventStore {
 
 /// Records a call to insertEvent for verification.
 class CallRecord {
-
   CallRecord(this.documentId, this.event);
   final String documentId;
   final EventBase event;
@@ -391,7 +393,8 @@ void main() {
       );
 
       mockEventStore.shouldThrowOnInsert = true;
-      mockEventStore.errorMessageOnInsert = 'Document $documentId does not exist';
+      mockEventStore.errorMessageOnInsert =
+          'Document $documentId does not exist';
 
       // Act & Assert
       expect(() => recorder.recordEvent(testEvent), returnsNormally);
@@ -475,7 +478,8 @@ void main() {
       // The key requirement is significant reduction, not exact count
       final reduction = (1 - (mockEventStore.callCount / events.length)) * 100;
       expect(reduction, greaterThan(70)); // At least 70% reduction
-      expect(mockEventStore.callCount, lessThan(20)); // Much fewer than 50 inputs
+      expect(
+          mockEventStore.callCount, lessThan(20)); // Much fewer than 50 inputs
     });
   });
 
@@ -512,12 +516,14 @@ void main() {
 
       // Act - Record 3 events with enough spacing to emit all
       for (int i = 0; i < 3; i++) {
-        recorder.recordEvent(CreatePathEvent(
-          eventId: 'evt-$i',
-          timestamp: DateTime.now().millisecondsSinceEpoch + i,
-          pathId: 'path-$i',
-          startAnchor: Point(x: 100.0 + i * 10, y: 200.0),
-        ),);
+        recorder.recordEvent(
+          CreatePathEvent(
+            eventId: 'evt-$i',
+            timestamp: DateTime.now().millisecondsSinceEpoch + i,
+            pathId: 'path-$i',
+            startAnchor: Point(x: 100.0 + i * 10, y: 200.0),
+          ),
+        );
         await Future.delayed(const Duration(milliseconds: 60));
       }
 
@@ -604,7 +610,8 @@ void main() {
       lowThresholdRecorder.recordEvent(event1);
       await Future.delayed(const Duration(milliseconds: 10));
       lowThresholdRecorder.recordEvent(event2); // Buffered
-      await Future.delayed(const Duration(milliseconds: 30)); // Exceed threshold
+      await Future.delayed(
+          const Duration(milliseconds: 30)); // Exceed threshold
 
       // Trigger emission (which will check backpressure)
       lowThresholdRecorder.flush();
@@ -751,7 +758,9 @@ void main() {
       expect(mockEventStore.wasCalledWith(documentId, events[3]), isFalse);
     });
 
-    test('auto-sequencing verification - EventStore called with correct documentId', () async {
+    test(
+        'auto-sequencing verification - EventStore called with correct documentId',
+        () async {
       // Arrange
       final testEvent = CreatePathEvent(
         eventId: 'evt-1',
@@ -767,7 +776,8 @@ void main() {
       // Assert - Verify documentId is passed correctly
       expect(mockEventStore.callCount, equals(1));
       expect(mockEventStore.calls.first.documentId, equals(documentId));
-      expect(mockEventStore.calls.first.event.eventId, equals(testEvent.eventId));
+      expect(
+          mockEventStore.calls.first.event.eventId, equals(testEvent.eventId));
     });
   });
 }

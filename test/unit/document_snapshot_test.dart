@@ -221,23 +221,30 @@ void main() {
       final deserialized = serializer.deserialize(bytes);
 
       // Assert: Path geometry preserved
-      final deserializedPath = (deserialized.layers[0].objects[0]
-          as PathObject).path;
+      final deserializedPath =
+          (deserialized.layers[0].objects[0] as PathObject).path;
       expect(deserializedPath.anchors.length, equals(3));
       expect(deserializedPath.segments.length, equals(2));
       expect(deserializedPath.closed, isTrue);
 
       // Assert: Anchor properties preserved
-      expect(deserializedPath.anchors[0].position, equals(const Point(x: 0, y: 0)));
-      expect(deserializedPath.anchors[0].handleOut, equals(const Point(x: 50, y: 0)));
-      expect(deserializedPath.anchors[0].anchorType, equals(ap.AnchorType.smooth));
+      expect(deserializedPath.anchors[0].position,
+          equals(const Point(x: 0, y: 0)));
+      expect(deserializedPath.anchors[0].handleOut,
+          equals(const Point(x: 50, y: 0)));
+      expect(
+          deserializedPath.anchors[0].anchorType, equals(ap.AnchorType.smooth));
 
-      expect(deserializedPath.anchors[1].handleIn, equals(const Point(x: -50, y: 0)));
-      expect(deserializedPath.anchors[1].handleOut, equals(const Point(x: 50, y: 0)));
-      expect(deserializedPath.anchors[1].anchorType, equals(ap.AnchorType.symmetric));
+      expect(deserializedPath.anchors[1].handleIn,
+          equals(const Point(x: -50, y: 0)));
+      expect(deserializedPath.anchors[1].handleOut,
+          equals(const Point(x: 50, y: 0)));
+      expect(deserializedPath.anchors[1].anchorType,
+          equals(ap.AnchorType.symmetric));
 
       // Assert: Segment properties preserved
-      expect(deserializedPath.segments[0].segmentType, equals(SegmentType.bezier));
+      expect(
+          deserializedPath.segments[0].segmentType, equals(SegmentType.bezier));
       expect(deserializedPath.segments[0].startAnchorIndex, equals(0));
       expect(deserializedPath.segments[0].endAnchorIndex, equals(1));
 
@@ -276,10 +283,12 @@ void main() {
         objects: shapes
             .asMap()
             .entries
-            .map((e) => VectorObject.shape(
-                  id: 'shape-${e.key}',
-                  shape: e.value,
-                ),)
+            .map(
+              (e) => VectorObject.shape(
+                id: 'shape-${e.key}',
+                shape: e.value,
+              ),
+            )
             .toList(),
       );
 
@@ -413,7 +422,8 @@ void main() {
       expect(compressedBytes.length, lessThan(uncompressedBytes.length));
 
       // Assert: Both deserialize to the same document
-      final fromCompressed = serializerWithCompression.deserialize(compressedBytes);
+      final fromCompressed =
+          serializerWithCompression.deserialize(compressedBytes);
       final fromUncompressed =
           serializerWithoutCompression.deserialize(uncompressedBytes);
 
@@ -461,10 +471,13 @@ void main() {
       expect(deserialized.getObjectById('nonexistent'), isNull);
 
       expect(deserialized.getSelectedObjects().length, equals(2));
-      expect(deserialized.getSelectedObjects().map((o) => o.id), containsAll(['path-1', 'path-3']));
+      expect(deserialized.getSelectedObjects().map((o) => o.id),
+          containsAll(['path-1', 'path-3']));
 
-      expect(deserialized.getLayerContainingObject('path-1')?.id, equals('layer-1'));
-      expect(deserialized.getLayerContainingObject('path-3')?.id, equals('layer-2'));
+      expect(deserialized.getLayerContainingObject('path-1')?.id,
+          equals('layer-1'));
+      expect(deserialized.getLayerContainingObject('path-3')?.id,
+          equals('layer-2'));
       expect(deserialized.getLayerContainingObject('nonexistent'), isNull);
     });
   });

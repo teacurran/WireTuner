@@ -17,7 +17,8 @@ void main() {
     setUp(() {
       baseDragController = DragController();
       snappingService = SnappingService(
-        gridSnapEnabled: true, angleSnapEnabled: true,
+        gridSnapEnabled: true,
+        angleSnapEnabled: true,
         gridSize: 10.0,
         angleIncrement: 15.0,
       );
@@ -83,8 +84,7 @@ void main() {
         );
 
         // Calculate magnitude of snapped handleOut
-        final originalMagnitude =
-            math.sqrt(50 * 50 + 20 * 20); // ~53.85
+        final originalMagnitude = math.sqrt(50 * 50 + 20 * 20); // ~53.85
         final snappedMagnitude = math.sqrt(
           result.handleOut!.x * result.handleOut!.x +
               result.handleOut!.y * result.handleOut!.y,

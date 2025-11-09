@@ -128,6 +128,5 @@ class InvalidFilePathException extends SaveException {
 /// - No error message needed (user intentionally cancelled)
 class SaveCancelledException extends SaveException {
   /// Creates a save cancelled exception.
-  const SaveCancelledException()
-      : super('Save operation cancelled by user');
+  const SaveCancelledException() : super('Save operation cancelled by user');
 }

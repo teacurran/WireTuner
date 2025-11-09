@@ -26,7 +26,8 @@ void main() {
       // Should not throw
       final events = await importer.importFromString(svgContent);
 
-      expect(events, isNotEmpty, reason: 'Should import rect with gradient fallback');
+      expect(events, isNotEmpty,
+          reason: 'Should import rect with gradient fallback');
       expect(events.first.eventType, 'CreatePathEvent');
     });
 
@@ -46,7 +47,8 @@ void main() {
       // Should not throw
       final events = await importer.importFromString(svgContent);
 
-      expect(events, isNotEmpty, reason: 'Should import circle with gradient fallback');
+      expect(events, isNotEmpty,
+          reason: 'Should import circle with gradient fallback');
     });
 
     test('Handle clipPath reference with warning', () async {
@@ -64,7 +66,8 @@ void main() {
       // Should not throw, but log warning
       final events = await importer.importFromString(svgContent);
 
-      expect(events, isNotEmpty, reason: 'Should import rect with clipPath warning');
+      expect(events, isNotEmpty,
+          reason: 'Should import rect with clipPath warning');
     });
 
     test('Convert text to placeholder path', () async {
@@ -77,7 +80,8 @@ void main() {
       // Should not throw, convert to placeholder
       final events = await importer.importFromString(svgContent);
 
-      expect(events, isNotEmpty, reason: 'Should create placeholder path for text');
+      expect(events, isNotEmpty,
+          reason: 'Should create placeholder path for text');
       expect(events.first.eventType, 'CreatePathEvent');
     });
 
@@ -91,7 +95,8 @@ void main() {
       // Should not throw, just log warning
       final events = await importer.importFromString(svgContent);
 
-      expect(events, isNotEmpty, reason: 'Should import rect despite invalid gradient ref');
+      expect(events, isNotEmpty,
+          reason: 'Should import rect despite invalid gradient ref');
     });
   });
 }

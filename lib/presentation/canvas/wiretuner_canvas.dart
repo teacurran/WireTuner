@@ -206,7 +206,8 @@ class _WireTunerCanvasState extends State<WireTunerCanvas> {
       // Log frame time if telemetry is enabled
       if (widget.telemetryService != null) {
         final frameTimeMs = _frameStopwatch.elapsedMicroseconds / 1000.0;
-        debugPrint('[Canvas] Frame build time: ${frameTimeMs.toStringAsFixed(2)}ms');
+        debugPrint(
+            '[Canvas] Frame build time: ${frameTimeMs.toStringAsFixed(2)}ms');
       }
     }
 

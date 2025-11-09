@@ -72,7 +72,8 @@ class RenderPipelineConfig {
     return RenderPipelineConfig(
       enablePathCaching: enablePathCaching ?? this.enablePathCaching,
       enableGPUCaching: enableGPUCaching ?? this.enableGPUCaching,
-      enableViewportCulling: enableViewportCulling ?? this.enableViewportCulling,
+      enableViewportCulling:
+          enableViewportCulling ?? this.enableViewportCulling,
       cullMargin: cullMargin ?? this.cullMargin,
       lodThreshold: lodThreshold ?? this.lodThreshold,
       minObjectScreenSize: minObjectScreenSize ?? this.minObjectScreenSize,

@@ -691,8 +691,7 @@ void main() {
       }
     });
 
-    test('full document lifecycle - create events, snapshot, replay',
-        () async {
+    test('full document lifecycle - create events, snapshot, replay', () async {
       // Arrange - simulate creating 100 events (sequences 0-99)
       final events = List.generate(
         100,

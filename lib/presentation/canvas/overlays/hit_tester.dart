@@ -1,4 +1,3 @@
-
 import 'package:flutter/material.dart';
 import 'package:wiretuner/domain/events/event_base.dart' as event_base;
 import 'package:wiretuner/domain/models/geometry/point_extensions.dart';
@@ -11,7 +10,6 @@ import 'package:wiretuner/presentation/canvas/viewport/viewport_controller.dart'
 
 /// Result of a hit test operation.
 class HitTestResult {
-
   const HitTestResult({
     this.objectId,
     this.anchorIndex,
@@ -23,6 +21,7 @@ class HitTestResult {
   factory HitTestResult.miss() => const HitTestResult(
         distance: double.infinity,
       );
+
   /// The ID of the object that was hit (if any).
   final String? objectId;
 
@@ -88,7 +87,6 @@ class HitTestResult {
 /// );
 /// ```
 class CanvasHitTester {
-
   /// Creates a hit tester with the specified configuration.
   ///
   /// The [hitThresholdScreenPx] controls how close the cursor must be
@@ -99,6 +97,7 @@ class CanvasHitTester {
     required this.pathRenderer,
     this.hitThresholdScreenPx = 8.0,
   });
+
   /// Viewport controller for coordinate transformations.
   final ViewportController viewportController;
 

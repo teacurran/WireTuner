@@ -182,8 +182,9 @@ void main() {
         expect(eventRecorder.recordedEvents.length, greaterThan(0));
 
         // Should emit ClearSelectionEvent
-        final clearEvent =
-            eventRecorder.recordedEvents.whereType<events.ClearSelectionEvent>().first;
+        final clearEvent = eventRecorder.recordedEvents
+            .whereType<events.ClearSelectionEvent>()
+            .first;
         expect(clearEvent, isNotNull);
       });
 

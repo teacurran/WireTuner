@@ -107,7 +107,8 @@ class PlatformFilePickerAdapter implements FilePickerAdapter {
     // TODO(I5.T1): Implement native file dialog integration
     // For now, return a test path for demonstration
     // In production, use file_selector package or platform channels
-    print('Save dialog: defaultName=$defaultName, directory=$suggestedDirectory');
+    print(
+        'Save dialog: defaultName=$defaultName, directory=$suggestedDirectory');
     return null; // Stub - returns null to simulate cancellation
   }
 

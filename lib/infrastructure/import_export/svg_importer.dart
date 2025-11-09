@@ -263,7 +263,8 @@ class SvgImporter {
         return [];
 
       case 'pattern':
-        _logger.w('Unsupported SVG element: <$tagName> (pattern fills not supported), skipping');
+        _logger.w(
+            'Unsupported SVG element: <$tagName> (pattern fills not supported), skipping');
         return [];
 
       case 'filter':
@@ -271,11 +272,13 @@ class SvgImporter {
       case 'fecolormatrix':
       case 'feblend':
       case 'feoffset':
-        _logger.w('Unsupported SVG element: <$tagName> (filter effects not supported), skipping');
+        _logger.w(
+            'Unsupported SVG element: <$tagName> (filter effects not supported), skipping');
         return [];
 
       case 'image':
-        _logger.w('Unsupported SVG element: <$tagName> (embedded images not supported), skipping');
+        _logger.w(
+            'Unsupported SVG element: <$tagName> (embedded images not supported), skipping');
         return [];
 
       default:
@@ -523,7 +526,9 @@ class SvgImporter {
       switch (cmd.type.toUpperCase()) {
         case 'M': // MoveTo
           final point = cmd.isRelative
-              ? Point(x: _currentPoint.x + cmd.coords[0], y: _currentPoint.y + cmd.coords[1])
+              ? Point(
+                  x: _currentPoint.x + cmd.coords[0],
+                  y: _currentPoint.y + cmd.coords[1])
               : Point(x: cmd.coords[0], y: cmd.coords[1]);
 
           if (isFirstCommand) {
@@ -557,7 +562,9 @@ class SvgImporter {
 
         case 'L': // LineTo
           final point = cmd.isRelative
-              ? Point(x: _currentPoint.x + cmd.coords[0], y: _currentPoint.y + cmd.coords[1])
+              ? Point(
+                  x: _currentPoint.x + cmd.coords[0],
+                  y: _currentPoint.y + cmd.coords[1])
               : Point(x: cmd.coords[0], y: cmd.coords[1]);
 
           events.add(AddAnchorEvent(
@@ -574,7 +581,8 @@ class SvgImporter {
           break;
 
         case 'H': // Horizontal LineTo
-          final x = cmd.isRelative ? _currentPoint.x + cmd.coords[0] : cmd.coords[0];
+          final x =
+              cmd.isRelative ? _currentPoint.x + cmd.coords[0] : cmd.coords[0];
           final point = Point(x: x, y: _currentPoint.y);
 
           events.add(AddAnchorEvent(
@@ -591,7 +599,8 @@ class SvgImporter {
           break;
 
         case 'V': // Vertical LineTo
-          final y = cmd.isRelative ? _currentPoint.y + cmd.coords[0] : cmd.coords[0];
+          final y =
+              cmd.isRelative ? _currentPoint.y + cmd.coords[0] : cmd.coords[0];
           final point = Point(x: _currentPoint.x, y: y);
 
           events.add(AddAnchorEvent(
@@ -609,20 +618,28 @@ class SvgImporter {
 
         case 'C': // Cubic Bezier
           final cp1Abs = cmd.isRelative
-              ? Point(x: _currentPoint.x + cmd.coords[0], y: _currentPoint.y + cmd.coords[1])
+              ? Point(
+                  x: _currentPoint.x + cmd.coords[0],
+                  y: _currentPoint.y + cmd.coords[1])
               : Point(x: cmd.coords[0], y: cmd.coords[1]);
 
           final cp2Abs = cmd.isRelative
-              ? Point(x: _currentPoint.x + cmd.coords[2], y: _currentPoint.y + cmd.coords[3])
+              ? Point(
+                  x: _currentPoint.x + cmd.coords[2],
+                  y: _currentPoint.y + cmd.coords[3])
               : Point(x: cmd.coords[2], y: cmd.coords[3]);
 
           final endPoint = cmd.isRelative
-              ? Point(x: _currentPoint.x + cmd.coords[4], y: _currentPoint.y + cmd.coords[5])
+              ? Point(
+                  x: _currentPoint.x + cmd.coords[4],
+                  y: _currentPoint.y + cmd.coords[5])
               : Point(x: cmd.coords[4], y: cmd.coords[5]);
 
           // Convert absolute control points to relative handles
-          final handleOut = Point(x: cp1Abs.x - _currentPoint.x, y: cp1Abs.y - _currentPoint.y);
-          final handleIn = Point(x: cp2Abs.x - endPoint.x, y: cp2Abs.y - endPoint.y);
+          final handleOut = Point(
+              x: cp1Abs.x - _currentPoint.x, y: cp1Abs.y - _currentPoint.y);
+          final handleIn =
+              Point(x: cp2Abs.x - endPoint.x, y: cp2Abs.y - endPoint.y);
 
           // Set handleOut on current anchor (before adding the next one)
           // For the first bezier after CreatePath, anchorIndex is 0
@@ -662,15 +679,21 @@ class SvgImporter {
               : _currentPoint;
 
           final cp2Abs = cmd.isRelative
-              ? Point(x: _currentPoint.x + cmd.coords[0], y: _currentPoint.y + cmd.coords[1])
+              ? Point(
+                  x: _currentPoint.x + cmd.coords[0],
+                  y: _currentPoint.y + cmd.coords[1])
               : Point(x: cmd.coords[0], y: cmd.coords[1]);
 
           final endPoint = cmd.isRelative
-              ? Point(x: _currentPoint.x + cmd.coords[2], y: _currentPoint.y + cmd.coords[3])
+              ? Point(
+                  x: _currentPoint.x + cmd.coords[2],
+                  y: _currentPoint.y + cmd.coords[3])
               : Point(x: cmd.coords[2], y: cmd.coords[3]);
 
-          final handleOut = Point(x: cp1Abs.x - _currentPoint.x, y: cp1Abs.y - _currentPoint.y);
-          final handleIn = Point(x: cp2Abs.x - endPoint.x, y: cp2Abs.y - endPoint.y);
+          final handleOut = Point(
+              x: cp1Abs.x - _currentPoint.x, y: cp1Abs.y - _currentPoint.y);
+          final handleIn =
+              Point(x: cp2Abs.x - endPoint.x, y: cp2Abs.y - endPoint.y);
 
           if (anchorIndex >= 0 && !isFirstCommand) {
             events.add(ModifyAnchorEvent(
@@ -698,11 +721,15 @@ class SvgImporter {
 
         case 'Q': // Quadratic Bezier (convert to cubic)
           final cpAbs = cmd.isRelative
-              ? Point(x: _currentPoint.x + cmd.coords[0], y: _currentPoint.y + cmd.coords[1])
+              ? Point(
+                  x: _currentPoint.x + cmd.coords[0],
+                  y: _currentPoint.y + cmd.coords[1])
               : Point(x: cmd.coords[0], y: cmd.coords[1]);
 
           final endPoint = cmd.isRelative
-              ? Point(x: _currentPoint.x + cmd.coords[2], y: _currentPoint.y + cmd.coords[3])
+              ? Point(
+                  x: _currentPoint.x + cmd.coords[2],
+                  y: _currentPoint.y + cmd.coords[3])
               : Point(x: cmd.coords[2], y: cmd.coords[3]);
 
           // Convert quadratic to cubic Bezier
@@ -718,8 +745,10 @@ class SvgImporter {
             y: endPoint.y + 2.0 / 3.0 * (cpAbs.y - endPoint.y),
           );
 
-          final handleOut = Point(x: cp1Abs.x - _currentPoint.x, y: cp1Abs.y - _currentPoint.y);
-          final handleIn = Point(x: cp2Abs.x - endPoint.x, y: cp2Abs.y - endPoint.y);
+          final handleOut = Point(
+              x: cp1Abs.x - _currentPoint.x, y: cp1Abs.y - _currentPoint.y);
+          final handleIn =
+              Point(x: cp2Abs.x - endPoint.x, y: cp2Abs.y - endPoint.y);
 
           if (anchorIndex >= 0 && !isFirstCommand) {
             events.add(ModifyAnchorEvent(
@@ -754,7 +783,9 @@ class SvgImporter {
               : _currentPoint;
 
           final endPoint = cmd.isRelative
-              ? Point(x: _currentPoint.x + cmd.coords[0], y: _currentPoint.y + cmd.coords[1])
+              ? Point(
+                  x: _currentPoint.x + cmd.coords[0],
+                  y: _currentPoint.y + cmd.coords[1])
               : Point(x: cmd.coords[0], y: cmd.coords[1]);
 
           // Convert to cubic
@@ -768,8 +799,10 @@ class SvgImporter {
             y: endPoint.y + 2.0 / 3.0 * (cpAbs.y - endPoint.y),
           );
 
-          final handleOut = Point(x: cp1Abs.x - _currentPoint.x, y: cp1Abs.y - _currentPoint.y);
-          final handleIn = Point(x: cp2Abs.x - endPoint.x, y: cp2Abs.y - endPoint.y);
+          final handleOut = Point(
+              x: cp1Abs.x - _currentPoint.x, y: cp1Abs.y - _currentPoint.y);
+          final handleIn =
+              Point(x: cp2Abs.x - endPoint.x, y: cp2Abs.y - endPoint.y);
 
           if (anchorIndex >= 0 && !isFirstCommand) {
             events.add(ModifyAnchorEvent(
@@ -824,10 +857,8 @@ class SvgImporter {
     final commands = <_PathCommand>[];
 
     // Remove all commas and extra whitespace
-    final normalized = pathData
-        .replaceAll(',', ' ')
-        .replaceAll(RegExp(r'\s+'), ' ')
-        .trim();
+    final normalized =
+        pathData.replaceAll(',', ' ').replaceAll(RegExp(r'\s+'), ' ').trim();
 
     // Split into tokens
     final tokens = <String>[];
@@ -847,7 +878,9 @@ class SvgImporter {
           tokens.add(buffer.toString());
           buffer.clear();
         }
-      } else if (char == '-' && buffer.isNotEmpty && !buffer.toString().endsWith('e')) {
+      } else if (char == '-' &&
+          buffer.isNotEmpty &&
+          !buffer.toString().endsWith('e')) {
         // Negative sign starts new number (unless it's scientific notation)
         tokens.add(buffer.toString());
         buffer.clear();
@@ -880,7 +913,9 @@ class SvgImporter {
 
       // Collect coordinates
       final coords = <double>[];
-      while (i < tokens.length && !_isCommand(tokens[i]) && coords.length < coordCount) {
+      while (i < tokens.length &&
+          !_isCommand(tokens[i]) &&
+          coords.length < coordCount) {
         try {
           coords.add(_parseDouble(tokens[i]));
           i++;
@@ -897,7 +932,8 @@ class SvgImporter {
           isRelative: isRelative,
         ));
       } else {
-        _logger.w('Incomplete coordinates for command $cmdChar (expected $coordCount, got ${coords.length})');
+        _logger.w(
+            'Incomplete coordinates for command $cmdChar (expected $coordCount, got ${coords.length})');
       }
     }
 
@@ -992,7 +1028,8 @@ class SvgImporter {
       // Rounded corners - more complex path
       // For simplicity in Milestone 0.1, convert to sharp rectangle
       // Future enhancement: implement rounded corners with Bezier curves
-      _logger.d('Rounded rectangle corners not yet supported, using sharp corners');
+      _logger.d(
+          'Rounded rectangle corners not yet supported, using sharp corners');
       return _rectangleToPath(x, y, width, height, 0, pathId, style);
     }
 
@@ -1157,7 +1194,8 @@ class SvgImporter {
         .toList();
 
     if (coords.length % 2 != 0) {
-      _logger.w('Points list has odd number of coordinates, ignoring last value');
+      _logger
+          .w('Points list has odd number of coordinates, ignoring last value');
     }
 
     final points = <Point>[];
@@ -1186,12 +1224,15 @@ class SvgImporter {
         // Extract gradient ID
         fillGradientId = fill.substring(5, fill.length - 1);
         if (_gradients.containsKey(fillGradientId)) {
-          _logger.d('Gradient reference detected: $fillGradientId (support limited, using fallback)');
+          _logger.d(
+              'Gradient reference detected: $fillGradientId (support limited, using fallback)');
           // For now, use first stop color as fallback
           final gradient = _gradients[fillGradientId]!;
-          resolvedFill = gradient.stops.isNotEmpty ? gradient.stops.first.color : null;
+          resolvedFill =
+              gradient.stops.isNotEmpty ? gradient.stops.first.color : null;
         } else {
-          _logger.w('Gradient reference not found: $fillGradientId, using no fill');
+          _logger.w(
+              'Gradient reference not found: $fillGradientId, using no fill');
         }
       } else {
         resolvedFill = fill;
@@ -1203,11 +1244,14 @@ class SvgImporter {
       if (stroke.startsWith('url(#') && stroke.endsWith(')')) {
         final gradientId = stroke.substring(5, stroke.length - 1);
         if (_gradients.containsKey(gradientId)) {
-          _logger.d('Stroke gradient reference detected: $gradientId (support limited, using fallback)');
+          _logger.d(
+              'Stroke gradient reference detected: $gradientId (support limited, using fallback)');
           final gradient = _gradients[gradientId]!;
-          resolvedStroke = gradient.stops.isNotEmpty ? gradient.stops.first.color : null;
+          resolvedStroke =
+              gradient.stops.isNotEmpty ? gradient.stops.first.color : null;
         } else {
-          _logger.w('Stroke gradient reference not found: $gradientId, using no stroke');
+          _logger.w(
+              'Stroke gradient reference not found: $gradientId, using no stroke');
         }
       } else {
         resolvedStroke = stroke;
@@ -1220,7 +1264,8 @@ class SvgImporter {
       if (clipPath.startsWith('url(#') && clipPath.endsWith(')')) {
         clipPathId = clipPath.substring(5, clipPath.length - 1);
         if (_clipPaths.containsKey(clipPathId)) {
-          _logger.w('ClipPath detected: $clipPathId - Clipping paths are recognized but not fully applied in current version. Visual clipping may not be accurate.');
+          _logger.w(
+              'ClipPath detected: $clipPathId - Clipping paths are recognized but not fully applied in current version. Visual clipping may not be accurate.');
         } else {
           _logger.w('ClipPath reference not found: $clipPathId');
         }
@@ -1281,15 +1326,18 @@ class SvgImporter {
     final gradientTransform = element.getAttribute('gradientTransform');
 
     if (gradientUnits != null && gradientUnits != 'objectBoundingBox') {
-      _logger.w('LinearGradient $id: gradientUnits="$gradientUnits" not fully supported, may render incorrectly');
+      _logger.w(
+          'LinearGradient $id: gradientUnits="$gradientUnits" not fully supported, may render incorrectly');
     }
 
     if (spreadMethod != null && spreadMethod != 'pad') {
-      _logger.w('LinearGradient $id: spreadMethod="$spreadMethod" not supported, using pad fallback');
+      _logger.w(
+          'LinearGradient $id: spreadMethod="$spreadMethod" not supported, using pad fallback');
     }
 
     if (gradientTransform != null) {
-      _logger.w('LinearGradient $id: gradientTransform not supported, gradient orientation may be incorrect');
+      _logger.w(
+          'LinearGradient $id: gradientTransform not supported, gradient orientation may be incorrect');
     }
 
     _gradients[id] = _GradientDefinition(
@@ -1332,11 +1380,13 @@ class SvgImporter {
     final spreadMethod = element.getAttribute('spreadMethod');
 
     if (gradientUnits != null && gradientUnits != 'objectBoundingBox') {
-      _logger.w('RadialGradient $id: gradientUnits="$gradientUnits" not fully supported, may render incorrectly');
+      _logger.w(
+          'RadialGradient $id: gradientUnits="$gradientUnits" not fully supported, may render incorrectly');
     }
 
     if (spreadMethod != null && spreadMethod != 'pad') {
-      _logger.w('RadialGradient $id: spreadMethod="$spreadMethod" not supported, using pad fallback');
+      _logger.w(
+          'RadialGradient $id: spreadMethod="$spreadMethod" not supported, using pad fallback');
     }
 
     _gradients[id] = _GradientDefinition(
@@ -1359,7 +1409,8 @@ class SvgImporter {
 
     for (final stopElement in gradientElement.findElements('stop')) {
       if (stops.length >= _maxGradientStops) {
-        _logger.w('Gradient has more than $_maxGradientStops stops, truncating');
+        _logger
+            .w('Gradient has more than $_maxGradientStops stops, truncating');
         break;
       }
 
@@ -1383,7 +1434,8 @@ class SvgImporter {
   double _parsePercentageOrDouble(String value) {
     final trimmed = value.trim();
     if (trimmed.endsWith('%')) {
-      final percentValue = double.parse(trimmed.substring(0, trimmed.length - 1));
+      final percentValue =
+          double.parse(trimmed.substring(0, trimmed.length - 1));
       return percentValue / 100.0;
     } else {
       return _parseDouble(trimmed);
@@ -1408,8 +1460,11 @@ class SvgImporter {
           pathData.write(d);
           pathData.write(' ');
         }
-      } else if (childTag == 'rect' || childTag == 'circle' || childTag == 'ellipse') {
-        _logger.d('ClipPath $id contains <$childTag> - complex clipping shapes have limited support');
+      } else if (childTag == 'rect' ||
+          childTag == 'circle' ||
+          childTag == 'ellipse') {
+        _logger.d(
+            'ClipPath $id contains <$childTag> - complex clipping shapes have limited support');
       }
     }
 

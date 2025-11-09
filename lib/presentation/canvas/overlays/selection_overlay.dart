@@ -77,7 +77,6 @@ class SelectionOverlayConstants {
 /// )
 /// ```
 class SelectionOverlayPainter extends CustomPainter {
-
   /// Creates a selection overlay painter.
   SelectionOverlayPainter({
     required this.selection,
@@ -87,6 +86,7 @@ class SelectionOverlayPainter extends CustomPainter {
     required this.pathRenderer,
     this.hoveredAnchor,
   }) : super(repaint: viewportController);
+
   /// The current selection state.
   final Selection selection;
 
@@ -258,7 +258,8 @@ class SelectionOverlayPainter extends CustomPainter {
 
     while (currentDistance < totalLength) {
       final segmentLength = isDash ? dashLength : gapLength;
-      final nextDistance = (currentDistance + segmentLength).clamp(0.0, totalLength);
+      final nextDistance =
+          (currentDistance + segmentLength).clamp(0.0, totalLength);
 
       final t = nextDistance / totalLength;
       final nextPoint = Offset.lerp(start, end, t)!;
@@ -285,7 +286,8 @@ class SelectionOverlayPainter extends CustomPainter {
     // Draw handleIn line and circle
     if (anchor.handleIn != null) {
       final handleInPos = anchor.position + anchor.handleIn!;
-      final isHandleInHovered = isHovered && component == AnchorComponent.handleIn;
+      final isHandleInHovered =
+          isHovered && component == AnchorComponent.handleIn;
 
       _drawBCPLine(canvas, anchor.position, handleInPos);
       _drawHandle(
@@ -299,7 +301,8 @@ class SelectionOverlayPainter extends CustomPainter {
     // Draw handleOut line and circle
     if (anchor.handleOut != null) {
       final handleOutPos = anchor.position + anchor.handleOut!;
-      final isHandleOutHovered = isHovered && component == AnchorComponent.handleOut;
+      final isHandleOutHovered =
+          isHovered && component == AnchorComponent.handleOut;
 
       _drawBCPLine(canvas, anchor.position, handleOutPos);
       _drawHandle(
@@ -311,8 +314,8 @@ class SelectionOverlayPainter extends CustomPainter {
     }
 
     // Draw anchor point circle
-    final isAnchorHovered = isHovered &&
-        (component == AnchorComponent.anchor || component == null);
+    final isAnchorHovered =
+        isHovered && (component == AnchorComponent.anchor || component == null);
     _drawAnchorPoint(
       canvas,
       anchor.position,
@@ -427,12 +430,12 @@ class SelectionOverlayPainter extends CustomPainter {
 
 /// Represents a hovered anchor point or handle component.
 class HoveredAnchor {
-
   const HoveredAnchor({
     required this.objectId,
     required this.anchorIndex,
     this.component,
   });
+
   /// The object ID containing the anchor.
   final String objectId;
 

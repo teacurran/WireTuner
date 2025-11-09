@@ -13,15 +13,15 @@ class PointConverter implements JsonConverter<Point, Map<String, dynamic>> {
 
   @override
   Point fromJson(Map<String, dynamic> json) => Point(
-      x: (json['x'] as num).toDouble(),
-      y: (json['y'] as num).toDouble(),
-    );
+        x: (json['x'] as num).toDouble(),
+        y: (json['y'] as num).toDouble(),
+      );
 
   @override
   Map<String, dynamic> toJson(Point object) => {
-      'x': object.x,
-      'y': object.y,
-    };
+        'x': object.x,
+        'y': object.y,
+      };
 }
 
 /// JSON converter for Path objects.
@@ -52,53 +52,54 @@ class PathConverter implements JsonConverter<Path, Map<String, dynamic>> {
 
   @override
   Map<String, dynamic> toJson(Path object) => {
-      'anchors': object.anchors.map(_anchorPointToJson).toList(),
-      'segments': object.segments.map(_segmentToJson).toList(),
-      'closed': object.closed,
-    };
+        'anchors': object.anchors.map(_anchorPointToJson).toList(),
+        'segments': object.segments.map(_segmentToJson).toList(),
+        'closed': object.closed,
+      };
 
-  ap.AnchorPoint _anchorPointFromJson(Map<String, dynamic> json) => ap.AnchorPoint(
-      position: _pointFromJson(json['position'] as Map<String, dynamic>),
-      handleIn: json['handleIn'] != null
-          ? _pointFromJson(json['handleIn'] as Map<String, dynamic>)
-          : null,
-      handleOut: json['handleOut'] != null
-          ? _pointFromJson(json['handleOut'] as Map<String, dynamic>)
-          : null,
-      anchorType: ap.AnchorType.values
-          .byName(json['anchorType'] as String? ?? 'corner'),
-    );
+  ap.AnchorPoint _anchorPointFromJson(Map<String, dynamic> json) =>
+      ap.AnchorPoint(
+        position: _pointFromJson(json['position'] as Map<String, dynamic>),
+        handleIn: json['handleIn'] != null
+            ? _pointFromJson(json['handleIn'] as Map<String, dynamic>)
+            : null,
+        handleOut: json['handleOut'] != null
+            ? _pointFromJson(json['handleOut'] as Map<String, dynamic>)
+            : null,
+        anchorType: ap.AnchorType.values
+            .byName(json['anchorType'] as String? ?? 'corner'),
+      );
 
   Map<String, dynamic> _anchorPointToJson(ap.AnchorPoint anchor) => {
-      'position': _pointToJson(anchor.position),
-      if (anchor.handleIn != null) 'handleIn': _pointToJson(anchor.handleIn!),
-      if (anchor.handleOut != null)
-        'handleOut': _pointToJson(anchor.handleOut!),
-      'anchorType': anchor.anchorType.name,
-    };
+        'position': _pointToJson(anchor.position),
+        if (anchor.handleIn != null) 'handleIn': _pointToJson(anchor.handleIn!),
+        if (anchor.handleOut != null)
+          'handleOut': _pointToJson(anchor.handleOut!),
+        'anchorType': anchor.anchorType.name,
+      };
 
   Segment _segmentFromJson(Map<String, dynamic> json) => Segment(
-      startAnchorIndex: json['startAnchorIndex'] as int,
-      endAnchorIndex: json['endAnchorIndex'] as int,
-      segmentType:
-          SegmentType.values.byName(json['segmentType'] as String? ?? 'line'),
-    );
+        startAnchorIndex: json['startAnchorIndex'] as int,
+        endAnchorIndex: json['endAnchorIndex'] as int,
+        segmentType:
+            SegmentType.values.byName(json['segmentType'] as String? ?? 'line'),
+      );
 
   Map<String, dynamic> _segmentToJson(Segment segment) => {
-      'startAnchorIndex': segment.startAnchorIndex,
-      'endAnchorIndex': segment.endAnchorIndex,
-      'segmentType': segment.segmentType.name,
-    };
+        'startAnchorIndex': segment.startAnchorIndex,
+        'endAnchorIndex': segment.endAnchorIndex,
+        'segmentType': segment.segmentType.name,
+      };
 
   Point _pointFromJson(Map<String, dynamic> json) => Point(
-      x: (json['x'] as num).toDouble(),
-      y: (json['y'] as num).toDouble(),
-    );
+        x: (json['x'] as num).toDouble(),
+        y: (json['y'] as num).toDouble(),
+      );
 
   Map<String, dynamic> _pointToJson(Point point) => {
-      'x': point.x,
-      'y': point.y,
-    };
+        'x': point.x,
+        'y': point.y,
+      };
 }
 
 /// JSON converter for Shape objects.

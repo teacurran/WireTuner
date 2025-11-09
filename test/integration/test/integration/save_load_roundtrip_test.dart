@@ -40,7 +40,8 @@ void main() {
 
     setUp(() async {
       // Create temporary directory for test database files
-      tempDir = await Directory.systemTemp.createTemp('wiretuner_roundtrip_test_');
+      tempDir =
+          await Directory.systemTemp.createTemp('wiretuner_roundtrip_test_');
       testDbPath = path.join(tempDir.path, 'test_document.wiretuner');
 
       logger = Logger(level: Level.warning); // Reduce test noise
@@ -415,7 +416,8 @@ class _MockOperationGrouping implements OperationGroupingService {
   void onEventRecorded(EventMetadata metadata) {}
 
   @override
-  String startUndoGroup({required String label, String? toolId}) => 'test-group';
+  String startUndoGroup({required String label, String? toolId}) =>
+      'test-group';
 
   @override
   void endUndoGroup({required String groupId, required String label}) {}

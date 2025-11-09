@@ -50,7 +50,6 @@ import 'package:wiretuner/presentation/canvas/viewport/viewport_controller.dart'
 /// )
 /// ```
 class DocumentPainter extends CustomPainter {
-
   /// Creates a document painter with the specified paths and viewport.
   ///
   /// The [paths] list should contain the paths to render.
@@ -65,6 +64,7 @@ class DocumentPainter extends CustomPainter {
     this.strokeColor = Colors.black,
     this.renderPipeline,
   }) : super(repaint: viewportController);
+
   /// The list of paths to render.
   ///
   /// These are domain [Path] objects that will be converted to

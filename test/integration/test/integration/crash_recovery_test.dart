@@ -188,7 +188,8 @@ void main() {
         );
 
         // Verify all events were persisted
-        expect(maxSeq, equals(3), reason: 'All 4 events (0-3) should be present');
+        expect(maxSeq, equals(3),
+            reason: 'All 4 events (0-3) should be present');
 
         // Verify recovery performance target: < 100 ms
         expect(
@@ -298,7 +299,8 @@ void main() {
         );
 
         // Simulate corrupted snapshot at sequence 3 (simulating crash during snapshot write)
-        final corruptedData = Uint8List.fromList([0xDE, 0xAD, 0xBE, 0xEF]); // Invalid data
+        final corruptedData =
+            Uint8List.fromList([0xDE, 0xAD, 0xBE, 0xEF]); // Invalid data
         await snapshotStore.insertSnapshot(
           documentId: docId,
           eventSequence: 3,
@@ -523,7 +525,8 @@ void main() {
         print('Snapshot at: sequence 10');
         print('Events Replayed: $eventsReplayed');
         print('Recovery Time: ${recoveryDuration.inMilliseconds} ms');
-        print('Performance: ${(eventsReplayed / recoveryDuration.inMilliseconds * 1000).toStringAsFixed(0)} events/sec');
+        print(
+            'Performance: ${(eventsReplayed / recoveryDuration.inMilliseconds * 1000).toStringAsFixed(0)} events/sec');
         print('==============================');
 
         await db.close();
@@ -590,7 +593,8 @@ void main() {
         expect(
           maxSeq,
           equals(2),
-          reason: 'WAL mode should prevent event loss even without explicit flush',
+          reason:
+              'WAL mode should prevent event loss even without explicit flush',
         );
 
         // Verify we can read all events
@@ -683,8 +687,7 @@ void _registerEventHandlers(EventHandlerRegistry registry) {
         layers.indexWhere((layer) => layer['id'] == anchorEvent.pathId);
     if (pathIndex != -1) {
       final path = Map<String, dynamic>.from(layers[pathIndex]);
-      final anchors =
-          List<Map<String, dynamic>>.from(path['anchors'] as List);
+      final anchors = List<Map<String, dynamic>>.from(path['anchors'] as List);
 
       final anchorData = <String, dynamic>{
         'x': anchorEvent.position.x,

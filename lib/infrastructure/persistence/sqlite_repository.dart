@@ -40,7 +40,6 @@ import 'package:wiretuner/infrastructure/persistence/event_store.dart';
 /// await repo.createSnapshot('doc-1', 1000, snapshotData);
 /// ```
 class SqliteRepository {
-
   /// Creates a repository instance wrapping the given [DatabaseProvider].
   ///
   /// The provider must be initialized and have an open database connection
@@ -229,7 +228,8 @@ class SqliteRepository {
   /// Returns the auto-incremented event_id.
   ///
   /// Throws [StateError] if the document doesn't exist.
-  Future<int> insertEvent(String documentId, EventBase event) async => _eventStore.insertEvent(documentId, event);
+  Future<int> insertEvent(String documentId, EventBase event) async =>
+      _eventStore.insertEvent(documentId, event);
 
   /// Retrieves events for a document in the specified sequence range.
   ///
@@ -240,16 +240,18 @@ class SqliteRepository {
     String documentId, {
     required int fromSeq,
     int? toSeq,
-  }) async => _eventStore.getEvents(
-      documentId,
-      fromSeq: fromSeq,
-      toSeq: toSeq,
-    );
+  }) async =>
+      _eventStore.getEvents(
+        documentId,
+        fromSeq: fromSeq,
+        toSeq: toSeq,
+      );
 
   /// Returns the maximum event sequence for a document, or -1 if none exist.
   ///
   /// This is a convenience wrapper around [EventStore.getMaxSequence].
-  Future<int> getMaxSequence(String documentId) async => _eventStore.getMaxSequence(documentId);
+  Future<int> getMaxSequence(String documentId) async =>
+      _eventStore.getMaxSequence(documentId);
 
   // ========================================================================
   // Snapshot Operations
@@ -474,13 +476,16 @@ class SqliteRepository {
 
     final db = _provider.getDatabase();
 
-    final docCountResult = await db.rawQuery('SELECT COUNT(*) as count FROM metadata');
+    final docCountResult =
+        await db.rawQuery('SELECT COUNT(*) as count FROM metadata');
     final docCount = docCountResult.first['count'] as int;
 
-    final eventCountResult = await db.rawQuery('SELECT COUNT(*) as count FROM events');
+    final eventCountResult =
+        await db.rawQuery('SELECT COUNT(*) as count FROM events');
     final eventCount = eventCountResult.first['count'] as int;
 
-    final snapshotCountResult = await db.rawQuery('SELECT COUNT(*) as count FROM snapshots');
+    final snapshotCountResult =
+        await db.rawQuery('SELECT COUNT(*) as count FROM snapshots');
     final snapshotCount = snapshotCountResult.first['count'] as int;
 
     return {

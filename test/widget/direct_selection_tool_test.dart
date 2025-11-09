@@ -1,4 +1,3 @@
-
 import 'package:flutter/gestures.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -17,7 +16,6 @@ import 'package:wiretuner/infrastructure/persistence/event_store.dart';
 
 /// Mock EventRecorder for testing.
 class MockEventRecorder extends EventRecorder {
-
   MockEventRecorder()
       : super(
           eventStore: _MockEventStore(),
@@ -202,8 +200,10 @@ void main() {
         expect(modifyEvent.handleIn, isNotNull);
 
         // Handles should be mirrored
-        expect(modifyEvent.handleIn!.x, closeTo(-modifyEvent.handleOut!.x, 0.1));
-        expect(modifyEvent.handleIn!.y, closeTo(-modifyEvent.handleOut!.y, 0.1));
+        expect(
+            modifyEvent.handleIn!.x, closeTo(-modifyEvent.handleOut!.x, 0.1));
+        expect(
+            modifyEvent.handleIn!.y, closeTo(-modifyEvent.handleOut!.y, 0.1));
       });
     });
   });

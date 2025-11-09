@@ -160,8 +160,9 @@ void main() {
         Point(x: 19, y: 10), // Outside hysteresis, releases
       ];
 
-      final snapResults = positions.map((pos) =>
-          snapping.maybeSnapToGrid(pos) != null).toList();
+      final snapResults = positions
+          .map((pos) => snapping.maybeSnapToGrid(pos) != null)
+          .toList();
 
       // Should maintain snap through hysteresis zone
       expect(snapResults[0], isTrue, reason: 'Initial snap');
@@ -404,7 +405,8 @@ void main() {
           reason: 'Total events should be manageable for undo grouping');
 
       // All events should fit within operation group
-      final totalDuration = sequence.durationMs + 150; // Drag duration + inertia
+      final totalDuration =
+          sequence.durationMs + 150; // Drag duration + inertia
       expect(totalDuration, lessThan(500),
           reason: 'Operation should complete quickly');
     });

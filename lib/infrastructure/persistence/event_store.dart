@@ -9,7 +9,6 @@ import 'package:wiretuner/api/event_schema.dart';
 /// foundation of the event sourcing architecture. Events are never modified
 /// after insertion, only appended.
 class EventStore {
-
   EventStore(this._db);
   final Database _db;
   static final Logger _logger = Logger();
@@ -151,7 +150,8 @@ class EventStore {
       throw ArgumentError('Events list cannot be empty');
     }
 
-    _logger.d('Batch inserting ${events.length} events for document: $documentId');
+    _logger
+        .d('Batch inserting ${events.length} events for document: $documentId');
 
     return await _db.transaction((txn) async {
       final eventIds = <int>[];
@@ -173,7 +173,14 @@ class EventStore {
             INSERT INTO events (document_id, event_sequence, event_type, event_payload, timestamp, user_id)
             VALUES (?, ?, ?, ?, ?, ?)
             ''',
-            [documentId, nextSeq, event.eventType, payload, event.timestamp, null],
+            [
+              documentId,
+              nextSeq,
+              event.eventType,
+              payload,
+              event.timestamp,
+              null
+            ],
           );
 
           eventIds.add(eventId);
@@ -192,7 +199,8 @@ class EventStore {
         }
       }
 
-      _logger.i('Batch inserted ${eventIds.length} events for document $documentId');
+      _logger.i(
+          'Batch inserted ${eventIds.length} events for document $documentId');
       return eventIds;
     });
   }

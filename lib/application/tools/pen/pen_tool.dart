@@ -320,11 +320,13 @@ class PenTool implements ITool {
 
     // If drag distance is below threshold, treat as click (straight line anchor)
     if (dragDistance < _minDragDistance) {
-      _logger.d('Short drag ($dragDistance < $_minDragDistance) - treating as click');
+      _logger.d(
+          'Short drag ($dragDistance < $_minDragDistance) - treating as click');
       _addStraightLineAnchor(_dragStartPosition!, event);
     } else {
       // Actual drag - create Bezier anchor with handles
-      _logger.d('Drag detected (distance: $dragDistance) - creating Bezier anchor');
+      _logger.d(
+          'Drag detected (distance: $dragDistance) - creating Bezier anchor');
       _addBezierAnchor(
         anchorPosition: _dragStartPosition!,
         dragEndPosition: _currentDragPosition ?? _dragStartPosition!,
@@ -368,7 +370,8 @@ class PenTool implements ITool {
     // This inline rendering is kept for backward compatibility and
     // for cases where direct canvas access is needed.
 
-    if (_state != PathState.creatingPath && _state != PathState.adjustingHandles) {
+    if (_state != PathState.creatingPath &&
+        _state != PathState.adjustingHandles) {
       return;
     }
 
@@ -407,22 +410,26 @@ class PenTool implements ITool {
     final now = DateTime.now().millisecondsSinceEpoch;
 
     // Emit StartGroupEvent
-    _eventRecorder.recordEvent(StartGroupEvent(
-      eventId: _uuid.v4(),
-      timestamp: now,
-      groupId: groupId,
-      description: 'Create path',
-    ),);
+    _eventRecorder.recordEvent(
+      StartGroupEvent(
+        eventId: _uuid.v4(),
+        timestamp: now,
+        groupId: groupId,
+        description: 'Create path',
+      ),
+    );
 
     // Emit CreatePathEvent
-    _eventRecorder.recordEvent(CreatePathEvent(
-      eventId: _uuid.v4(),
-      timestamp: now,
-      pathId: pathId,
-      startAnchor: startAnchor,
-      strokeColor: '#000000',
-      strokeWidth: 2.0,
-    ),);
+    _eventRecorder.recordEvent(
+      CreatePathEvent(
+        eventId: _uuid.v4(),
+        timestamp: now,
+        pathId: pathId,
+        startAnchor: startAnchor,
+        strokeColor: '#000000',
+        strokeWidth: 2.0,
+      ),
+    );
 
     // Update state
     _state = PathState.creatingPath;
@@ -444,7 +451,8 @@ class PenTool implements ITool {
 
     // Apply angle constraint if Shift is pressed
     Point anchorPosition = position;
-    if (HardwareKeyboard.instance.isShiftPressed && _lastAnchorPosition != null) {
+    if (HardwareKeyboard.instance.isShiftPressed &&
+        _lastAnchorPosition != null) {
       anchorPosition = _constrainToAngle(_lastAnchorPosition!, position);
       _logger.d('Shift pressed - constrained angle: $anchorPosition');
     }
@@ -452,13 +460,15 @@ class PenTool implements ITool {
     final now = DateTime.now().millisecondsSinceEpoch;
 
     // Emit AddAnchorEvent for straight line
-    _eventRecorder.recordEvent(AddAnchorEvent(
-      eventId: _uuid.v4(),
-      timestamp: now,
-      pathId: _currentPathId!,
-      position: anchorPosition,
-      anchorType: AnchorType.line,
-    ),);
+    _eventRecorder.recordEvent(
+      AddAnchorEvent(
+        eventId: _uuid.v4(),
+        timestamp: now,
+        pathId: _currentPathId!,
+        position: anchorPosition,
+        anchorType: AnchorType.line,
+      ),
+    );
 
     _lastAnchorPosition = anchorPosition;
     _anchorCount++;
@@ -481,7 +491,8 @@ class PenTool implements ITool {
     Point constrainedDragEnd = dragEndPosition;
     if (HardwareKeyboard.instance.isShiftPressed) {
       constrainedDragEnd = _constrainToAngle(anchorPosition, dragEndPosition);
-      _logger.d('Shift pressed - constrained handle angle: $constrainedDragEnd');
+      _logger
+          .d('Shift pressed - constrained handle angle: $constrainedDragEnd');
     }
 
     // Calculate handleOut as relative offset from anchor to constrained drag end
@@ -495,24 +506,25 @@ class PenTool implements ITool {
 
     // For smooth anchor: handleIn is mirrored (-handleOut)
     // For corner anchor: no handleIn (independent handles)
-    final Point? handleIn = isAltPressed
-        ? null
-        : Point(x: -handleOut.x, y: -handleOut.y);
+    final Point? handleIn =
+        isAltPressed ? null : Point(x: -handleOut.x, y: -handleOut.y);
 
     final anchorType = isAltPressed ? AnchorType.bezier : AnchorType.bezier;
 
     final now = DateTime.now().millisecondsSinceEpoch;
 
     // Emit AddAnchorEvent with handles
-    _eventRecorder.recordEvent(AddAnchorEvent(
-      eventId: _uuid.v4(),
-      timestamp: now,
-      pathId: _currentPathId!,
-      position: anchorPosition,
-      anchorType: anchorType,
-      handleIn: handleIn,
-      handleOut: handleOut,
-    ),);
+    _eventRecorder.recordEvent(
+      AddAnchorEvent(
+        eventId: _uuid.v4(),
+        timestamp: now,
+        pathId: _currentPathId!,
+        position: anchorPosition,
+        anchorType: anchorType,
+        handleIn: handleIn,
+        handleOut: handleOut,
+      ),
+    );
 
     _lastAnchorPosition = anchorPosition;
     _anchorCount++;
@@ -534,19 +546,23 @@ class PenTool implements ITool {
     final now = DateTime.now().millisecondsSinceEpoch;
 
     // Emit FinishPathEvent
-    _eventRecorder.recordEvent(FinishPathEvent(
-      eventId: _uuid.v4(),
-      timestamp: now,
-      pathId: _currentPathId!,
-      closed: closed,
-    ),);
+    _eventRecorder.recordEvent(
+      FinishPathEvent(
+        eventId: _uuid.v4(),
+        timestamp: now,
+        pathId: _currentPathId!,
+        closed: closed,
+      ),
+    );
 
     // Emit EndGroupEvent
-    _eventRecorder.recordEvent(EndGroupEvent(
-      eventId: _uuid.v4(),
-      timestamp: now,
-      groupId: _currentGroupId!,
-    ),);
+    _eventRecorder.recordEvent(
+      EndGroupEvent(
+        eventId: _uuid.v4(),
+        timestamp: now,
+        groupId: _currentGroupId!,
+      ),
+    );
 
     // Flush events to ensure they're persisted
     _eventRecorder.flush();
@@ -568,11 +584,13 @@ class PenTool implements ITool {
 
     // Emit EndGroupEvent to close the undo group
     // (No FinishPathEvent = incomplete path, will be ignored by event handlers)
-    _eventRecorder.recordEvent(EndGroupEvent(
-      eventId: _uuid.v4(),
-      timestamp: now,
-      groupId: _currentGroupId!,
-    ),);
+    _eventRecorder.recordEvent(
+      EndGroupEvent(
+        eventId: _uuid.v4(),
+        timestamp: now,
+        groupId: _currentGroupId!,
+      ),
+    );
 
     _logger.i('Path canceled: groupId=$_currentGroupId');
 
@@ -691,7 +709,8 @@ class PenTool implements ITool {
     // Apply angle constraint if Shift is pressed
     Point constrainedDragEnd = dragEndPosition;
     if (HardwareKeyboard.instance.isShiftPressed) {
-      constrainedDragEnd = _constrainToAngle(_lastAnchorPosition!, dragEndPosition);
+      constrainedDragEnd =
+          _constrainToAngle(_lastAnchorPosition!, dragEndPosition);
       _logger.d('Shift pressed - constrained handle angle during adjustment');
     }
 
@@ -706,22 +725,23 @@ class PenTool implements ITool {
 
     // For symmetric handles: handleIn is mirrored (-handleOut)
     // For independent handles (Alt pressed): no handleIn
-    final Point? handleIn = isAltPressed
-        ? null
-        : Point(x: -handleOut.x, y: -handleOut.y);
+    final Point? handleIn =
+        isAltPressed ? null : Point(x: -handleOut.x, y: -handleOut.y);
 
     final now = DateTime.now().millisecondsSinceEpoch;
 
     // Emit ModifyAnchorEvent to record handle adjustment
     // anchorType is null since we're only modifying handles, not changing anchor type
-    _eventRecorder.recordEvent(ModifyAnchorEvent(
-      eventId: _uuid.v4(),
-      timestamp: now,
-      pathId: _currentPathId!,
-      anchorIndex: _anchorCount - 1, // Last anchor (0-based index)
-      handleOut: handleOut,
-      handleIn: handleIn,
-    ),);
+    _eventRecorder.recordEvent(
+      ModifyAnchorEvent(
+        eventId: _uuid.v4(),
+        timestamp: now,
+        pathId: _currentPathId!,
+        anchorIndex: _anchorCount - 1, // Last anchor (0-based index)
+        handleOut: handleOut,
+        handleIn: handleIn,
+      ),
+    );
 
     _logger.d(
       'Handle adjustment committed: anchorIndex=${_anchorCount - 1}, '

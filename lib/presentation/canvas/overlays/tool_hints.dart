@@ -3,7 +3,6 @@ import 'package:wiretuner/application/tools/framework/cursor_manager.dart';
 
 /// Represents a hint message with internationalization support.
 class HintMessage {
-
   /// Creates a hint message.
   const HintMessage({
     required this.key,
@@ -11,6 +10,7 @@ class HintMessage {
     this.icon,
     this.color,
   });
+
   /// Internationalization key for the hint.
   ///
   /// This allows hints to be translated in future iterations.
@@ -177,13 +177,13 @@ class ToolHints {
 ///
 /// Related: I3.T5, Decision 6 (platform parity)
 class ToolHintsOverlay extends StatelessWidget {
-
   /// Creates a tool hints overlay.
   const ToolHintsOverlay({
     super.key,
     required this.hints,
     this.position = ToolHintPosition.bottomRight,
   });
+
   /// The hints to display.
   final List<HintMessage> hints;
 
@@ -220,37 +220,35 @@ class ToolHintsOverlay extends StatelessWidget {
 
 /// Internal widget that renders the hint container.
 class _HintContainer extends StatelessWidget {
-
   const _HintContainer({required this.hints});
   final List<HintMessage> hints;
 
   @override
   Widget build(BuildContext context) => Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-      decoration: BoxDecoration(
-        color: Colors.black.withValues(alpha: 0.75),
-        borderRadius: BorderRadius.circular(6),
-        border: Border.all(
-          color: Colors.white.withValues(alpha: 0.2),
-          width: 1,
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        decoration: BoxDecoration(
+          color: Colors.black.withValues(alpha: 0.75),
+          borderRadius: BorderRadius.circular(6),
+          border: Border.all(
+            color: Colors.white.withValues(alpha: 0.2),
+            width: 1,
+          ),
         ),
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          for (int i = 0; i < hints.length; i++) ...[
-            _HintItem(hint: hints[i]),
-            if (i < hints.length - 1) const SizedBox(height: 6),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            for (int i = 0; i < hints.length; i++) ...[
+              _HintItem(hint: hints[i]),
+              if (i < hints.length - 1) const SizedBox(height: 6),
+            ],
           ],
-        ],
-      ),
-    );
+        ),
+      );
 }
 
 /// Internal widget that renders a single hint item.
 class _HintItem extends StatelessWidget {
-
   const _HintItem({required this.hint});
   final HintMessage hint;
 
@@ -314,7 +312,6 @@ enum ToolHintPosition {
 /// )
 /// ```
 class ContextualToolHints extends StatelessWidget {
-
   /// Creates contextual tool hints that watch the cursor manager.
   const ContextualToolHints({
     super.key,
@@ -322,6 +319,7 @@ class ContextualToolHints extends StatelessWidget {
     this.toolHints = const {},
     this.position = ToolHintPosition.bottomRight,
   });
+
   /// The cursor manager to watch for context changes.
   final CursorManager cursorManager;
 
@@ -335,15 +333,15 @@ class ContextualToolHints extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => ListenableBuilder(
-      listenable: cursorManager,
-      builder: (context, _) {
-        final hints = _deriveHints();
-        return ToolHintsOverlay(
-          hints: hints,
-          position: position,
-        );
-      },
-    );
+        listenable: cursorManager,
+        builder: (context, _) {
+          final hints = _deriveHints();
+          return ToolHintsOverlay(
+            hints: hints,
+            position: position,
+          );
+        },
+      );
 
   /// Derives hints from cursor context and active tool.
   List<HintMessage> _deriveHints() {

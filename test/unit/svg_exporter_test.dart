@@ -460,7 +460,10 @@ void main() {
 
       final svgContent = exporter.generateSvg(document);
 
-      expect(svgContent, contains('<dc:title>Test &lt;Title&gt; &amp; &quot;Quotes&quot;</dc:title>'));
+      expect(
+          svgContent,
+          contains(
+              '<dc:title>Test &lt;Title&gt; &amp; &quot;Quotes&quot;</dc:title>'));
     });
 
     test('Escapes XML special characters in IDs', () {

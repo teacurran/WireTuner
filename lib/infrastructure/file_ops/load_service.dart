@@ -226,7 +226,8 @@ class LoadService {
       final documentId = metadata.first['document_id'] as String;
       final formatVersion = metadata.first['format_version'] as int;
 
-      _logger.d('Document metadata: id=$documentId, formatVersion=$formatVersion');
+      _logger
+          .d('Document metadata: id=$documentId, formatVersion=$formatVersion');
 
       // Step 5: Check format version and run migrations if needed
       await _checkFormatVersion(db, formatVersion);
@@ -312,7 +313,8 @@ class LoadService {
       _mapDatabaseException(e);
       rethrow; // Should not reach here due to _mapDatabaseException throwing
     } on FileSystemException catch (e, stackTrace) {
-      _logger.e('File system error during load', error: e, stackTrace: stackTrace);
+      _logger.e('File system error during load',
+          error: e, stackTrace: stackTrace);
       throw FileNotFoundException(
         'Cannot read file: ${e.message}',
         cause: e,
@@ -320,7 +322,8 @@ class LoadService {
     } on LoadException {
       rethrow; // Already a domain exception
     } catch (e, stackTrace) {
-      _logger.e('Unexpected error during load', error: e, stackTrace: stackTrace);
+      _logger.e('Unexpected error during load',
+          error: e, stackTrace: stackTrace);
       throw LoadException('Unexpected error during load: $e', cause: e);
     }
   }
@@ -382,7 +385,8 @@ class LoadService {
         'Current app version supports v$kCurrentFormatVersion.',
       );
     } else if (formatVersion < kCurrentFormatVersion) {
-      _logger.i('Older format detected (v$formatVersion), running migrations...');
+      _logger
+          .i('Older format detected (v$formatVersion), running migrations...');
 
       if (_versionMigrator == null) {
         _logger.w(
@@ -396,7 +400,8 @@ class LoadService {
         );
       }
     } else {
-      _logger.d('Format version matches (v$formatVersion), no migration needed');
+      _logger
+          .d('Format version matches (v$formatVersion), no migration needed');
     }
   }
 

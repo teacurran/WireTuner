@@ -501,8 +501,7 @@ void main() {
       expect(foundState, isNotNull);
     });
 
-    testWidgets('emits telemetry during gestures',
-        (WidgetTester tester) async {
+    testWidgets('emits telemetry during gestures', (WidgetTester tester) async {
       ViewportTelemetry? capturedTelemetry;
 
       await tester.pumpWidget(
@@ -533,8 +532,7 @@ void main() {
       await tester.pump();
     });
 
-    testWidgets('integrates with DocumentPainter',
-        (WidgetTester tester) async {
+    testWidgets('integrates with DocumentPainter', (WidgetTester tester) async {
       final paths = [
         domain_path.Path.line(
           start: const Point(x: 0, y: 0),

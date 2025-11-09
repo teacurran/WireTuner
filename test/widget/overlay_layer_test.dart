@@ -339,7 +339,8 @@ void main() {
 
       // Verify painters are in z-index order (Stack renders bottom-to-top)
       // Find the OverlayLayer's Stack specifically
-      final overlayLayer = tester.widget<OverlayLayer>(find.byType(OverlayLayer));
+      final overlayLayer =
+          tester.widget<OverlayLayer>(find.byType(OverlayLayer));
       final context = tester.element(find.byWidget(overlayLayer));
       final stack = context.widget as OverlayLayer;
 

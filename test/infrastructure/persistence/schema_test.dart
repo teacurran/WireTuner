@@ -55,14 +55,19 @@ void main() {
       };
 
       // Verify all required columns exist
-      expect(columnMap.keys, containsAll([
-        'document_id',
-        'title',
-        'format_version',
-        'created_at',
-        'modified_at',
-        'author',
-      ],),);
+      expect(
+        columnMap.keys,
+        containsAll(
+          [
+            'document_id',
+            'title',
+            'format_version',
+            'created_at',
+            'modified_at',
+            'author',
+          ],
+        ),
+      );
 
       // Verify primary key
       expect(columnMap['document_id']!['pk'], 1);
@@ -97,15 +102,20 @@ void main() {
       };
 
       // Verify all required columns exist
-      expect(columnMap.keys, containsAll([
-        'event_id',
-        'document_id',
-        'event_sequence',
-        'event_type',
-        'event_payload',
-        'timestamp',
-        'user_id',
-      ],),);
+      expect(
+        columnMap.keys,
+        containsAll(
+          [
+            'event_id',
+            'document_id',
+            'event_sequence',
+            'event_type',
+            'event_payload',
+            'timestamp',
+            'user_id',
+          ],
+        ),
+      );
 
       // Verify primary key (AUTOINCREMENT)
       expect(columnMap['event_id']!['pk'], 1);
@@ -128,7 +138,8 @@ void main() {
       expect(columnMap['user_id']!['notnull'], 0); // Optional
     });
 
-    test('events table has UNIQUE constraint on (document_id, event_sequence)', () async {
+    test('events table has UNIQUE constraint on (document_id, event_sequence)',
+        () async {
       // Arrange
       await SchemaManager.createSchema(db);
 
@@ -175,14 +186,19 @@ void main() {
       };
 
       // Verify all required columns exist
-      expect(columnMap.keys, containsAll([
-        'snapshot_id',
-        'document_id',
-        'event_sequence',
-        'snapshot_data',
-        'created_at',
-        'compression',
-      ],),);
+      expect(
+        columnMap.keys,
+        containsAll(
+          [
+            'snapshot_id',
+            'document_id',
+            'event_sequence',
+            'snapshot_data',
+            'created_at',
+            'compression',
+          ],
+        ),
+      );
 
       // Verify primary key
       expect(columnMap['snapshot_id']!['pk'], 1);
@@ -252,7 +268,8 @@ void main() {
       });
 
       // Act - Delete metadata
-      await db.delete('metadata', where: 'document_id = ?', whereArgs: ['doc1']);
+      await db
+          .delete('metadata', where: 'document_id = ?', whereArgs: ['doc1']);
 
       // Assert - Events and snapshots should be deleted
       final remainingEvents = await db.query('events');

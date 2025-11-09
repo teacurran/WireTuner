@@ -76,7 +76,8 @@ void main() {
 
       // Verify empty state is shown
       expect(find.text('No History'), findsOneWidget);
-      expect(find.text('Operations will appear here\nas you work'), findsOneWidget);
+      expect(find.text('Operations will appear here\nas you work'),
+          findsOneWidget);
       expect(find.byIcon(Icons.history), findsOneWidget);
     });
 

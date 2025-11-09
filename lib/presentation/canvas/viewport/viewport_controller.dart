@@ -43,7 +43,6 @@ import 'package:wiretuner/domain/events/event_base.dart' as event_base;
 /// The controller extends [ChangeNotifier] to support reactive UI updates.
 /// Widgets should listen to changes and rebuild when transformations change.
 class ViewportController extends ChangeNotifier {
-
   /// Creates a viewport controller with optional initial state.
   ///
   /// [initialPan] defaults to zero offset (world origin at screen origin).
@@ -57,6 +56,7 @@ class ViewportController extends ChangeNotifier {
         _screenToWorldMatrix = Matrix4.identity() {
     _updateMatrices();
   }
+
   /// Minimum allowed zoom level (5%).
   static const double minZoom = 0.05;
 

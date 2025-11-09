@@ -88,8 +88,10 @@ void main() {
       expect(events, isNotEmpty);
 
       // Should have ModifyAnchorEvent for handleOut
-      final modifyEvents = events.where((e) => e.eventType == 'ModifyAnchorEvent');
-      expect(modifyEvents, isNotEmpty, reason: 'Bezier handles should be imported');
+      final modifyEvents =
+          events.where((e) => e.eventType == 'ModifyAnchorEvent');
+      expect(modifyEvents, isNotEmpty,
+          reason: 'Bezier handles should be imported');
 
       // Should have AddAnchorEvent with handleIn
       final addEvents = events.where((e) => e.eventType == 'AddAnchorEvent');
@@ -118,6 +120,5 @@ void main() {
       final dynamic createDynamic = createEvent;
       expect(createDynamic.fillColor, '#ff0000');
     });
-
   });
 }

@@ -45,17 +45,19 @@ void main() {
 
           // 30% chance of Bezier curve
           if (random.nextDouble() < 0.3) {
-            anchors.add(AnchorPoint(
-              position: Point(x: x, y: y),
-              handleOut: Point(
-                x: (random.nextDouble() - 0.5) * 50,
-                y: (random.nextDouble() - 0.5) * 50,
+            anchors.add(
+              AnchorPoint(
+                position: Point(x: x, y: y),
+                handleOut: Point(
+                  x: (random.nextDouble() - 0.5) * 50,
+                  y: (random.nextDouble() - 0.5) * 50,
+                ),
+                handleIn: Point(
+                  x: (random.nextDouble() - 0.5) * 50,
+                  y: (random.nextDouble() - 0.5) * 50,
+                ),
               ),
-              handleIn: Point(
-                x: (random.nextDouble() - 0.5) * 50,
-                y: (random.nextDouble() - 0.5) * 50,
-              ),
-            ),);
+            );
           } else {
             anchors.add(AnchorPoint.corner(Point(x: x, y: y)));
           }
@@ -64,18 +66,22 @@ void main() {
         // Create segments connecting anchors
         final segments = <Segment>[];
         for (int j = 0; j < anchorCount - 1; j++) {
-          final isBezier = anchors[j].handleOut != null ||
-              anchors[j + 1].handleIn != null;
-          segments.add(isBezier
-              ? Segment.bezier(startIndex: j, endIndex: j + 1)
-              : Segment.line(startIndex: j, endIndex: j + 1),);
+          final isBezier =
+              anchors[j].handleOut != null || anchors[j + 1].handleIn != null;
+          segments.add(
+            isBezier
+                ? Segment.bezier(startIndex: j, endIndex: j + 1)
+                : Segment.line(startIndex: j, endIndex: j + 1),
+          );
         }
 
-        paths.add(domain.Path(
-          anchors: anchors,
-          segments: segments,
-          closed: random.nextBool(),
-        ),);
+        paths.add(
+          domain.Path(
+            anchors: anchors,
+            segments: segments,
+            closed: random.nextBool(),
+          ),
+        );
       }
 
       return paths;
@@ -162,9 +168,13 @@ void main() {
       recorder.endRecording();
 
       // Assert: Paint time should be under 16ms (60 FPS budget)
-      print('DocumentPainter: 1000 paths painted in ${paintTimeMs.toStringAsFixed(2)}ms');
-      expect(paintTimeMs, lessThan(16.0),
-          reason: 'Paint time exceeded 16ms frame budget',);
+      print(
+          'DocumentPainter: 1000 paths painted in ${paintTimeMs.toStringAsFixed(2)}ms');
+      expect(
+        paintTimeMs,
+        lessThan(16.0),
+        reason: 'Paint time exceeded 16ms frame budget',
+      );
     });
 
     test('SelectionOverlay renders 100 selected paths within 16ms', () {
@@ -206,9 +216,13 @@ void main() {
       recorder.endRecording();
 
       // Assert: Paint time should be under 16ms
-      print('SelectionOverlay: 100 paths painted in ${paintTimeMs.toStringAsFixed(2)}ms');
-      expect(paintTimeMs, lessThan(16.0),
-          reason: 'Paint time exceeded 16ms frame budget',);
+      print(
+          'SelectionOverlay: 100 paths painted in ${paintTimeMs.toStringAsFixed(2)}ms');
+      expect(
+        paintTimeMs,
+        lessThan(16.0),
+        reason: 'Paint time exceeded 16ms frame budget',
+      );
     });
 
     test('PathRenderer caching provides performance benefit', () {
@@ -248,8 +262,11 @@ void main() {
       print('PathRenderer cached pass: ${secondPassMs.toStringAsFixed(2)}ms');
       print('Speedup: ${(firstPassMs / secondPassMs).toStringAsFixed(2)}x');
 
-      expect(secondPassMs, lessThan(firstPassMs * 0.8),
-          reason: 'Cache should provide at least 20% speedup',);
+      expect(
+        secondPassMs,
+        lessThan(firstPassMs * 0.8),
+        reason: 'Cache should provide at least 20% speedup',
+      );
     });
 
     test('Mixed document (paths + shapes) renders within 16ms', () {
@@ -279,9 +296,13 @@ void main() {
       recorder.endRecording();
 
       // Assert: Paint time should be under 16ms
-      print('Mixed document: 1000 objects painted in ${paintTimeMs.toStringAsFixed(2)}ms');
-      expect(paintTimeMs, lessThan(16.0),
-          reason: 'Paint time exceeded 16ms frame budget',);
+      print(
+          'Mixed document: 1000 objects painted in ${paintTimeMs.toStringAsFixed(2)}ms');
+      expect(
+        paintTimeMs,
+        lessThan(16.0),
+        reason: 'Paint time exceeded 16ms frame budget',
+      );
     });
 
     test('Cache hit rate remains high under normal workload', () {
@@ -311,8 +332,11 @@ void main() {
       }
 
       // Assert: Cache size should remain stable
-      expect(pathRenderer.cacheSize, equals(initialCacheSize),
-          reason: 'Cache should not grow unnecessarily',);
+      expect(
+        pathRenderer.cacheSize,
+        equals(initialCacheSize),
+        reason: 'Cache should not grow unnecessarily',
+      );
     });
 
     test('Zoom changes within threshold do not invalidate cache', () {

@@ -27,7 +27,6 @@ import 'package:flutter/foundation.dart';
 /// telemetryService.recordToolMetric(metric);
 /// ```
 class ToolTelemetry {
-
   /// Creates a tool telemetry metric.
   ToolTelemetry({
     required this.toolId,
@@ -38,6 +37,7 @@ class ToolTelemetry {
     this.backlogOccurred = false,
     DateTime? timestamp,
   }) : timestamp = timestamp ?? DateTime.now();
+
   /// Unique identifier for the tool that generated this metric.
   final String toolId;
 
@@ -65,19 +65,20 @@ class ToolTelemetry {
   /// - Duration > 2000ms (2 seconds)
   /// - Events per second < 15 (expected ~20 for 50ms sampling)
   /// - Backlog occurred (event sampler buffer overflow)
-  bool get hasPerformanceIssue => duration.inMilliseconds > 2000 ||
-        eventsPerSecond < 15.0 ||
-        backlogOccurred;
+  bool get hasPerformanceIssue =>
+      duration.inMilliseconds > 2000 ||
+      eventsPerSecond < 15.0 ||
+      backlogOccurred;
 
   @override
   String toString() => 'ToolTelemetry('
-        'tool: $toolId, '
-        'operation: $operationType, '
-        'duration: ${duration.inMilliseconds}ms, '
-        'events: $eventCount, '
-        'events/sec: ${eventsPerSecond.toStringAsFixed(1)}, '
-        'backlog: $backlogOccurred'
-        ')';
+      'tool: $toolId, '
+      'operation: $operationType, '
+      'duration: ${duration.inMilliseconds}ms, '
+      'events: $eventCount, '
+      'events/sec: ${eventsPerSecond.toStringAsFixed(1)}, '
+      'backlog: $backlogOccurred'
+      ')';
 }
 
 /// Extension to TelemetryService for tool-specific metrics.

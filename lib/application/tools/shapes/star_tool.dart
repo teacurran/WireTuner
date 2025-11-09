@@ -85,7 +85,8 @@ class StarTool extends ShapeToolBase {
 
     // Validate inner radius
     if (innerRadius >= outerRadius || innerRadius <= 0) {
-      _logger.w('Invalid star parameters: innerRadius=$innerRadius, outerRadius=$outerRadius');
+      _logger.w(
+          'Invalid star parameters: innerRadius=$innerRadius, outerRadius=$outerRadius');
       return;
     }
 
@@ -192,7 +193,8 @@ class StarTool extends ShapeToolBase {
       'centerY': center.dy,
       'radius': outerRadius, // "radius" field = outer radius
       'innerRadius': innerRadius,
-      'sides': max(_pointCount, 3).toDouble(), // Enforce minimum, convert to double
+      'sides':
+          max(_pointCount, 3).toDouble(), // Enforce minimum, convert to double
       'rotation': 0.0,
     };
   }

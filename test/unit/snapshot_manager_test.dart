@@ -50,7 +50,9 @@ void main() {
   });
 
   group('Acceptance Criterion 1: ACID-safe writes and WAL mode', () {
-    test('WAL mode is configured (or equivalent journal mode for test environment)', () async {
+    test(
+        'WAL mode is configured (or equivalent journal mode for test environment)',
+        () async {
       // Query the journal mode to verify it's been set
       final result = await db.rawQuery('PRAGMA journal_mode');
       final journalMode = result.first.values.first as String;
@@ -66,13 +68,15 @@ void main() {
       expect(
         journalMode.toLowerCase(),
         isIn(['wal', 'delete', 'memory']),
-        reason: 'Journal mode should be set (WAL in production, may vary in tests)',
+        reason:
+            'Journal mode should be set (WAL in production, may vary in tests)',
       );
 
       // Verify that foreign keys are enabled (this proves PRAGMA commands work)
       final fkResult = await db.rawQuery('PRAGMA foreign_keys');
       final fkEnabled = fkResult.first.values.first as int;
-      expect(fkEnabled, equals(1), reason: 'Foreign keys must be enabled for ACID compliance');
+      expect(fkEnabled, equals(1),
+          reason: 'Foreign keys must be enabled for ACID compliance');
     });
 
     test('batch event insert is atomic - all succeed or all fail', () async {
@@ -245,9 +249,13 @@ void main() {
       final largeDocument = {
         'id': 'doc-1k',
         'title': 'Large Document with 1k Anchors',
-        'paths': List.generate(100, (pathIndex) => {
+        'paths': List.generate(
+          100,
+          (pathIndex) => {
             'id': 'path-$pathIndex',
-            'anchors': List.generate(10, (anchorIndex) => {
+            'anchors': List.generate(
+              10,
+              (anchorIndex) => {
                 'id': 'anchor-$pathIndex-$anchorIndex',
                 'x': pathIndex * 10.0 + anchorIndex,
                 'y': pathIndex * 20.0 + anchorIndex,
@@ -259,12 +267,14 @@ void main() {
                   'x': pathIndex * 10.0 + anchorIndex + 2,
                   'y': pathIndex * 20.0 + anchorIndex + 2,
                 },
-              },),
+              },
+            ),
             'fillColor': '#FF0000',
             'strokeColor': '#000000',
             'strokeWidth': 2.0,
             'opacity': 1.0,
-          },),
+          },
+        ),
         'metadata': {
           'created': DateTime.now().millisecondsSinceEpoch,
           'modified': DateTime.now().millisecondsSinceEpoch,
@@ -290,7 +300,8 @@ void main() {
       expect(
         durationMs,
         lessThan(25),
-        reason: 'Snapshot creation must complete under 25ms for 1k anchors dataset',
+        reason:
+            'Snapshot creation must complete under 25ms for 1k anchors dataset',
       );
     });
 
@@ -312,14 +323,20 @@ void main() {
 
       final document = {
         'id': 'doc-perf',
-        'paths': List.generate(50, (i) => {
-              'id': 'path-$i',
-              'anchors': List.generate(20, (j) => {
-                    'id': 'anchor-$i-$j',
-                    'x': i * 10.0 + j,
-                    'y': i * 20.0 + j,
-                  },),
-            },),
+        'paths': List.generate(
+          50,
+          (i) => {
+            'id': 'path-$i',
+            'anchors': List.generate(
+              20,
+              (j) => {
+                'id': 'anchor-$i-$j',
+                'x': i * 10.0 + j,
+                'y': i * 20.0 + j,
+              },
+            ),
+          },
+        ),
       };
 
       final durations = <int>[];
@@ -396,7 +413,8 @@ void main() {
       final document = {
         'id': 'doc-telemetry',
         'title': 'Test Document',
-        'data': List.generate(100, (i) => 'repeated data for compression ' * 10),
+        'data':
+            List.generate(100, (i) => 'repeated data for compression ' * 10),
       };
 
       await snapshotManager.createSnapshot(
@@ -421,7 +439,8 @@ void main() {
       print('Duration: ${capturedDuration}ms');
     });
 
-    test('compression ratio meets expectations (>2:1 for repetitive data)', () async {
+    test('compression ratio meets expectations (>2:1 for repetitive data)',
+        () async {
       final snapshotStore = SnapshotStore(db);
 
       double? actualRatio;
@@ -463,8 +482,11 @@ void main() {
       );
 
       expect(actualRatio, isNotNull);
-      expect(actualRatio, greaterThan(2.0),
-          reason: 'Compression ratio should be >2:1 for repetitive data',);
+      expect(
+        actualRatio,
+        greaterThan(2.0),
+        reason: 'Compression ratio should be >2:1 for repetitive data',
+      );
     });
 
     test('telemetry counters track snapshot creation', () async {

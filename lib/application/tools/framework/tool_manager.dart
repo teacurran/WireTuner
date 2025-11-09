@@ -86,7 +86,6 @@ import 'dart:ui';
 ///
 /// Related: T018 (Tool Framework), Component Diagram (Tool System)
 class ToolManager extends ChangeNotifier {
-
   /// Creates a tool manager with required services.
   ///
   /// The [cursorService] is required for cursor management.
@@ -100,6 +99,7 @@ class ToolManager extends ChangeNotifier {
         _eventRecorder = eventRecorder {
     _logger.i('ToolManager initialized');
   }
+
   /// Map of registered tools by toolId.
   final Map<String, ITool> _tools = {};
 

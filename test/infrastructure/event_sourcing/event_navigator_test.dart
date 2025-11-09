@@ -364,7 +364,8 @@ void main() {
       // Assert
       expect(navigator.currentSequence, 4);
 
-      final result = await navigator.navigateToSequence(navigator.currentSequence);
+      final result =
+          await navigator.navigateToSequence(navigator.currentSequence);
       final doc = result.state as Map<String, dynamic>;
       final layers = doc['layers'] as List;
       expect(layers.length, 5);
@@ -737,7 +738,8 @@ void main() {
       expect(await navigator.canRedo(), false);
     });
 
-    test('cache immutability - modifying returned state does not affect cache', () async {
+    test('cache immutability - modifying returned state does not affect cache',
+        () async {
       // Arrange
       final events = List.generate(
         5,

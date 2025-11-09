@@ -24,7 +24,6 @@ import 'package:wiretuner/domain/document/document.dart';
 /// (< 1MB), this is acceptable. If performance becomes an issue, consider
 /// async serialization or chunking.
 class SnapshotSerializer {
-
   SnapshotSerializer({this.enableCompression = true});
   final Logger _logger = Logger();
   final bool enableCompression;
@@ -53,7 +52,8 @@ class SnapshotSerializer {
 
       return Uint8List.fromList(bytes);
     } catch (e, stackTrace) {
-      _logger.e('Failed to serialize document to JSON', error: e, stackTrace: stackTrace);
+      _logger.e('Failed to serialize document to JSON',
+          error: e, stackTrace: stackTrace);
       rethrow;
     }
   }
@@ -99,11 +99,13 @@ class SnapshotSerializer {
         );
         return Uint8List.fromList(compressed);
       } else {
-        _logger.d('Serialized document $docId: ${bytes.length} bytes (uncompressed)');
+        _logger.d(
+            'Serialized document $docId: ${bytes.length} bytes (uncompressed)');
         return Uint8List.fromList(bytes);
       }
     } catch (e, stackTrace) {
-      _logger.e('Failed to serialize document', error: e, stackTrace: stackTrace);
+      _logger.e('Failed to serialize document',
+          error: e, stackTrace: stackTrace);
       rethrow;
     }
   }
@@ -134,13 +136,15 @@ class SnapshotSerializer {
       _logger.d('Deserializing snapshot (${bytes.length} bytes)');
 
       // Step 1: Detect compression (gzip magic bytes)
-      final isCompressed = bytes.length >= 2 && bytes[0] == 0x1f && bytes[1] == 0x8b;
+      final isCompressed =
+          bytes.length >= 2 && bytes[0] == 0x1f && bytes[1] == 0x8b;
 
       // Step 2: Decompress if needed
       List<int> decompressed;
       if (isCompressed) {
         decompressed = gzip.decode(bytes);
-        _logger.d('Decompressed: ${bytes.length} bytes → ${decompressed.length} bytes');
+        _logger.d(
+            'Decompressed: ${bytes.length} bytes → ${decompressed.length} bytes');
       } else {
         decompressed = bytes;
       }
@@ -156,14 +160,16 @@ class SnapshotSerializer {
       _logger.d('Deserialized document: ${document.id}');
       return document;
     } on FormatException catch (e) {
-      _logger.e('Failed to deserialize snapshot: Invalid JSON format', error: e);
+      _logger.e('Failed to deserialize snapshot: Invalid JSON format',
+          error: e);
       throw FormatException(
         'Snapshot deserialization failed: Invalid JSON format. '
         'Data may be corrupted or not a valid snapshot. '
         'Original error: ${e.message}',
       );
     } catch (e, stackTrace) {
-      _logger.e('Failed to deserialize snapshot', error: e, stackTrace: stackTrace);
+      _logger.e('Failed to deserialize snapshot',
+          error: e, stackTrace: stackTrace);
       throw Exception(
         'Snapshot deserialization failed: $e. '
         'This may indicate a schema version mismatch or corrupted data.',

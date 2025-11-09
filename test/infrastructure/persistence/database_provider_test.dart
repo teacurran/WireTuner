@@ -129,7 +129,8 @@ void main() {
       expect(db.isOpen, isTrue);
     });
 
-    test('should throw StateError when calling getDatabase() with no open database',
+    test(
+        'should throw StateError when calling getDatabase() with no open database',
         () async {
       await provider.initialize();
 

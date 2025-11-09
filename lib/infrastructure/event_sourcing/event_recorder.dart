@@ -44,7 +44,6 @@ import 'event_sampler.dart';
 /// - **ChangeNotifier**: Emits notifications after successful persistence for UI updates
 /// - **Backpressure Monitoring**: Warns when event buffer age exceeds threshold
 class EventRecorder with ChangeNotifier {
-
   /// Creates an [EventRecorder] for the specified document.
   ///
   /// The [eventStore] is used for persisting events to SQLite.
@@ -262,7 +261,8 @@ class EventRecorder with ChangeNotifier {
   void _checkBackpressure() {
     if (_bufferedEventTimestamp == null) return;
 
-    final ageMs = DateTime.now().difference(_bufferedEventTimestamp!).inMilliseconds;
+    final ageMs =
+        DateTime.now().difference(_bufferedEventTimestamp!).inMilliseconds;
     if (ageMs > _backpressureThresholdMs) {
       _logger.w(
         'Event backpressure detected: buffered event age ${ageMs}ms exceeds threshold ${_backpressureThresholdMs}ms. '

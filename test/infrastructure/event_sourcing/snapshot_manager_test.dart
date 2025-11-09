@@ -39,14 +39,16 @@ class MockSnapshotStore implements SnapshotStore {
   }
 
   @override
-  Future<int> deleteOldSnapshots(String documentId, {int keepCount = 10}) async {
+  Future<int> deleteOldSnapshots(String documentId,
+      {int keepCount = 10}) async {
     throw UnimplementedError();
   }
 
   bool wasCalledWith(String documentId, int eventSequence) => insertCalls.any(
-      (call) =>
-          call.documentId == documentId && call.eventSequence == eventSequence,
-    );
+        (call) =>
+            call.documentId == documentId &&
+            call.eventSequence == eventSequence,
+      );
 
   int get callCount => insertCalls.length;
 
@@ -59,7 +61,6 @@ class MockSnapshotStore implements SnapshotStore {
 }
 
 class InsertCall {
-
   InsertCall(
     this.documentId,
     this.eventSequence,
@@ -296,16 +297,22 @@ void main() {
       final largeDocument = {
         'id': 'doc-large',
         'title': 'Large Document',
-        'layers': List.generate(1000, (i) => {
-              'id': 'layer-$i',
-              'name': 'Layer $i',
-              'shapes': List.generate(10, (j) => {
-                    'id': 'shape-$i-$j',
-                    'type': 'rectangle',
-                    'x': i * 10,
-                    'y': j * 10,
-                  },),
-            },),
+        'layers': List.generate(
+          1000,
+          (i) => {
+            'id': 'layer-$i',
+            'name': 'Layer $i',
+            'shapes': List.generate(
+              10,
+              (j) => {
+                'id': 'shape-$i-$j',
+                'type': 'rectangle',
+                'x': i * 10,
+                'y': j * 10,
+              },
+            ),
+          },
+        ),
       };
 
       await manager.createSnapshot(

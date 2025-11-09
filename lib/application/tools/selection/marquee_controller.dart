@@ -48,11 +48,11 @@ import 'package:wiretuner/presentation/canvas/viewport/viewport_controller.dart'
 /// final selectedObjects = document.objectsInBounds(bounds);
 /// ```
 class MarqueeController {
-
   MarqueeController({
     required this.startScreenPos,
     required this.startWorldPos,
   });
+
   /// Start position in screen coordinates.
   final Offset startScreenPos;
 
@@ -87,10 +87,14 @@ class MarqueeController {
   geom.Rectangle? get worldBounds {
     if (_endWorldPos == null) return null;
 
-    final minX = _endWorldPos!.x < startWorldPos.x ? _endWorldPos!.x : startWorldPos.x;
-    final minY = _endWorldPos!.y < startWorldPos.y ? _endWorldPos!.y : startWorldPos.y;
-    final maxX = _endWorldPos!.x > startWorldPos.x ? _endWorldPos!.x : startWorldPos.x;
-    final maxY = _endWorldPos!.y > startWorldPos.y ? _endWorldPos!.y : startWorldPos.y;
+    final minX =
+        _endWorldPos!.x < startWorldPos.x ? _endWorldPos!.x : startWorldPos.x;
+    final minY =
+        _endWorldPos!.y < startWorldPos.y ? _endWorldPos!.y : startWorldPos.y;
+    final maxX =
+        _endWorldPos!.x > startWorldPos.x ? _endWorldPos!.x : startWorldPos.x;
+    final maxY =
+        _endWorldPos!.y > startWorldPos.y ? _endWorldPos!.y : startWorldPos.y;
 
     return geom.Rectangle(
       x: minX,

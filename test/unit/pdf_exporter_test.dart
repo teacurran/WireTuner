@@ -717,102 +717,106 @@ void main() {
       exporter = PdfExporter();
     });
 
-    test('Exports 5000 objects within 10 seconds', () async {
-      // Create document with 5000 simple line paths
-      final objects = List.generate(
-        5000,
-        (i) => VectorObject.path(
-          id: 'path-$i',
-          path: Path.line(
-            start: Point(x: i.toDouble(), y: i.toDouble()),
-            end: Point(x: i.toDouble() + 10, y: i.toDouble() + 10),
+    test(
+      'Exports 5000 objects within 10 seconds',
+      () async {
+        // Create document with 5000 simple line paths
+        final objects = List.generate(
+          5000,
+          (i) => VectorObject.path(
+            id: 'path-$i',
+            path: Path.line(
+              start: Point(x: i.toDouble(), y: i.toDouble()),
+              end: Point(x: i.toDouble() + 10, y: i.toDouble() + 10),
+            ),
           ),
-        ),
-      );
+        );
 
-      final document = Document(
-        id: 'doc-benchmark',
-        title: 'Performance Benchmark',
-        layers: [
-          Layer(
-            id: 'layer-bulk',
-            objects: objects,
-          ),
-        ],
-        selection: const Selection(),
-        viewport: const Viewport(),
-      );
+        final document = Document(
+          id: 'doc-benchmark',
+          title: 'Performance Benchmark',
+          layers: [
+            Layer(
+              id: 'layer-bulk',
+              objects: objects,
+            ),
+          ],
+          selection: const Selection(),
+          viewport: const Viewport(),
+        );
 
-      final startTime = DateTime.now();
-      final pdfBytes = await exporter.generatePdf(document);
-      final duration = DateTime.now().difference(startTime);
+        final startTime = DateTime.now();
+        final pdfBytes = await exporter.generatePdf(document);
+        final duration = DateTime.now().difference(startTime);
 
-      // Acceptance criteria: <10s for benchmark doc
-      expect(
-        duration.inSeconds,
-        lessThan(10),
-        reason: 'Export took ${duration.inSeconds}s, target <10s',
-      );
+        // Acceptance criteria: <10s for benchmark doc
+        expect(
+          duration.inSeconds,
+          lessThan(10),
+          reason: 'Export took ${duration.inSeconds}s, target <10s',
+        );
 
-      // Verify PDF is valid
-      expect(pdfBytes, isNotEmpty);
-      expect(pdfBytes.sublist(0, 4), equals([0x25, 0x50, 0x44, 0x46]));
-    },
+        // Verify PDF is valid
+        expect(pdfBytes, isNotEmpty);
+        expect(pdfBytes.sublist(0, 4), equals([0x25, 0x50, 0x44, 0x46]));
+      },
       timeout: const Timeout(Duration(seconds: 15)),
     );
 
-    test('Exports 1000 Bezier curves efficiently', () async {
-      // Create document with 1000 Bezier curve paths
-      final objects = List.generate(
-        1000,
-        (i) => VectorObject.path(
-          id: 'curve-$i',
-          path: Path(
-            anchors: [
-              AnchorPoint(
-                position: Point(x: i.toDouble(), y: i.toDouble()),
-                handleOut: const Point(x: 50, y: 0),
-              ),
-              AnchorPoint(
-                position: Point(x: i.toDouble() + 100, y: i.toDouble() + 100),
-                handleIn: const Point(x: -50, y: 0),
-              ),
-            ],
-            segments: [
-              Segment.bezier(startIndex: 0, endIndex: 1),
-            ],
+    test(
+      'Exports 1000 Bezier curves efficiently',
+      () async {
+        // Create document with 1000 Bezier curve paths
+        final objects = List.generate(
+          1000,
+          (i) => VectorObject.path(
+            id: 'curve-$i',
+            path: Path(
+              anchors: [
+                AnchorPoint(
+                  position: Point(x: i.toDouble(), y: i.toDouble()),
+                  handleOut: const Point(x: 50, y: 0),
+                ),
+                AnchorPoint(
+                  position: Point(x: i.toDouble() + 100, y: i.toDouble() + 100),
+                  handleIn: const Point(x: -50, y: 0),
+                ),
+              ],
+              segments: [
+                Segment.bezier(startIndex: 0, endIndex: 1),
+              ],
+            ),
           ),
-        ),
-      );
+        );
 
-      final document = Document(
-        id: 'doc-curves',
-        title: 'Bezier Benchmark',
-        layers: [
-          Layer(
-            id: 'layer-curves',
-            objects: objects,
-          ),
-        ],
-        selection: const Selection(),
-        viewport: const Viewport(),
-      );
+        final document = Document(
+          id: 'doc-curves',
+          title: 'Bezier Benchmark',
+          layers: [
+            Layer(
+              id: 'layer-curves',
+              objects: objects,
+            ),
+          ],
+          selection: const Selection(),
+          viewport: const Viewport(),
+        );
 
-      final startTime = DateTime.now();
-      final pdfBytes = await exporter.generatePdf(document);
-      final duration = DateTime.now().difference(startTime);
+        final startTime = DateTime.now();
+        final pdfBytes = await exporter.generatePdf(document);
+        final duration = DateTime.now().difference(startTime);
 
-      // Should complete in reasonable time
-      expect(
-        duration.inSeconds,
-        lessThan(5),
-        reason: 'Export took ${duration.inSeconds}s',
-      );
+        // Should complete in reasonable time
+        expect(
+          duration.inSeconds,
+          lessThan(5),
+          reason: 'Export took ${duration.inSeconds}s',
+        );
 
-      // Verify PDF is valid
-      expect(pdfBytes, isNotEmpty);
-      expect(pdfBytes.sublist(0, 4), equals([0x25, 0x50, 0x44, 0x46]));
-    },
+        // Verify PDF is valid
+        expect(pdfBytes, isNotEmpty);
+        expect(pdfBytes.sublist(0, 4), equals([0x25, 0x50, 0x44, 0x46]));
+      },
       timeout: const Timeout(Duration(seconds: 10)),
     );
   });

@@ -80,7 +80,6 @@ import 'package:wiretuner/presentation/canvas/viewport/viewport_controller.dart'
 /// toolManager.activateTool('direct_selection');
 /// ```
 class DirectSelectionTool implements ITool {
-
   DirectSelectionTool({
     required Document document,
     required ViewportController viewportController,
@@ -272,7 +271,8 @@ class DirectSelectionTool implements ITool {
   @override
   bool onKeyPress(KeyEvent event) {
     // Handle ESC key for canceling drag
-    if (event is KeyDownEvent && event.logicalKey == LogicalKeyboardKey.escape) {
+    if (event is KeyDownEvent &&
+        event.logicalKey == LogicalKeyboardKey.escape) {
       if (_dragContext != null) {
         _cancelDrag();
         _logger.d('Drag cancelled by ESC key');
@@ -476,15 +476,17 @@ class DirectSelectionTool implements ITool {
     }
 
     // Emit ModifyAnchorEvent (will be auto-sampled)
-    _recordEvent(ModifyAnchorEvent(
-      eventId: _uuid.v4(),
-      timestamp: timestamp,
-      pathId: context.objectId,
-      anchorIndex: context.anchorIndex,
-      position: result.position,
-      handleIn: result.handleIn,
-      handleOut: result.handleOut,
-    ),);
+    _recordEvent(
+      ModifyAnchorEvent(
+        eventId: _uuid.v4(),
+        timestamp: timestamp,
+        pathId: context.objectId,
+        anchorIndex: context.anchorIndex,
+        position: result.position,
+        handleIn: result.handleIn,
+        handleOut: result.handleOut,
+      ),
+    );
 
     // Update drag context with feedback metrics
     _dragContext = context.copyWith(
@@ -547,15 +549,17 @@ class DirectSelectionTool implements ITool {
         }
 
         // Emit event for this inertia frame
-        _recordEvent(ModifyAnchorEvent(
-          eventId: _uuid.v4(),
-          timestamp: eventTimestamp,
-          pathId: context.objectId,
-          anchorIndex: context.anchorIndex,
-          position: result.position,
-          handleIn: result.handleIn,
-          handleOut: result.handleOut,
-        ),);
+        _recordEvent(
+          ModifyAnchorEvent(
+            eventId: _uuid.v4(),
+            timestamp: eventTimestamp,
+            pathId: context.objectId,
+            anchorIndex: context.anchorIndex,
+            position: result.position,
+            handleIn: result.handleIn,
+            handleOut: result.handleOut,
+          ),
+        );
       }
     }
 
@@ -677,7 +681,8 @@ class DirectSelectionTool implements ITool {
 
     // Calculate feedback position in screen space
     // Position text offset from current drag position
-    final screenPos = _viewportController.worldToScreen(context.currentPosition);
+    final screenPos =
+        _viewportController.worldToScreen(context.currentPosition);
     const feedbackOffset = Offset(10, 15); // px offset from cursor
 
     // Create text painter
@@ -729,12 +734,12 @@ class DirectSelectionTool implements ITool {
   }
 
   /// Calculates the length of a vector.
-  double _vectorLength(Point vector) => math.sqrt(vector.x * vector.x + vector.y * vector.y);
+  double _vectorLength(Point vector) =>
+      math.sqrt(vector.x * vector.x + vector.y * vector.y);
 }
 
 /// Internal state for drag operations.
 class _DragContext {
-
   _DragContext({
     required this.objectId,
     required this.anchorIndex,
@@ -746,6 +751,7 @@ class _DragContext {
     required this.originalAnchor,
     this.feedbackMetrics,
   });
+
   /// The object ID being dragged.
   final String objectId;
 
@@ -777,15 +783,16 @@ class _DragContext {
     Point? currentPosition,
     int? eventCount,
     Map<String, dynamic>? feedbackMetrics,
-  }) => _DragContext(
-      objectId: objectId,
-      anchorIndex: anchorIndex,
-      component: component,
-      startPosition: startPosition,
-      currentPosition: currentPosition ?? this.currentPosition,
-      startTime: startTime,
-      eventCount: eventCount ?? this.eventCount,
-      originalAnchor: originalAnchor,
-      feedbackMetrics: feedbackMetrics ?? this.feedbackMetrics,
-    );
+  }) =>
+      _DragContext(
+        objectId: objectId,
+        anchorIndex: anchorIndex,
+        component: component,
+        startPosition: startPosition,
+        currentPosition: currentPosition ?? this.currentPosition,
+        startTime: startTime,
+        eventCount: eventCount ?? this.eventCount,
+        originalAnchor: originalAnchor,
+        feedbackMetrics: feedbackMetrics ?? this.feedbackMetrics,
+      );
 }

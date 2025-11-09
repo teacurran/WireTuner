@@ -49,7 +49,6 @@ import 'package:wiretuner/domain/models/geometry/point_extensions.dart';
 /// - Angle snapping: O(1) time complexity, < 1ms overhead
 /// - Path snapping: O(n) where n = number of path segments, ~2-5ms
 class SnappingService {
-
   SnappingService({
     this.gridSnapEnabled = false,
     this.angleSnapEnabled = false,
@@ -179,9 +178,8 @@ class SnappingService {
     final distanceSquared = dx * dx + dy * dy;
 
     // Apply hysteresis if currently snapped
-    final effectiveThreshold = _isSnapped
-        ? magneticThreshold + hysteresisMargin
-        : magneticThreshold;
+    final effectiveThreshold =
+        _isSnapped ? magneticThreshold + hysteresisMargin : magneticThreshold;
     final thresholdSquared = effectiveThreshold * effectiveThreshold;
 
     // Snap if within threshold

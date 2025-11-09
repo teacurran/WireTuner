@@ -185,7 +185,8 @@ class SchemaManager {
       );
 
       if (tables.length != 3) {
-        _logger.w('Schema verification failed: Expected 3 tables, found ${tables.length}');
+        _logger.w(
+            'Schema verification failed: Expected 3 tables, found ${tables.length}');
         return false;
       }
 
@@ -195,7 +196,8 @@ class SchemaManager {
       );
 
       if (indexes.length != 2) {
-        _logger.w('Schema verification failed: Expected 2 indexes, found ${indexes.length}');
+        _logger.w(
+            'Schema verification failed: Expected 2 indexes, found ${indexes.length}');
         return false;
       }
 

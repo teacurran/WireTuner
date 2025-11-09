@@ -107,9 +107,12 @@ void main() {
       final id3 = await eventStore.insertEvent('doc1', event3);
 
       // Verify sequences are 0, 1, 2
-      final result1 = await db.query('events', where: 'event_id = ?', whereArgs: [id1]);
-      final result2 = await db.query('events', where: 'event_id = ?', whereArgs: [id2]);
-      final result3 = await db.query('events', where: 'event_id = ?', whereArgs: [id3]);
+      final result1 =
+          await db.query('events', where: 'event_id = ?', whereArgs: [id1]);
+      final result2 =
+          await db.query('events', where: 'event_id = ?', whereArgs: [id2]);
+      final result3 =
+          await db.query('events', where: 'event_id = ?', whereArgs: [id3]);
 
       expect(result1.first['event_sequence'], equals(0));
       expect(result2.first['event_sequence'], equals(1));
@@ -281,14 +284,22 @@ void main() {
             INSERT INTO events (document_id, event_sequence, event_type, event_payload, timestamp, user_id)
             VALUES (?, ?, ?, ?, ?, ?)
             ''',
-            ['doc1', 0, 'TestEvent', '{}', DateTime.now().millisecondsSinceEpoch, null],
+            [
+              'doc1',
+              0,
+              'TestEvent',
+              '{}',
+              DateTime.now().millisecondsSinceEpoch,
+              null
+            ],
           );
         },
         throwsA(isA<DatabaseException>()),
       );
     });
 
-    test('EventStore error handling converts DatabaseException correctly', () async {
+    test('EventStore error handling converts DatabaseException correctly',
+        () async {
       await createTestDocument('doc1');
 
       // Test that the error path in EventStore.insertEvent is executed
@@ -329,7 +340,8 @@ void main() {
       expect(id, greaterThan(0));
 
       // Verify the event was inserted at sequence 3
-      final result = await db.query('events', where: 'event_id = ?', whereArgs: [id]);
+      final result =
+          await db.query('events', where: 'event_id = ?', whereArgs: [id]);
       expect(result.first['event_sequence'], equals(3));
     });
   });

@@ -336,8 +336,7 @@ class PdfExporter {
   /// // becomes (100, 750) in PDF coordinates
   /// final pdfY = _pdfY(50, 800); // Returns 750
   /// ```
-  double _pdfY(double wireTunerY, double pageHeight) =>
-      pageHeight - wireTunerY;
+  double _pdfY(double wireTunerY, double pageHeight) => pageHeight - wireTunerY;
 
   /// Calculates the bounding rectangle for the document.
   ///

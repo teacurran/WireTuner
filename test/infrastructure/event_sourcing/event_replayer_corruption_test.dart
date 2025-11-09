@@ -94,8 +94,8 @@ class MockSnapshotStore implements SnapshotStore {
     int maxSequence,
   ) async {
     // Find latest snapshot <= maxSequence
-    final validSequences = _snapshots.keys.where((seq) => seq <= maxSequence).toList()
-      ..sort();
+    final validSequences =
+        _snapshots.keys.where((seq) => seq <= maxSequence).toList()..sort();
 
     if (validSequences.isEmpty) {
       return null;
@@ -134,7 +134,6 @@ Uint8List _createSnapshotBytes(Map<String, dynamic> data) {
 // Custom event type for corruption testing
 // This is a simple concrete implementation for testing purposes
 class _CorruptTestEvent extends EventBase {
-
   const _CorruptTestEvent({
     required String eventId,
     required int timestamp,
@@ -154,10 +153,10 @@ class _CorruptTestEvent extends EventBase {
 
   @override
   Map<String, dynamic> toJson() => {
-      'eventId': eventId,
-      'timestamp': timestamp,
-      'eventType': eventType,
-    };
+        'eventId': eventId,
+        'timestamp': timestamp,
+        'eventType': eventType,
+      };
 }
 
 void main() {
@@ -326,7 +325,8 @@ void main() {
       expect(result.hasIssues, true);
       expect(result.warnings.isNotEmpty, true);
       expect(
-        result.warnings.any((w) => w.contains('Snapshot at sequence 50 corrupted')),
+        result.warnings
+            .any((w) => w.contains('Snapshot at sequence 50 corrupted')),
         true,
       );
 
@@ -337,7 +337,8 @@ void main() {
       expect(layers[0]['id'], 'path1');
     });
 
-    test('handles snapshot corruption with previous snapshot fallback', () async {
+    test('handles snapshot corruption with previous snapshot fallback',
+        () async {
       // Arrange
       // Set valid snapshot at sequence 25
       snapshotStore.setSnapshotAtSequence(25, {
@@ -369,7 +370,8 @@ void main() {
       // Assert
       expect(result.hasIssues, true);
       expect(
-        result.warnings.any((w) => w.contains('Snapshot at sequence 50 corrupted')),
+        result.warnings
+            .any((w) => w.contains('Snapshot at sequence 50 corrupted')),
         true,
       );
 

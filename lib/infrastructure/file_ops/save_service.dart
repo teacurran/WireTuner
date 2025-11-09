@@ -225,7 +225,8 @@ class SaveService {
 
         // 4b. Insert pending events (inline to avoid nested transactions)
         if (pendingEvents.isNotEmpty) {
-          _logger.d('Batch inserting ${pendingEvents.length} events for document: $documentId');
+          _logger.d(
+              'Batch inserting ${pendingEvents.length} events for document: $documentId');
 
           // Get the starting sequence number
           final maxSeqResult = await txn.rawQuery(
@@ -243,7 +244,14 @@ class SaveService {
               INSERT INTO events (document_id, event_sequence, event_type, event_payload, timestamp, user_id)
               VALUES (?, ?, ?, ?, ?, ?)
               ''',
-              [documentId, nextSeq, event.eventType, payload, event.timestamp, null],
+              [
+                documentId,
+                nextSeq,
+                event.eventType,
+                payload,
+                event.timestamp,
+                null
+              ],
             );
 
             nextSeq++;
@@ -326,7 +334,8 @@ class SaveService {
       _mapDatabaseException(e);
       rethrow; // Should not reach here due to _mapDatabaseException throwing
     } on FileSystemException catch (e, stackTrace) {
-      _logger.e('File system error during save', error: e, stackTrace: stackTrace);
+      _logger.e('File system error during save',
+          error: e, stackTrace: stackTrace);
       throw PermissionDeniedException(
         'Cannot write to file: ${e.message}',
         cause: e,
@@ -334,7 +343,8 @@ class SaveService {
     } on SaveException {
       rethrow; // Already a domain exception
     } catch (e, stackTrace) {
-      _logger.e('Unexpected error during save', error: e, stackTrace: stackTrace);
+      _logger.e('Unexpected error during save',
+          error: e, stackTrace: stackTrace);
       throw SaveException('Unexpected error during save: $e', cause: e);
     }
   }
@@ -361,7 +371,8 @@ class SaveService {
     required Document document,
   }) async {
     final startTime = DateTime.now();
-    _logger.d('Starting Save As: documentId=$documentId, events=${allEvents.length}');
+    _logger.d(
+        'Starting Save As: documentId=$documentId, events=${allEvents.length}');
 
     try {
       // Step 1: Prompt for new file path (always required for Save As)
@@ -406,7 +417,8 @@ class SaveService {
 
         // 5b. Copy all events to new document (inline to avoid nested transactions)
         if (allEvents.isNotEmpty) {
-          _logger.d('Copying ${allEvents.length} events for document: $newDocumentId');
+          _logger.d(
+              'Copying ${allEvents.length} events for document: $newDocumentId');
 
           int nextSeq = 0;
 
@@ -419,7 +431,14 @@ class SaveService {
               INSERT INTO events (document_id, event_sequence, event_type, event_payload, timestamp, user_id)
               VALUES (?, ?, ?, ?, ?, ?)
               ''',
-              [newDocumentId, nextSeq, event.eventType, payload, event.timestamp, null],
+              [
+                newDocumentId,
+                nextSeq,
+                event.eventType,
+                payload,
+                event.timestamp,
+                null
+              ],
             );
 
             nextSeq++;
@@ -479,11 +498,13 @@ class SaveService {
         durationMs: durationMs,
       );
     } on DatabaseException catch (e, stackTrace) {
-      _logger.e('Database error during Save As', error: e, stackTrace: stackTrace);
+      _logger.e('Database error during Save As',
+          error: e, stackTrace: stackTrace);
       _mapDatabaseException(e);
       rethrow;
     } on FileSystemException catch (e, stackTrace) {
-      _logger.e('File system error during Save As', error: e, stackTrace: stackTrace);
+      _logger.e('File system error during Save As',
+          error: e, stackTrace: stackTrace);
       throw PermissionDeniedException(
         'Cannot write to file: ${e.message}',
         cause: e,
@@ -491,7 +512,8 @@ class SaveService {
     } on SaveException {
       rethrow;
     } catch (e, stackTrace) {
-      _logger.e('Unexpected error during Save As', error: e, stackTrace: stackTrace);
+      _logger.e('Unexpected error during Save As',
+          error: e, stackTrace: stackTrace);
       throw SaveException('Unexpected error during Save As: $e', cause: e);
     }
   }

@@ -145,10 +145,8 @@ void main() {
         final xError = (snapped!.x % service.gridSize).abs();
         final yError = (snapped.y % service.gridSize).abs();
 
-        expect(xError, lessThan(0.001),
-            reason: 'X drift should be <0.001px');
-        expect(yError, lessThan(0.001),
-            reason: 'Y drift should be <0.001px');
+        expect(xError, lessThan(0.001), reason: 'X drift should be <0.001px');
+        expect(yError, lessThan(0.001), reason: 'Y drift should be <0.001px');
       }
     });
 

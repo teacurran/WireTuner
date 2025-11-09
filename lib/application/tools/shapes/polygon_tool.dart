@@ -33,12 +33,12 @@ import 'package:wiretuner/domain/models/shape.dart' as shape_model;
 ///
 /// Related: T027 (Polygon Tool), I4.T2
 class PolygonTool extends ShapeToolBase {
-
   PolygonTool({
     required super.document,
     required super.viewportController,
     required super.eventRecorder,
   });
+
   /// Number of sides for the polygon (minimum 3, maximum 20).
   ///
   /// Can be configured via [setSideCount] method.

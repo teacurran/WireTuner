@@ -373,8 +373,7 @@ void main() {
       expect(shouldRepaint, isTrue);
     });
 
-    testWidgets('repaints when viewport changes',
-        (WidgetTester tester) async {
+    testWidgets('repaints when viewport changes', (WidgetTester tester) async {
       // Arrange
       final paths = [
         domain.Path.line(
@@ -474,7 +473,8 @@ void main() {
       ); // Clamped to 0.05
 
       final controller2 = ViewportController(initialZoom: 10.0);
-      expect(controller2.zoomLevel, ViewportController.maxZoom); // Clamped to 8.0
+      expect(
+          controller2.zoomLevel, ViewportController.maxZoom); // Clamped to 8.0
 
       controller1.dispose();
       controller2.dispose();

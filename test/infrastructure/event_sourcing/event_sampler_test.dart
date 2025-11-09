@@ -219,10 +219,12 @@ void main() {
           samplingInterval: const Duration(milliseconds: 75),
         );
 
-        expect(sampler.samplingInterval, equals(const Duration(milliseconds: 75)));
+        expect(
+            sampler.samplingInterval, equals(const Duration(milliseconds: 75)));
 
         sampler.setSamplingInterval(const Duration(milliseconds: 100));
-        expect(sampler.samplingInterval, equals(const Duration(milliseconds: 100)));
+        expect(sampler.samplingInterval,
+            equals(const Duration(milliseconds: 100)));
       });
     });
 
@@ -236,7 +238,8 @@ void main() {
         // Emit 20 events at 1ms intervals (total ~20ms, well under 50ms)
         for (int i = 0; i < 20; i++) {
           sampler.recordEvent(_createTestEvent(i));
-          if (i < 19) await Future<void>.delayed(const Duration(milliseconds: 1));
+          if (i < 19)
+            await Future<void>.delayed(const Duration(milliseconds: 1));
         }
 
         // Should only have emitted very few events (first one, maybe one more)
@@ -384,13 +387,15 @@ void main() {
         // Burst 1: 10 rapid events (2ms apart = 20ms total, well under 50ms)
         for (int i = 0; i < 10; i++) {
           sampler.recordEvent(_createTestEvent(i));
-          if (i < 9) await Future<void>.delayed(const Duration(milliseconds: 2));
+          if (i < 9)
+            await Future<void>.delayed(const Duration(milliseconds: 2));
         }
 
         // At this point, only event 0 was emitted (first event)
         // Event 9 is buffered
         final emittedAfterBurst1 = emitted.length;
-        expect(emittedAfterBurst1, lessThanOrEqualTo(2)); // Allow some timing variance
+        expect(emittedAfterBurst1,
+            lessThanOrEqualTo(2)); // Allow some timing variance
 
         // Pause for 100ms
         await Future<void>.delayed(const Duration(milliseconds: 100));
@@ -399,7 +404,8 @@ void main() {
         // First event of burst 2 will trigger emission since >50ms elapsed
         for (int i = 10; i < 20; i++) {
           sampler.recordEvent(_createTestEvent(i));
-          if (i < 19) await Future<void>.delayed(const Duration(milliseconds: 2));
+          if (i < 19)
+            await Future<void>.delayed(const Duration(milliseconds: 2));
         }
 
         // At this point: should have initial burst events + event 10

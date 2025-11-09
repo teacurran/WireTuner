@@ -59,7 +59,8 @@ void main() {
     }
 
     /// Helper to create test snapshot data
-    Uint8List createTestSnapshotData(String content) => Uint8List.fromList(content.codeUnits);
+    Uint8List createTestSnapshotData(String content) =>
+        Uint8List.fromList(content.codeUnits);
 
     group('insertSnapshot', () {
       test('stores BLOB with metadata correctly', () async {
@@ -662,7 +663,8 @@ void main() {
         expect(beforeDelete.first['count'], equals(2));
 
         // Delete document (should cascade to snapshots)
-        await db.delete('metadata', where: 'document_id = ?', whereArgs: ['doc1']);
+        await db
+            .delete('metadata', where: 'document_id = ?', whereArgs: ['doc1']);
 
         // Verify snapshots were deleted due to CASCADE
         final afterDelete = await db.rawQuery(

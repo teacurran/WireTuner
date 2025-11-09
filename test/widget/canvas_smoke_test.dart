@@ -208,10 +208,12 @@ void main() {
       expect(
         buildTimeMs,
         lessThan(20.0),
-        reason: 'Frame build time should be under 20ms (60 FPS = 16.67ms/frame)',
+        reason:
+            'Frame build time should be under 20ms (60 FPS = 16.67ms/frame)',
       );
 
-      debugPrint('[Test] Frame build time: ${buildTimeMs.toStringAsFixed(2)}ms');
+      debugPrint(
+          '[Test] Frame build time: ${buildTimeMs.toStringAsFixed(2)}ms');
     });
 
     testWidgets('telemetry captures viewport metrics',

@@ -53,7 +53,6 @@ import 'package:logger/logger.dart';
 ///
 /// Related: T018 (Tool Framework), Acceptance Criteria (cursor propagation)
 class CursorService extends ChangeNotifier {
-
   /// Creates a cursor service with an initial cursor.
   ///
   /// Defaults to [SystemMouseCursors.basic] if not specified.
@@ -62,6 +61,7 @@ class CursorService extends ChangeNotifier {
   }) : _currentCursor = initialCursor {
     _logger.d('CursorService initialized with cursor: $_currentCursor');
   }
+
   /// The currently active mouse cursor.
   MouseCursor _currentCursor;
 

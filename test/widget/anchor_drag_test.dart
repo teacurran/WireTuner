@@ -18,7 +18,6 @@ import 'package:wiretuner/presentation/canvas/viewport/viewport_controller.dart'
 
 /// Mock EventRecorder for testing.
 class MockEventRecorder extends EventRecorder {
-
   MockEventRecorder()
       : super(
           eventStore: _MockEventStore(),
@@ -150,9 +149,8 @@ void main() {
       tool.onPointerUp(upEvent);
 
       // Verify events emitted
-      final modifyEvents = eventRecorder.recordedEvents
-          .whereType<ModifyAnchorEvent>()
-          .toList();
+      final modifyEvents =
+          eventRecorder.recordedEvents.whereType<ModifyAnchorEvent>().toList();
 
       expect(modifyEvents, isNotEmpty);
 
@@ -183,9 +181,8 @@ void main() {
       tool.onPointerUp(upEvent);
 
       // Verify events emitted
-      final modifyEvents = eventRecorder.recordedEvents
-          .whereType<ModifyAnchorEvent>()
-          .toList();
+      final modifyEvents =
+          eventRecorder.recordedEvents.whereType<ModifyAnchorEvent>().toList();
 
       expect(modifyEvents, isNotEmpty);
 
@@ -231,9 +228,8 @@ void main() {
       tool.onPointerUp(upEvent);
 
       // Verify events emitted
-      final modifyEvents = eventRecorder.recordedEvents
-          .whereType<ModifyAnchorEvent>()
-          .toList();
+      final modifyEvents =
+          eventRecorder.recordedEvents.whereType<ModifyAnchorEvent>().toList();
 
       expect(modifyEvents, isNotEmpty);
 
@@ -278,9 +274,8 @@ void main() {
       tool.onPointerUp(upEvent);
 
       // Verify event count (should be 18-22 events for 1 second)
-      final modifyEvents = eventRecorder.recordedEvents
-          .whereType<ModifyAnchorEvent>()
-          .toList();
+      final modifyEvents =
+          eventRecorder.recordedEvents.whereType<ModifyAnchorEvent>().toList();
 
       expect(modifyEvents.length, greaterThanOrEqualTo(18));
       expect(modifyEvents.length, lessThanOrEqualTo(22));
@@ -316,46 +311,54 @@ void main() {
       tool.onPointerDown(const PointerDownEvent(position: Offset(200, 200)));
 
       // Drag without Shift (no snap)
-      tool.onPointerMove(const PointerMoveEvent(position: Offset(212.3, 205.7)));
+      tool.onPointerMove(
+          const PointerMoveEvent(position: Offset(212.3, 205.7)));
 
-      final eventsBeforeShift = eventRecorder.recordedEvents
-          .whereType<ModifyAnchorEvent>()
-          .length;
+      final eventsBeforeShift =
+          eventRecorder.recordedEvents.whereType<ModifyAnchorEvent>().length;
 
       // Press Shift mid-drag
-      tool.onKeyPress(const KeyDownEvent(
-        logicalKey: LogicalKeyboardKey.shiftLeft,
-        physicalKey: PhysicalKeyboardKey.shiftLeft,
-        timeStamp: Duration(milliseconds: 50),
-      ),);
+      tool.onKeyPress(
+        const KeyDownEvent(
+          logicalKey: LogicalKeyboardKey.shiftLeft,
+          physicalKey: PhysicalKeyboardKey.shiftLeft,
+          timeStamp: Duration(milliseconds: 50),
+        ),
+      );
 
       // Drag with Shift (should snap)
-      tool.onPointerMove(const PointerMoveEvent(position: Offset(222.3, 215.7)));
+      tool.onPointerMove(
+          const PointerMoveEvent(position: Offset(222.3, 215.7)));
 
       // Release Shift
-      tool.onKeyPress(const KeyUpEvent(
-        logicalKey: LogicalKeyboardKey.shiftLeft,
-        physicalKey: PhysicalKeyboardKey.shiftLeft,
-        timeStamp: Duration(milliseconds: 100),
-      ),);
+      tool.onKeyPress(
+        const KeyUpEvent(
+          logicalKey: LogicalKeyboardKey.shiftLeft,
+          physicalKey: PhysicalKeyboardKey.shiftLeft,
+          timeStamp: Duration(milliseconds: 100),
+        ),
+      );
 
       // End drag
       tool.onPointerUp(const PointerUpEvent());
 
       // Verify multiple events emitted
-      final totalEvents = eventRecorder.recordedEvents
-          .whereType<ModifyAnchorEvent>()
-          .length;
+      final totalEvents =
+          eventRecorder.recordedEvents.whereType<ModifyAnchorEvent>().length;
 
       expect(totalEvents, greaterThan(eventsBeforeShift));
     });
   });
 
   group('DirectSelectionTool - Multi-Anchor Adjustment (Future)', () {
-    test('multi-anchor drag with snapping', () {
-      // TODO: Implement in I4.T5 (Multi-Selection Support)
-      // This test verifies that dragging multiple selected anchors
-      // applies snapping consistently to all anchors
-    }, skip: 'Deferred to I4.T5',);
+    test(
+      'multi-anchor drag with snapping',
+      () {
+        // TODO: Implement in I4.T5 (Multi-Selection Support)
+        // This test verifies that dragging multiple selected anchors
+        // applies snapping consistently to all anchors
+      },
+      skip: 'Deferred to I4.T5',
+    );
   });
 }

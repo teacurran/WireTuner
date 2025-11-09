@@ -91,7 +91,6 @@ import 'package:wiretuner/domain/models/segment.dart';
 /// ```
 @immutable
 class Path {
-
   /// Creates a path with the specified anchors and segments.
   ///
   /// The [anchors] list defines the positions and control points.
@@ -193,6 +192,7 @@ class Path {
         ],
         closed: false,
       );
+
   /// The anchor points that define this path.
   ///
   /// Segments reference these anchors by index. The list must contain
@@ -491,9 +491,9 @@ class Path {
   /// which degrades the curve to a straight line.
   Point _evaluateBezier(AnchorPoint start, AnchorPoint end, double t) {
     final p0 = start.position;
-    final p1 =
-        start.handleOut != null ? start.position + start.handleOut! : p0;
-    final p2 = end.handleIn != null ? end.position + end.handleIn! : end.position;
+    final p1 = start.handleOut != null ? start.position + start.handleOut! : p0;
+    final p2 =
+        end.handleIn != null ? end.position + end.handleIn! : end.position;
     final p3 = end.position;
 
     final t2 = t * t;

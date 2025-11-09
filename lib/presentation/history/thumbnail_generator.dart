@@ -95,7 +95,8 @@ class ThumbnailGenerator {
 
     // Fill background
     canvas.drawRect(
-      Rect.fromLTWH(0, 0, thumbnailWidth.toDouble(), thumbnailHeight.toDouble()),
+      Rect.fromLTWH(
+          0, 0, thumbnailWidth.toDouble(), thumbnailHeight.toDouble()),
       Paint()..color = backgroundColor,
     );
 

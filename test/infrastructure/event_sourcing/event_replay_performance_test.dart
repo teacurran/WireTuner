@@ -81,8 +81,8 @@ class MockSnapshotStore implements SnapshotStore {
     String documentId,
     int maxSequence,
   ) async {
-    final validSequences = _snapshots.keys.where((seq) => seq <= maxSequence).toList()
-      ..sort();
+    final validSequences =
+        _snapshots.keys.where((seq) => seq <= maxSequence).toList()..sort();
 
     if (validSequences.isEmpty) {
       return null;
@@ -212,7 +212,8 @@ void main() {
       expect(
         elapsedMs,
         lessThan(2000),
-        reason: 'Replay of 5000 events with snapshot must complete in reasonable time. '
+        reason:
+            'Replay of 5000 events with snapshot must complete in reasonable time. '
             'Actual: ${elapsedMs}ms. '
             'Note: CI release builds target < 200ms; debug mode is slower due to logging.',
       );
@@ -462,7 +463,8 @@ void main() {
       print('Second navigation: ${secondNavigationMs}ms');
 
       // Assert - cache hit should be significantly faster
-      print('Speedup: ${(firstNavigationMs / secondNavigationMs).toStringAsFixed(1)}x');
+      print(
+          'Speedup: ${(firstNavigationMs / secondNavigationMs).toStringAsFixed(1)}x');
 
       expect(
         secondNavigationMs,

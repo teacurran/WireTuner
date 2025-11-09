@@ -30,7 +30,6 @@ import 'package:wiretuner/domain/models/geometry/rectangle.dart';
 /// ```
 @immutable
 class Transform {
-
   /// Creates a transform from a Matrix4.
   ///
   /// The matrix is cloned to ensure immutability.
@@ -60,7 +59,8 @@ class Transform {
   /// final result = t.transformPoint(p);
   /// // result: Point(x: 15, y: 25)
   /// ```
-  factory Transform.translate(double dx, double dy) => Transform(Matrix4.identity()..translate(dx, dy));
+  factory Transform.translate(double dx, double dy) =>
+      Transform(Matrix4.identity()..translate(dx, dy));
 
   /// Creates a rotation transform.
   ///
@@ -74,7 +74,8 @@ class Transform {
   /// final result = t.transformPoint(p);
   /// // result: Point(x: 0, y: 1) approximately
   /// ```
-  factory Transform.rotate(double angleInRadians) => Transform(Matrix4.identity()..rotateZ(angleInRadians));
+  factory Transform.rotate(double angleInRadians) =>
+      Transform(Matrix4.identity()..rotateZ(angleInRadians));
 
   /// Creates a rotation transform around a specific point.
   ///
@@ -109,7 +110,8 @@ class Transform {
   /// final result = t.transformPoint(p);
   /// // result: Point(x: 10, y: 30)
   /// ```
-  factory Transform.scale(double sx, double sy) => Transform(Matrix4.identity()..scale(sx, sy));
+  factory Transform.scale(double sx, double sy) =>
+      Transform(Matrix4.identity()..scale(sx, sy));
 
   /// Creates a uniform scale transform.
   ///
@@ -162,6 +164,7 @@ class Transform {
     matrix[4] = math.tan(angleY); // Skew Y
     return Transform(matrix);
   }
+
   /// The underlying transformation matrix.
   final Matrix4 matrix;
 
@@ -229,14 +232,14 @@ class Transform {
     final bottomRight = transformPoint(rect.bottomRight);
 
     // Find bounding box of transformed corners
-    final minX = [topLeft.x, topRight.x, bottomLeft.x, bottomRight.x]
-        .reduce(math.min);
-    final maxX = [topLeft.x, topRight.x, bottomLeft.x, bottomRight.x]
-        .reduce(math.max);
-    final minY = [topLeft.y, topRight.y, bottomLeft.y, bottomRight.y]
-        .reduce(math.min);
-    final maxY = [topLeft.y, topRight.y, bottomLeft.y, bottomRight.y]
-        .reduce(math.max);
+    final minX =
+        [topLeft.x, topRight.x, bottomLeft.x, bottomRight.x].reduce(math.min);
+    final maxX =
+        [topLeft.x, topRight.x, bottomLeft.x, bottomRight.x].reduce(math.max);
+    final minY =
+        [topLeft.y, topRight.y, bottomLeft.y, bottomRight.y].reduce(math.min);
+    final maxY =
+        [topLeft.y, topRight.y, bottomLeft.y, bottomRight.y].reduce(math.max);
 
     return Rectangle.fromLTRB(minX, minY, maxX, maxY);
   }
@@ -272,7 +275,8 @@ class Transform {
   /// Extracts the translation component of this transform.
   ///
   /// Returns the (dx, dy) translation as a Point.
-  Point get translation => Point(x: matrix.getTranslation().x, y: matrix.getTranslation().y);
+  Point get translation =>
+      Point(x: matrix.getTranslation().x, y: matrix.getTranslation().y);
 
   /// Extracts the rotation angle (in radians) from this transform.
   ///

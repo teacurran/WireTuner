@@ -42,7 +42,8 @@ void main() {
 
     setUp(() {
       exporter = SvgExporter();
-      tempDir = Directory.systemTemp.createTempSync('wiretuner_svg_integration_');
+      tempDir =
+          Directory.systemTemp.createTempSync('wiretuner_svg_integration_');
     });
 
     tearDown(() {
@@ -132,7 +133,8 @@ void main() {
 
       // Validate metadata
       expect(content, contains('<metadata>'));
-      expect(content, contains('<dc:title>Integration Test Document</dc:title>'));
+      expect(
+          content, contains('<dc:title>Integration Test Document</dc:title>'));
       expect(content, contains('<dc:creator>WireTuner 0.1</dc:creator>'));
 
       // Validate layer groups
@@ -555,7 +557,8 @@ void main() {
       // Read golden file
       final goldenFile = File('test/integration/fixtures/golden_export.svg');
       expect(goldenFile.existsSync(), isTrue,
-          reason: 'Golden file should exist at test/integration/fixtures/golden_export.svg');
+          reason:
+              'Golden file should exist at test/integration/fixtures/golden_export.svg');
 
       final goldenSvg = await goldenFile.readAsString();
 

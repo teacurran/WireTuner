@@ -136,7 +136,6 @@ class ResetViewportAction extends Action<ResetViewportIntent> {
 /// All gestures are routed through ViewportState for consistent
 /// coordinate handling and telemetry.
 class ViewportBinding extends StatefulWidget {
-
   const ViewportBinding({
     super.key,
     required this.controller,
@@ -145,6 +144,7 @@ class ViewportBinding extends StatefulWidget {
     this.onTelemetry,
     this.debugMode = false,
   });
+
   /// The viewport controller managing transformations.
   final ViewportController controller;
 
@@ -178,8 +178,8 @@ class ViewportBinding extends StatefulWidget {
   /// Returns null if no ViewportBinding is found in the tree.
   /// Use this to access viewport state from descendant widgets.
   static ViewportState? maybeOf(BuildContext context) => context
-        .dependOnInheritedWidgetOfExactType<_InheritedViewportState>()
-        ?.state;
+      .dependOnInheritedWidgetOfExactType<_InheritedViewportState>()
+      ?.state;
 
   /// Retrieves the ViewportState from the widget tree.
   ///
@@ -262,114 +262,120 @@ class _ViewportBindingState extends State<ViewportBinding> {
 
   @override
   Widget build(BuildContext context) => _InheritedViewportState(
-      state: _state,
-      child: RawKeyboardListener(
-        focusNode: _focusNode,
-        onKey: _handleRawKeyEvent,
-        child: Shortcuts(
-          shortcuts: <ShortcutActivator, Intent>{
-            // Zoom shortcuts
-            const SingleActivator(LogicalKeyboardKey.equal, shift: true):
-                const ZoomInIntent(), // Shift+= (plus key)
-            const SingleActivator(LogicalKeyboardKey.add):
-                const ZoomInIntent(), // Numpad +
-            const SingleActivator(LogicalKeyboardKey.minus):
-                const ZoomOutIntent(), // Minus key
-            const SingleActivator(LogicalKeyboardKey.numpadSubtract):
-                const ZoomOutIntent(), // Numpad -
-            // Reset viewport
-            const SingleActivator(LogicalKeyboardKey.digit0, meta: true):
-                const ResetViewportIntent(), // Cmd+0 on Mac
-            const SingleActivator(LogicalKeyboardKey.digit0, control: true):
-                const ResetViewportIntent(), // Ctrl+0 on Windows/Linux
-          },
-          child: Actions(
-            actions: <Type, Action<Intent>>{
-              ZoomInIntent: ZoomInAction(widget.controller),
-              ZoomOutIntent: ZoomOutAction(widget.controller),
-              ResetViewportIntent: ResetViewportAction(_state),
+        state: _state,
+        child: RawKeyboardListener(
+          focusNode: _focusNode,
+          onKey: _handleRawKeyEvent,
+          child: Shortcuts(
+            shortcuts: <ShortcutActivator, Intent>{
+              // Zoom shortcuts
+              const SingleActivator(LogicalKeyboardKey.equal, shift: true):
+                  const ZoomInIntent(), // Shift+= (plus key)
+              const SingleActivator(LogicalKeyboardKey.add):
+                  const ZoomInIntent(), // Numpad +
+              const SingleActivator(LogicalKeyboardKey.minus):
+                  const ZoomOutIntent(), // Minus key
+              const SingleActivator(LogicalKeyboardKey.numpadSubtract):
+                  const ZoomOutIntent(), // Numpad -
+              // Reset viewport
+              const SingleActivator(LogicalKeyboardKey.digit0, meta: true):
+                  const ResetViewportIntent(), // Cmd+0 on Mac
+              const SingleActivator(LogicalKeyboardKey.digit0, control: true):
+                  const ResetViewportIntent(), // Ctrl+0 on Windows/Linux
             },
-            child: Focus(
-              focusNode: FocusNode(),
-              autofocus: true,
-              child: LayoutBuilder(
-                builder: (context, constraints) {
-                  // Update canvas size when layout changes
-                  WidgetsBinding.instance.addPostFrameCallback((_) {
-                    _state.updateCanvasSize(constraints.biggest);
-                  });
+            child: Actions(
+              actions: <Type, Action<Intent>>{
+                ZoomInIntent: ZoomInAction(widget.controller),
+                ZoomOutIntent: ZoomOutAction(widget.controller),
+                ResetViewportIntent: ResetViewportAction(_state),
+              },
+              child: Focus(
+                focusNode: FocusNode(),
+                autofocus: true,
+                child: LayoutBuilder(
+                  builder: (context, constraints) {
+                    // Update canvas size when layout changes
+                    WidgetsBinding.instance.addPostFrameCallback((_) {
+                      _state.updateCanvasSize(constraints.biggest);
+                    });
 
-                  return MouseRegion(
-                    cursor: _isPanModeActive
-                        ? _panModeCursor
-                        : SystemMouseCursors.basic,
-                    child: Listener(
-                      // Handle scroll wheel zoom
-                      onPointerSignal: _state.onPointerSignal,
-                      child: GestureDetector(
-                        // Use scale gestures which handle both pan and pinch zoom
-                        // Note: GestureDetector does not support both onPan* and onScale*
-                        // simultaneously. Scale is a superset of pan.
-                        onScaleStart: (details) {
-                          // Update cursor when pan mode is active and dragging
-                          if (_isPanModeActive) {
-                            setState(() {
-                              _panModeCursor = SystemMouseCursors.grabbing;
-                            });
-                          }
-                          // Convert ScaleStartDetails to pan-like handling
-                          _state.onPanStart(DragStartDetails(
-                            globalPosition: details.focalPoint,
-                          ),);
-                        },
-                        onScaleUpdate: (details) {
-                          // Handle both pan and zoom through scale gesture
-                          if (details.scale != 1.0) {
-                            // Zoom gesture
-                            _state.onScaleUpdate(details);
-                          } else if (details.focalPointDelta != Offset.zero) {
-                            // Pan gesture (scale == 1.0 means no zoom, just pan)
-                            _state.onPanUpdate(DragUpdateDetails(
-                              globalPosition: details.focalPoint,
-                              delta: details.focalPointDelta,
-                            ),);
-                          }
-                        },
-                        onScaleEnd: (details) {
-                          // Reset cursor when pan mode is active and drag ends
-                          if (_isPanModeActive) {
-                            setState(() {
-                              _panModeCursor = SystemMouseCursors.grab;
-                            });
-                          }
-                          // End both pan and zoom
-                          _state.onPanEnd(DragEndDetails(
-                            velocity: details.velocity,
-                          ),);
-                        },
-                        // Use eager gesture recognition for responsive pan
-                        behavior: HitTestBehavior.opaque,
-                        child: Stack(
-                          children: [
-                            // Main canvas content
-                            widget.child,
-                            // Debug overlay
-                            if (widget.debugMode) _buildDebugOverlay(),
-                            // Pan mode indicator
-                            if (_isPanModeActive && widget.debugMode)
-                              _buildPanModeIndicator(),
-                          ],
+                    return MouseRegion(
+                      cursor: _isPanModeActive
+                          ? _panModeCursor
+                          : SystemMouseCursors.basic,
+                      child: Listener(
+                        // Handle scroll wheel zoom
+                        onPointerSignal: _state.onPointerSignal,
+                        child: GestureDetector(
+                          // Use scale gestures which handle both pan and pinch zoom
+                          // Note: GestureDetector does not support both onPan* and onScale*
+                          // simultaneously. Scale is a superset of pan.
+                          onScaleStart: (details) {
+                            // Update cursor when pan mode is active and dragging
+                            if (_isPanModeActive) {
+                              setState(() {
+                                _panModeCursor = SystemMouseCursors.grabbing;
+                              });
+                            }
+                            // Convert ScaleStartDetails to pan-like handling
+                            _state.onPanStart(
+                              DragStartDetails(
+                                globalPosition: details.focalPoint,
+                              ),
+                            );
+                          },
+                          onScaleUpdate: (details) {
+                            // Handle both pan and zoom through scale gesture
+                            if (details.scale != 1.0) {
+                              // Zoom gesture
+                              _state.onScaleUpdate(details);
+                            } else if (details.focalPointDelta != Offset.zero) {
+                              // Pan gesture (scale == 1.0 means no zoom, just pan)
+                              _state.onPanUpdate(
+                                DragUpdateDetails(
+                                  globalPosition: details.focalPoint,
+                                  delta: details.focalPointDelta,
+                                ),
+                              );
+                            }
+                          },
+                          onScaleEnd: (details) {
+                            // Reset cursor when pan mode is active and drag ends
+                            if (_isPanModeActive) {
+                              setState(() {
+                                _panModeCursor = SystemMouseCursors.grab;
+                              });
+                            }
+                            // End both pan and zoom
+                            _state.onPanEnd(
+                              DragEndDetails(
+                                velocity: details.velocity,
+                              ),
+                            );
+                          },
+                          // Use eager gesture recognition for responsive pan
+                          behavior: HitTestBehavior.opaque,
+                          child: Stack(
+                            children: [
+                              // Main canvas content
+                              widget.child,
+                              // Debug overlay
+                              if (widget.debugMode) _buildDebugOverlay(),
+                              // Pan mode indicator
+                              if (_isPanModeActive && widget.debugMode)
+                                _buildPanModeIndicator(),
+                            ],
+                          ),
                         ),
                       ),
-                    ),
-                  );
-                },
+                    );
+                  },
+                ),
               ),
             ),
           ),
         ),
-      ),
-    );
+      );
 
   /// Handles raw keyboard events for space bar pan mode.
   ///
@@ -389,8 +395,8 @@ class _ViewportBindingState extends State<ViewportBinding> {
 
   /// Builds debug overlay showing FPS and viewport state.
   Widget _buildDebugOverlay() => ListenableBuilder(
-      listenable: _state,
-      builder: (context, _) => Positioned(
+        listenable: _state,
+        builder: (context, _) => Positioned(
           top: 8,
           left: 8,
           child: Container(
@@ -447,7 +453,7 @@ class _ViewportBindingState extends State<ViewportBinding> {
             ),
           ),
         ),
-    );
+      );
 
   /// Returns color for FPS display based on performance.
   Color _getFpsColor(double fps) {
@@ -493,7 +499,6 @@ class _ViewportBindingState extends State<ViewportBinding> {
 
 /// InheritedWidget that provides ViewportState down the widget tree.
 class _InheritedViewportState extends InheritedWidget {
-
   const _InheritedViewportState({
     required this.state,
     required super.child,
@@ -501,5 +506,6 @@ class _InheritedViewportState extends InheritedWidget {
   final ViewportState state;
 
   @override
-  bool updateShouldNotify(_InheritedViewportState oldWidget) => state != oldWidget.state;
+  bool updateShouldNotify(_InheritedViewportState oldWidget) =>
+      state != oldWidget.state;
 }

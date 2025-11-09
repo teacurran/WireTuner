@@ -207,7 +207,8 @@ void main() {
       expect(deserialized, equals(event));
     });
 
-    test('serializes and deserializes correctly with partial modifications', () {
+    test('serializes and deserializes correctly with partial modifications',
+        () {
       const event = ModifyAnchorEvent(
         eventId: 'evt_011',
         timestamp: 1699305610000,
@@ -1053,7 +1054,8 @@ void main() {
       final event = event_schema.eventFromJson(json);
 
       expect(event, isA<SaveDocumentEvent>());
-      expect((event as SaveDocumentEvent).filePath, equals('/path/to/doc.wiretuner'));
+      expect((event as SaveDocumentEvent).filePath,
+          equals('/path/to/doc.wiretuner'));
     });
 
     test('eventFromJson deserializes LoadDocumentEvent correctly', () {

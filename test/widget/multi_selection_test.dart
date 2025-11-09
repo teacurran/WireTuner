@@ -63,7 +63,8 @@ void main() {
         initialZoom: 1.0,
       );
       eventRecorder = MockEventRecorder();
-      snappingService = SnappingService(gridSnapEnabled: false, angleSnapEnabled: false, gridSize: 10.0);
+      snappingService = SnappingService(
+          gridSnapEnabled: false, angleSnapEnabled: false, gridSize: 10.0);
 
       // Create a test document with three objects
       final path1 = domain.Path(
@@ -305,9 +306,11 @@ void main() {
       final moveEvents =
           eventRecorder.recordedEvents.whereType<MoveObjectEvent>();
 
-      expect(startGroupEvents.length, 1, reason: 'Should have one StartGroupEvent');
+      expect(startGroupEvents.length, 1,
+          reason: 'Should have one StartGroupEvent');
       expect(endGroupEvents.length, 1, reason: 'Should have one EndGroupEvent');
-      expect(moveEvents.isNotEmpty, isTrue, reason: 'Should have MoveObjectEvents');
+      expect(moveEvents.isNotEmpty, isTrue,
+          reason: 'Should have MoveObjectEvents');
 
       // Verify groupId matches
       expect(
@@ -514,7 +517,8 @@ void main() {
 
       // Verify cumulative delta pattern
       expect((events[1] as MoveObjectEvent).delta.x, 10.0);
-      expect((events[2] as MoveObjectEvent).delta.x, 25.0); // Cumulative, not incremental
+      expect((events[2] as MoveObjectEvent).delta.x,
+          25.0); // Cumulative, not incremental
 
       // Verify groupId consistency
       expect(
@@ -549,10 +553,15 @@ void main() {
   });
 
   group('Viewport Integration', () {
-    test('Viewport pans to show selected objects', () {
-      // TODO: Implement scroll-to-selection in future iteration (v0.2)
-      // This test verifies that selecting off-screen objects
-      // triggers viewport pan to bring selection into view
-    }, skip: 'Deferred to v0.2', tags: ['viewport-integration'],);
+    test(
+      'Viewport pans to show selected objects',
+      () {
+        // TODO: Implement scroll-to-selection in future iteration (v0.2)
+        // This test verifies that selecting off-screen objects
+        // triggers viewport pan to bring selection into view
+      },
+      skip: 'Deferred to v0.2',
+      tags: ['viewport-integration'],
+    );
   });
 }

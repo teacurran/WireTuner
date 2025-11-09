@@ -65,7 +65,6 @@ import 'dart:ui' as ui;
 /// toolManager.activateTool('selection');
 /// ```
 class SelectionTool implements ITool {
-
   /// Creates a new selection tool.
   ///
   /// [document] is the document to operate on.
@@ -80,8 +79,10 @@ class SelectionTool implements ITool {
   })  : _document = document,
         _viewportController = viewportController,
         _eventRecorder = eventRecorder,
-        _snappingService = snappingService ?? SnappingService(gridSnapEnabled: false, angleSnapEnabled: false),
-        _objectDragController = ObjectDragController(snappingService: snappingService) {
+        _snappingService = snappingService ??
+            SnappingService(gridSnapEnabled: false, angleSnapEnabled: false),
+        _objectDragController =
+            ObjectDragController(snappingService: snappingService) {
     _logger.i('SelectionTool initialized');
   }
   final Document _document;
@@ -179,9 +180,10 @@ class SelectionTool implements ITool {
         // Pass the object IDs that will be dragged
         // If the object was already selected, use current selection
         // Otherwise, use just the clicked object
-        final dragObjectIds = isAlreadySelected && !isShiftPressed && !isCmdPressed
-            ? _document.selection.objectIds.toList()
-            : [clickedObjectId];
+        final dragObjectIds =
+            isAlreadySelected && !isShiftPressed && !isCmdPressed
+                ? _document.selection.objectIds.toList()
+                : [clickedObjectId];
         _startDrag(event.localPosition, worldPos, dragObjectIds);
       }
 
@@ -242,8 +244,7 @@ class SelectionTool implements ITool {
   @override
   bool onKeyPress(KeyEvent event) {
     // Shift key enables snapping
-    if (event is KeyDownEvent &&
-        event.logicalKey == LogicalKeyboardKey.shift) {
+    if (event is KeyDownEvent && event.logicalKey == LogicalKeyboardKey.shift) {
       _snappingEnabled = true;
       _snappingService.setSnapEnabled(true);
       return false; // Allow other handlers to process
@@ -269,8 +270,7 @@ class SelectionTool implements ITool {
   /// Returns true if the event was handled, false otherwise.
   bool onKeyRelease(KeyEvent event) {
     // Shift key disables snapping
-    if (event is KeyUpEvent &&
-        event.logicalKey == LogicalKeyboardKey.shift) {
+    if (event is KeyUpEvent && event.logicalKey == LogicalKeyboardKey.shift) {
       _snappingEnabled = false;
       _snappingService.setSnapEnabled(false);
       return false; // Allow other handlers to process
@@ -297,7 +297,8 @@ class SelectionTool implements ITool {
       eventId: _uuid.v4(),
       timestamp: DateTime.now().millisecondsSinceEpoch,
       groupId: groupId,
-      description: 'Move ${objectIds.length} object${objectIds.length > 1 ? 's' : ''}',
+      description:
+          'Move ${objectIds.length} object${objectIds.length > 1 ? 's' : ''}',
     );
     _eventRecorder.recordEvent(startGroupEvent);
 
@@ -309,7 +310,8 @@ class SelectionTool implements ITool {
       groupId: groupId,
     );
     _currentCursor = SystemMouseCursors.move;
-    _logger.d('Started drag operation for ${_dragState!.selectedObjectIds.length} objects (groupId: $groupId)');
+    _logger.d(
+        'Started drag operation for ${_dragState!.selectedObjectIds.length} objects (groupId: $groupId)');
   }
 
   /// Updates the drag operation with new position.
@@ -394,7 +396,9 @@ class SelectionTool implements ITool {
 
         final mode = isCmdPressed
             ? events.SelectionMode.toggle
-            : (isShiftPressed ? events.SelectionMode.add : events.SelectionMode.replace);
+            : (isShiftPressed
+                ? events.SelectionMode.add
+                : events.SelectionMode.replace);
 
         _recordSelectionEvent(selectedIds, mode);
       }
@@ -411,7 +415,8 @@ class SelectionTool implements ITool {
   }
 
   /// Records a selection event.
-  void _recordSelectionEvent(List<String> objectIds, events.SelectionMode mode) {
+  void _recordSelectionEvent(
+      List<String> objectIds, events.SelectionMode mode) {
     final event = events.SelectObjectsEvent(
       eventId: _uuid.v4(),
       timestamp: DateTime.now().millisecondsSinceEpoch,
@@ -419,7 +424,8 @@ class SelectionTool implements ITool {
       mode: mode,
     );
     _eventRecorder.recordEvent(event);
-    _logger.d('Recorded SelectObjectsEvent: mode=$mode, count=${objectIds.length}');
+    _logger.d(
+        'Recorded SelectObjectsEvent: mode=$mode, count=${objectIds.length}');
   }
 
   /// Records a clear selection event.
@@ -446,7 +452,6 @@ class SelectionTool implements ITool {
 
 /// Internal state for drag operations.
 class _DragState {
-
   _DragState({
     required this.startScreenPos,
     required this.startWorldPos,
@@ -465,12 +470,13 @@ class _DragState {
   _DragState copyWith({
     Offset? currentScreenPos,
     Point? currentWorldPos,
-  }) => _DragState(
-      startScreenPos: startScreenPos,
-      startWorldPos: startWorldPos,
-      currentScreenPos: currentScreenPos ?? this.currentScreenPos,
-      currentWorldPos: currentWorldPos ?? this.currentWorldPos,
-      selectedObjectIds: selectedObjectIds,
-      groupId: groupId,
-    );
+  }) =>
+      _DragState(
+        startScreenPos: startScreenPos,
+        startWorldPos: startWorldPos,
+        currentScreenPos: currentScreenPos ?? this.currentScreenPos,
+        currentWorldPos: currentWorldPos ?? this.currentWorldPos,
+        selectedObjectIds: selectedObjectIds,
+        groupId: groupId,
+      );
 }

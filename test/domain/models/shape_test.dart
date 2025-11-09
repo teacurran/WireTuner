@@ -302,7 +302,8 @@ void main() {
           expect(path.anchors[0].position.x, closeTo(0, 0.001)); // Top-left
           expect(path.anchors[0].position.y, closeTo(10, 0.001));
           expect(path.anchors[1].position.x, closeTo(100, 0.001)); // Top-right
-          expect(path.anchors[2].position.x, closeTo(100, 0.001)); // Bottom-right
+          expect(
+              path.anchors[2].position.x, closeTo(100, 0.001)); // Bottom-right
           expect(path.anchors[2].position.y, closeTo(90, 0.001));
           expect(path.anchors[3].position.x, closeTo(0, 0.001)); // Bottom-left
 
@@ -699,7 +700,8 @@ void main() {
         );
 
         final jsonString = jsonEncode(shape.toJson());
-        final decoded = Shape.fromJson(jsonDecode(jsonString) as Map<String, dynamic>);
+        final decoded =
+            Shape.fromJson(jsonDecode(jsonString) as Map<String, dynamic>);
 
         expect(decoded, equals(shape));
       });
