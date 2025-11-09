@@ -1,6 +1,8 @@
 # WireTuner
 
 [![CI](https://github.com/YOUR_USERNAME/WireTuner/actions/workflows/ci.yml/badge.svg)](https://github.com/YOUR_USERNAME/WireTuner/actions/workflows/ci.yml)
+[![Release](https://github.com/YOUR_USERNAME/WireTuner/actions/workflows/release.yml/badge.svg)](https://github.com/YOUR_USERNAME/WireTuner/actions/workflows/release.yml)
+[![License](https://img.shields.io/badge/license-TBD-blue.svg)](LICENSE)
 
 A professional event-sourced vector drawing application for macOS and Windows built with Flutter.
 
@@ -10,14 +12,85 @@ WireTuner is a desktop vector drawing application designed with an event-sourcin
 
 ### Key Features
 
-- **Event-Sourced Architecture**: All user interactions recorded with 50ms sampling rate
-- **Professional Vector Tools**: ✅ Pen tool with Bezier curves, ✅ Selection tool, shape creation (planned)
-- **Tool Framework**: Sub-30ms tool switching, keyboard shortcuts (V, P, A), modifier-driven workflows
-- **Direct Manipulation**: ✅ Object selection and movement, anchor/handle manipulation (I4)
-- **SQLite Persistence**: Self-contained .wiretuner file format (SQLite database)
-- **Import/Export**: Adobe Illustrator import (planned), SVG/PDF export (planned)
-- **High Performance**: 60 FPS rendering targeting 10,000+ objects
-- **Performance Monitoring**: Real-time FPS and render metrics overlay (toggle with Cmd/Ctrl+Shift+P)
+- **Professional Drawing Tools**
+  - Pen tool with Bezier curves and handle manipulation
+  - Selection tool with click, marquee, and multi-select
+  - Shape tools (rectangle, ellipse, polygon, star)
+  - Direct selection for anchor point editing
+  - Sub-30ms tool switching with keyboard shortcuts (V, P, A)
+
+- **Unlimited Undo/Redo & History**
+  - Operation-based undo grouping (<80ms latency)
+  - Visual history timeline panel for scrubbing through operations
+  - Infinite history navigation (5,000 events/sec playback rate)
+  - Crash recovery with preserved history
+
+- **Import & Export**
+  - AI import (Tier-2 features: paths, shapes, basic transforms)
+  - SVG export with external viewer validation
+  - PDF export for print workflows
+  - Native `.wiretuner` file format with semantic versioning
+
+- **Event-Sourced Architecture**
+  - All user interactions recorded with 50ms sampling rate
+  - SQLite-based persistence with ACID guarantees
+  - Automatic snapshots every 1,000 events for fast loading
+  - Complete workflow reconstruction and audit trails
+
+- **High Performance**
+  - 60 FPS rendering targeting 10,000+ objects
+  - Optimized canvas rendering with viewport transforms
+  - Real-time FPS and render metrics overlay (toggle with Cmd/Ctrl+Shift+P)
+  - Platform parity validated across macOS and Windows
+
+## Download
+
+### Latest Release
+
+**Version 0.1.0** - [Release Notes](docs/reference/release_notes.md)
+
+| Platform | Download | Requirements |
+|----------|----------|--------------|
+| **macOS** | [WireTuner-0.1.0-macOS.dmg](https://github.com/YOUR_USERNAME/WireTuner/releases) | macOS 10.15 (Catalina) or later<br/>Intel + Apple Silicon supported |
+| **Windows** | [WireTuner-0.1.0-Windows-Setup.exe](https://github.com/YOUR_USERNAME/WireTuner/releases) | Windows 10 version 1809 or later<br/>x64 architecture |
+
+### Installation Instructions
+
+#### macOS
+1. Download `WireTuner-0.1.0-macOS.dmg` from [GitHub Releases](https://github.com/YOUR_USERNAME/WireTuner/releases)
+2. Open the DMG file
+3. Drag WireTuner.app to Applications folder
+4. Launch from Applications
+
+**Note:** The app is notarized for macOS 10.15+ and signed with a Developer ID certificate.
+
+#### Windows
+1. Download `WireTuner-0.1.0-Windows-Setup.exe` from [GitHub Releases](https://github.com/YOUR_USERNAME/WireTuner/releases)
+2. Run the installer
+3. Follow the installation wizard
+4. Launch from Start Menu or Desktop shortcut
+
+**Note:** The installer is code-signed for security.
+
+### Verifying Downloads
+
+To verify download integrity, compare the SHA256 hash:
+
+**macOS:**
+```bash
+shasum -a 256 WireTuner-0.1.0-macOS.dmg
+```
+
+**Windows (PowerShell):**
+```powershell
+Get-FileHash WireTuner-0.1.0-Windows-Setup.exe -Algorithm SHA256
+```
+
+Compare the output with the checksums published in the [release notes](https://github.com/YOUR_USERNAME/WireTuner/releases).
+
+### Build from Source
+
+For developers who want to build from source, see the [Getting Started](#getting-started) section below.
 
 ## Prerequisites
 
@@ -465,21 +538,34 @@ mmdc -i docs/diagrams/undo_timeline.mmd -o docs/diagrams/undo_timeline.png
 
 ## Project Status
 
-**Current Phase**: Tool Framework & Vector Tooling (Iteration 3 Complete)
+**Current Phase**: Release v0.1.0 (Iteration 5 Complete)
 
-This is an active development project. Iteration 3 delivered a robust tool framework with selection and pen tool implementations, overlay feedback system, and comprehensive testing infrastructure. See the [I3 Plan](.codemachine/artifacts/plan/02_Iteration_I3.md#iteration-3-plan) for details.
+WireTuner v0.1.0 is the first public release, featuring a complete vector drawing application with professional tools, unlimited undo/redo, import/export capabilities, and cross-platform support. See the [I5 Plan](.codemachine/artifacts/plan/02_Iteration_I5.md) and [Final QA Report](docs/qa/final_report.md) for complete details.
 
-**Recently Completed (I3):**
-- ✅ Tool framework with sub-30ms switching
-- ✅ Selection tool (click, marquee, multi-select)
-- ✅ Pen tool with Bezier curves and handle manipulation
-- ✅ Overlay layer system for visual feedback
-- ✅ Cross-platform QA (macOS + Windows parity)
+**Recently Completed (I5):**
+- ✅ Save/load with `.wiretuner` file format and semantic versioning
+- ✅ AI import (Tier-2 features), SVG/PDF export
+- ✅ Platform parity validation (macOS + Windows)
+- ✅ Release packaging (DMG + Windows installer)
+- ✅ File format specification and compatibility matrix
 
-**Next Up (I4):**
-- Direct selection tool for anchor manipulation
-- Shape tools (rectangle, ellipse, polygon, star)
-- Undo/redo orchestration with grouped events
+**v0.1.0 Feature Highlights:**
+- Professional drawing tools (pen, shapes, selection, direct selection)
+- Unlimited undo/redo with visual history timeline
+- AI/SVG import and SVG/PDF export
+- 60 FPS rendering with 10,000+ object capacity
+- Cross-platform (macOS 10.15+, Windows 10 1809+)
+- Crash recovery and ACID-compliant persistence
+
+**Known Limitations:**
+- AI import supports Tier-2 features only (paths, shapes, basic transforms)
+- See [File Format Specification](api/file_format_spec.md#compatibility-matrix) for compatibility details
+- See [Rendering Troubleshooting Guide](docs/reference/rendering_troubleshooting.md) for performance optimization
+
+**Next Release (v0.2):**
+- Advanced AI import (Tier-3+ features: gradients, effects)
+- Additional shape tools and advanced path operations
+- Performance optimizations for complex documents
 
 ## License
 
