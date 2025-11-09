@@ -57,6 +57,9 @@ export 'src/event_recorder.dart';
 export 'src/event_replayer.dart';
 export 'src/snapshot_manager.dart';
 export 'src/snapshot_serializer.dart';
+export 'src/snapshot_tuning_config.dart';
+export 'src/editing_activity_window.dart';
+export 'src/snapshot_backlog_status.dart';
 
 // Supporting abstractions
 export 'src/event_sampler.dart';

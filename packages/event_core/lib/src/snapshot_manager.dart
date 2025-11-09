@@ -10,6 +10,9 @@ import 'event_store_gateway.dart';
 import 'metrics_sink.dart';
 import 'performance_counters.dart';
 import 'diagnostics_config.dart';
+import 'snapshot_tuning_config.dart';
+import 'editing_activity_window.dart';
+import 'snapshot_backlog_status.dart';
 
 /// Interface for managing document state snapshots.
 ///
@@ -96,33 +99,62 @@ class DefaultSnapshotManager implements SnapshotManager {
   /// [metricsSink]: Metrics collection sink
   /// [logger]: Logger instance for structured logging
   /// [config]: Diagnostics configuration
-  /// [snapshotInterval]: Events between snapshots (default: 1000)
+  /// [tuningConfig]: Adaptive snapshot tuning configuration (optional)
+  /// [snapshotInterval]: Base events between snapshots (default: 1000, deprecated - use tuningConfig)
   DefaultSnapshotManager({
     required EventStoreGateway storeGateway,
     required MetricsSink metricsSink,
     required Logger logger,
     required EventCoreDiagnosticsConfig config,
+    SnapshotTuningConfig? tuningConfig,
     int snapshotInterval = 1000,
   })  : _storeGateway = storeGateway,
         _metricsSink = metricsSink,
         _logger = logger,
         _config = config,
-        _snapshotInterval = snapshotInterval,
-        _counters = PerformanceCounters();
+        _tuningConfig = tuningConfig ??
+            SnapshotTuningConfig(
+              baseInterval: snapshotInterval,
+            ),
+        _counters = PerformanceCounters(),
+        _activityWindow = EditingActivityWindow(
+          windowDuration:
+              Duration(seconds: tuningConfig?.windowSeconds ?? 60),
+        ) {
+    logger.i('SnapshotManager initialized with config: $_tuningConfig');
+  }
 
   final EventStoreGateway _storeGateway;
   final MetricsSink _metricsSink;
   final Logger _logger;
   final EventCoreDiagnosticsConfig _config;
-  final int _snapshotInterval;
+  final SnapshotTuningConfig _tuningConfig;
   final PerformanceCounters _counters;
+  final EditingActivityWindow _activityWindow;
+
+  // Backlog tracking
+  int _pendingSnapshots = 0;
+  int _lastSnapshotSequence = 0;
+  int _currentSequence = 0;
+  EditingActivity _lastActivity = EditingActivity.normal;
 
   @override
   Future<void> createSnapshot({
     required Map<String, dynamic> documentState,
     required int sequenceNumber,
   }) async {
+    _pendingSnapshots++;
+    final backlogStatus = getBacklogStatus(sequenceNumber);
+
     _logger.i('Creating snapshot at sequence $sequenceNumber');
+    if (_config.enableDetailedLogging) {
+      _logger.d(backlogStatus.toLogString());
+    }
+
+    // Warn if falling behind
+    if (backlogStatus.isFallingBehind) {
+      _logger.w('Snapshot queue backlog detected: ${backlogStatus.pendingSnapshots} pending');
+    }
 
     try {
       // TODO(I1.T7): Implement snapshot creation
@@ -139,13 +171,23 @@ class DefaultSnapshotManager implements SnapshotManager {
         }
       });
 
+      // Warn if approaching performance threshold
+      if (durationMs > 80) {
+        _logger.w('Snapshot creation approaching threshold: ${durationMs}ms (target: <100ms)');
+      }
+
       // Record metrics (placeholder size until I1.T7)
       _metricsSink.recordSnapshot(
         sequenceNumber: sequenceNumber,
         snapshotSizeBytes: 0, // TODO(I1.T7): Calculate actual serialized size
         durationMs: durationMs,
       );
+
+      // Update tracking
+      _lastSnapshotSequence = sequenceNumber;
+      _pendingSnapshots--;
     } catch (e, stackTrace) {
+      _pendingSnapshots--;
       _logger.e('Snapshot creation failed', error: e, stackTrace: stackTrace);
       rethrow;
     }
@@ -203,9 +245,67 @@ class DefaultSnapshotManager implements SnapshotManager {
   }
 
   @override
-  bool shouldCreateSnapshot(int sequenceNumber) =>
-      sequenceNumber > 0 && sequenceNumber % _snapshotInterval == 0;
+  bool shouldCreateSnapshot(int sequenceNumber) {
+    if (sequenceNumber <= 0) return false;
+
+    final rate = _activityWindow.eventsPerSecond;
+    final activity = _tuningConfig.classifyActivity(rate);
+    final effectiveInterval = _tuningConfig.effectiveInterval(rate);
+
+    // Log activity transitions
+    if (activity != _lastActivity) {
+      _logger.i('Activity changed: ${_lastActivity.label} → ${activity.label} '
+          '(${rate.toStringAsFixed(1)} events/sec, new interval: $effectiveInterval)');
+      _lastActivity = activity;
+    }
+
+    final shouldSnapshot = sequenceNumber % effectiveInterval == 0;
+
+    // Log snapshot decisions in detailed mode
+    if (_config.enableDetailedLogging && shouldSnapshot) {
+      final status = getBacklogStatus(sequenceNumber);
+      _logger.d('Snapshot triggered: ${status.toLogString()}');
+    }
+
+    return shouldSnapshot;
+  }
 
   @override
-  int get snapshotInterval => _snapshotInterval;
+  int get snapshotInterval => _tuningConfig.baseInterval;
+
+  /// Records that an event was applied to the document.
+  ///
+  /// This updates the activity tracking window for adaptive cadence decisions.
+  /// Call this method after each event is successfully applied.
+  ///
+  /// [sequenceNumber]: The sequence number of the event that was applied.
+  void recordEventApplied(int sequenceNumber) {
+    _currentSequence = sequenceNumber;
+    _activityWindow.recordEvent();
+  }
+
+  /// Returns the current backlog status for instrumentation.
+  ///
+  /// Provides a snapshot of queue depth, activity classification, and
+  /// performance metrics for logging and diagnostics.
+  SnapshotBacklogStatus getBacklogStatus(int currentSequence) {
+    final rate = _activityWindow.eventsPerSecond;
+    final activity = _tuningConfig.classifyActivity(rate);
+    final effectiveInterval = _tuningConfig.effectiveInterval(rate);
+
+    return SnapshotBacklogStatus(
+      pendingSnapshots: _pendingSnapshots,
+      lastSnapshotSequence: _lastSnapshotSequence,
+      currentSequence: currentSequence,
+      eventsPerSecond: rate,
+      activity: activity,
+      effectiveInterval: effectiveInterval,
+    );
+  }
+
+  /// Returns the current tuning configuration.
+  SnapshotTuningConfig get tuningConfig => _tuningConfig;
+
+  /// Returns the current editing activity window for testing/diagnostics.
+  EditingActivityWindow get activityWindow => _activityWindow;
 }

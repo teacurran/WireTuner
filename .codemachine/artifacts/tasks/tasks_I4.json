@@ -103,7 +103,7 @@
       "I1.T8"
     ],
     "parallelizable": true,
-    "done": false
+    "done": true
   },
   {
     "task_id": "I4.T7",
