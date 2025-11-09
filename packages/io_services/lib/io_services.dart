@@ -44,3 +44,4 @@ export 'src/database_config.dart';
 export 'src/gateway/connection_factory.dart';
 export 'src/gateway/sqlite_event_gateway.dart';
 export 'src/migrations/migration_runner.dart';
+export 'src/save_service.dart';

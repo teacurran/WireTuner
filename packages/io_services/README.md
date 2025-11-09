@@ -10,6 +10,7 @@ This package provides the database infrastructure layer for WireTuner's event so
 - **Database Configuration**: Flexible configuration for file-based and in-memory databases
 - **Migration Runner**: Schema migration system with SQL script support
 - **Event Gateway**: Concrete implementation of the `EventStoreGateway` interface from `event_core`
+- **Save Service**: Document save orchestrator for `.wiretuner` files with dirty state tracking and error handling (Task I5.T1)
 
 ## Architecture
 
@@ -75,6 +76,52 @@ Periodic document state captures (every 1000 events):
 See [base_schema.sql](lib/src/migrations/base_schema.sql) for the complete DDL with detailed comments.
 
 ## Usage
+
+### Document Save/Load (SaveService)
+
+```dart
+import 'package:io_services/io_services.dart';
+import 'package:event_core/event_core.dart';
+
+// Initialize dependencies
+final connectionFactory = ConnectionFactory();
+await connectionFactory.initialize();
+
+final saveService = SaveService(
+  connectionFactory: connectionFactory,
+  snapshotManager: snapshotManager,
+  eventStoreGateway: eventGateway,
+  operationGrouping: operationGrouping,
+  logger: logger,
+);
+
+// Save As (new document)
+final documentState = {'version': 1, 'objects': []};
+final result = await saveService.saveAs(
+  documentId: 'doc-123',
+  filePath: '/path/to/drawing.wiretuner',
+  currentSequence: 1500,
+  documentState: documentState,
+  title: 'My Drawing',
+);
+
+if (result is SaveSuccess) {
+  print('Saved in ${result.durationMs}ms');
+} else if (result is SaveFailure) {
+  print('Error: ${result.userMessage}');
+}
+
+// Check dirty state
+final dirtyState = await saveService.checkDirtyState(
+  documentId: 'doc-123',
+  currentSequence: 1600,
+);
+
+// Close document
+await saveService.closeDocument('doc-123');
+```
+
+See the [SaveService section](#saveservice-api) below for complete API documentation.
 
 ### 1. Initialize the Connection Factory
 
@@ -259,9 +306,100 @@ Database files are stored in platform-specific locations:
 - macOS: `~/Library/Application Support/WireTuner/`
 - Windows: `%APPDATA%\WireTuner\`
 
+## SaveService API
+
+### Methods
+
+**`save()`** - Saves document to current file path
+```dart
+Future<SaveResult> save({
+  required String documentId,
+  required int currentSequence,
+  required Map<String, dynamic> documentState,
+  String title = 'Untitled',
+});
+```
+
+**`saveAs()`** - Saves document to new file path (Save As)
+```dart
+Future<SaveResult> saveAs({
+  required String documentId,
+  required String filePath,
+  required int currentSequence,
+  required Map<String, dynamic> documentState,
+  String title = 'Untitled',
+});
+```
+
+**`checkDirtyState()`** - Checks if document has unsaved changes
+```dart
+Future<DirtyState> checkDirtyState({
+  required String documentId,
+  required int currentSequence,
+});
+```
+
+**`closeDocument()`** - Closes database connection and cleans up state
+```dart
+Future<void> closeDocument(String documentId);
+```
+
+### Result Types
+
+**`SaveSuccess`**
+```dart
+class SaveSuccess {
+  final String filePath;
+  final int sequenceNumber;
+  final int durationMs;
+  final bool snapshotCreated;
+}
+```
+
+**`SaveFailure`**
+```dart
+class SaveFailure {
+  final SaveErrorType errorType;
+  final String userMessage;
+  final String technicalDetails;
+  final String? filePath;
+}
+
+enum SaveErrorType {
+  diskFull, permissionDenied, corruption, lockTimeout,
+  pathResolution, metadataMissing, transactionFailed, unknown,
+}
+```
+
+**`DirtyState`**
+```dart
+enum DirtyState { clean, dirty, unsaved }
+```
+
+### Performance Requirements
+
+- Save completes in **<100ms** for baseline document (10 objects, no snapshot)
+- Snapshot creation occurs every 1000 events (configurable via `SnapshotManager`)
+- All operations wrapped in SQLite transactions for atomicity
+
+### Error Handling
+
+SaveService provides actionable error messages categorized by type:
+
+| Error Type | User Message | Recovery Action |
+|------------|--------------|-----------------|
+| `diskFull` | "Insufficient disk space to save..." | Free up disk space |
+| `permissionDenied` | "Cannot write to path..." | Check permissions |
+| `corruption` | "Database corruption detected..." | Use Save As to new file |
+| `lockTimeout` | "File is locked by another process..." | Close other apps |
+| `metadataMissing` | "Document metadata missing..." | File may be corrupted |
+| `transactionFailed` | "Save already in progress..." | Wait for completion |
+| `pathResolution` | "Document has not been saved..." | Use Save As first |
+
 ## References
 
 - Architecture Blueprint: `docs/reference/03_System_Structure_and_Data.md`
 - ADR: Event Sourcing Architecture: `docs/reference/06_Rationale_and_Future.md` (Decision 1)
+- Task Specification: `.codemachine/artifacts/plan/02_Iteration_I5.md` (Task I5.T1)
 - Base Schema SQL: `lib/src/migrations/base_schema.sql`
 - EventStoreGateway Interface: `packages/event_core/lib/src/event_store_gateway.dart`
