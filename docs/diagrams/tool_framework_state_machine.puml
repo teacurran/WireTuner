@@ -1,0 +1,567 @@
+@startuml
+title Tool Framework State Machine - Selection, Direct Selection, and Pen Tools
+
+' ============================================================================
+' This diagram documents the complete state machine for the tool framework,
+' covering the three foundational tools in WireTuner: Selection, Direct
+' Selection, and Pen tools. Each tool operates as a state machine with
+' transitions driven by pointer events, keyboard input, and guard conditions.
+'
+' The diagram shows:
+' - All tool states (Idle, Hover, PointerDown, Dragging, Commit)
+' - State transitions with triggers (pointer/keyboard events)
+' - Guard conditions for conditional transitions
+' - Actions (events emitted) with undo grouping markers
+' - 50ms sampling annotations for high-frequency drag operations
+' - Event IDs and types for traceability to event_schema.md
+'
+' Date: 2025-11-09
+' Version: 1.0
+' Related: lib/application/tools/framework/tool_manager.dart
+' Related: docs/reference/event_schema.md
+' Related Events: See event tables in each tool section below
+' ============================================================================
+
+' anchor: tool-state-machine
+
+' ============================================================================
+' Selection Tool State Machine
+' ============================================================================
+
+state "Selection Tool" as SelectionTool {
+  state "SelectionIdle" as S_Idle {
+    S_Idle : Tool activated, waiting for input
+    S_Idle : No selection active
+    S_Idle : Hover detection enabled
+  }
+
+  state "SelectionHover" as S_Hover {
+    S_Hover : Mouse over selectable object
+    S_Hover : Preview selection highlight
+    S_Hover : Cursor: pointer (hand)
+  }
+
+  state "SelectionPointerDown" as S_Down {
+    S_Down : Pointer pressed on object or canvas
+    S_Down : Track drag start position
+    S_Down : Determine action type:
+    S_Down : • Object click = select
+    S_Down : • Canvas click = marquee start
+  }
+
+  state "SelectionDragging" as S_Drag {
+    S_Drag : Dragging selected objects
+    S_Drag : OR drawing marquee selection box
+    S_Drag : --
+    S_Drag : Sampled Events:
+    S_Drag : • MoveObjectEvent (50ms interval)
+    S_Drag : • OR MarqueeUpdateEvent (visual only)
+  }
+
+  state "SelectionCommit" as S_Commit {
+    S_Commit : Finalize selection or move operation
+    S_Commit : Emit EndGroupEvent for undo group
+    S_Commit : Reset drag state
+  }
+
+  [*] --> S_Idle : onActivate()
+
+  S_Idle --> S_Hover : onPointerMove\n[hover over object] /\nupdate cursor
+
+  S_Hover --> S_Idle : onPointerMove\n[no longer over object] /\nreset cursor
+
+  S_Hover --> S_Down : onPointerDown\n[on object] /\ntrack drag start
+
+  S_Idle --> S_Down : onPointerDown\n[on canvas] /\nstart marquee
+
+  S_Down --> S_Idle : onPointerUp\n[drag distance < 5.0\nAND on object] /\nSelectObjectsEvent
+
+  note right of S_Down
+    **Click Selection (No Drag):**
+
+    Guard: drag distance less than 5.0 pixels
+
+    Single click emits SelectObjectsEvent:
+    - objectIds: [clicked object ID]
+    - mode: "replace" (default)
+    - mode: "add" (Shift pressed)
+    - mode: "toggle" (Cmd or Ctrl pressed)
+
+    **Event Definition:**
+    eventType: "SelectObjectsEvent"
+    Required: objectIds, mode
+    Optional: undoGroupId
+
+    No undo grouping for single click.
+  end note
+
+  S_Down --> S_Drag : onPointerMove\n[drag distance >= 5.0] /\nStartGroupEvent,\nset isDragging = true
+
+  note left of S_Drag
+    **Drag Operation Starts:**
+
+    Guard: drag distance >= 5.0 pixels
+
+    Emit StartGroupEvent:
+    - groupId: unique UUID
+    - description: "Move objects"
+      OR "Marquee selection"
+
+    **Two drag modes:**
+    1. Move selected objects
+       → MoveObjectEvent (sampled)
+    2. Draw marquee box
+       → MarqueeUpdateEvent (not persisted)
+  end note
+
+  S_Drag --> S_Drag : onPointerMove /\nMoveObjectEvent\n(samplingIntervalMs: 50)
+
+  note right of S_Drag
+    **Sampled Drag Events:**
+
+    During object move, emit MoveObjectEvent
+    at 50ms intervals (Decision 5):
+
+    eventType: "MoveObjectEvent"
+    Required: objectIds, delta
+    Optional: samplingIntervalMs (50)
+    Optional: undoGroupId
+
+    Delta is incremental from last event,
+    not from drag start.
+
+    **Marquee Mode:**
+    Marquee selection does NOT emit
+    sampled events—only visual feedback.
+    Final SelectObjectsEvent emitted
+    on pointer up.
+  end note
+
+  S_Drag --> S_Commit : onPointerUp /\nif moving: final MoveObjectEvent\nif marquee: SelectObjectsEvent\nEndGroupEvent
+
+  S_Commit --> S_Idle : / resetState()
+
+  note bottom of S_Commit
+    **Commit Drag Operation:**
+
+    **If moving objects:**
+    1. Final MoveObjectEvent (no sampling)
+    2. EndGroupEvent (groupId, undoGroupEnd: true)
+    3. Flush events to persistence
+
+    **If marquee selection:**
+    1. SelectObjectsEvent (objectIds from marquee)
+    2. EndGroupEvent
+
+    Entire drag is one undo group.
+  end note
+
+  S_Idle --> S_Idle : onKeyPress\n[Delete key] /\nDeleteObjectsEvent
+
+  note left of S_Idle
+    **Delete Selected Objects:**
+
+    Delete key pressed while objects selected:
+    - Emit DeleteObjectsEvent
+    - objectIds: currently selected objects
+    - Single event, no undo group needed
+      (atomic operation)
+  end note
+}
+
+' ============================================================================
+' Direct Selection Tool State Machine
+' ============================================================================
+
+state "Direct Selection Tool" as DirectSelectionTool {
+  state "DSIdle" as DS_Idle {
+    DS_Idle : Tool activated, waiting for input
+    DS_Idle : Hover detection for anchors/BCPs
+    DS_Idle : Cursor: crosshair (default)
+  }
+
+  state "DSHover" as DS_Hover {
+    DS_Hover : Mouse over anchor point or BCP
+    DS_Hover : Preview anchor highlight
+    DS_Hover : Cursor: move (hand with arrows)
+  }
+
+  state "DSPointerDown" as DS_Down {
+    DS_Down : Pointer pressed on anchor/BCP
+    DS_Down : Track drag start position
+    DS_Down : Store anchor/BCP metadata
+  }
+
+  state "DSDragging" as DS_Drag {
+    DS_Drag : Dragging anchor point or BCP handle
+    DS_Drag : Live preview of path deformation
+    DS_Drag : --
+    DS_Drag : Sampled Events:
+    DS_Drag : • ModifyAnchorEvent (50ms interval)
+  }
+
+  state "DSCommit" as DS_Commit {
+    DS_Commit : Finalize anchor/BCP modification
+    DS_Commit : Emit final ModifyAnchorEvent
+    DS_Commit : Emit EndGroupEvent for undo group
+  }
+
+  [*] --> DS_Idle : onActivate()
+
+  DS_Idle --> DS_Hover : onPointerMove\n[hover over anchor/BCP] /\nupdate cursor
+
+  DS_Hover --> DS_Idle : onPointerMove\n[no longer over anchor/BCP] /\nreset cursor
+
+  DS_Hover --> DS_Down : onPointerDown\n[on anchor/BCP] /\ntrack drag start
+
+  DS_Down --> DS_Idle : onPointerUp\n[drag distance < 5.0] /\nSelectAnchorsEvent
+
+  note right of DS_Down
+    **Click Anchor Selection:**
+
+    Guard: drag distance < 5.0 pixels
+
+    Emit SelectAnchorsEvent:
+    - pathId: parent path
+    - anchorIndices: [clicked anchor index]
+    - mode: "replace" (default)
+    - mode: "add" (Shift pressed)
+
+    **Event Definition:**
+    eventType: "SelectAnchorsEvent"
+    Required: pathId, anchorIndices, mode
+
+    Single click, no undo group.
+  end note
+
+  DS_Down --> DS_Drag : onPointerMove\n[drag distance >= 5.0] /\nStartGroupEvent,\nset isDragging = true
+
+  note left of DS_Drag
+    **Drag Operation Starts:**
+
+    Guard: drag distance >= 5.0 pixels
+
+    Emit StartGroupEvent:
+    - groupId: unique UUID
+    - description: "Modify anchor"
+      OR "Adjust Bezier handle"
+
+    Begin 50ms sampling for smooth replay.
+  end note
+
+  DS_Drag --> DS_Drag : onPointerMove /\nModifyAnchorEvent\n(samplingIntervalMs: 50)
+
+  note right of DS_Drag
+    **Sampled Anchor Modification:**
+
+    During drag, emit ModifyAnchorEvent
+    at 50ms intervals (Decision 5):
+
+    eventType: "ModifyAnchorEvent"
+    Required: pathId, anchorIndex, position
+    Optional: handleIn, handleOut
+    Optional: samplingIntervalMs (50)
+    Optional: undoGroupId
+
+    **Modifier: Alt Key**
+    - Not pressed: Symmetric handles
+      (handleIn = -handleOut)
+    - Pressed: Independent handles
+      (handleIn unchanged, only handleOut)
+
+    Position is absolute, not delta.
+  end note
+
+  DS_Drag --> DS_Commit : onPointerUp /\nfinal ModifyAnchorEvent,\nEndGroupEvent
+
+  DS_Commit --> DS_Idle : / resetState()
+
+  note bottom of DS_Commit
+    **Commit Anchor Modification:**
+
+    1. Final ModifyAnchorEvent (no sampling)
+    2. EndGroupEvent (groupId, undoGroupEnd: true)
+    3. Flush events to persistence
+
+    Entire drag is one undo group.
+    Undo reverts anchor to pre-drag position.
+  end note
+}
+
+' ============================================================================
+' Pen Tool State Machine
+' ============================================================================
+
+state "Pen Tool" as PenTool {
+  state "PenIdle" as P_Idle {
+    P_Idle : Tool activated, waiting for input
+    P_Idle : No active path (currentPathId = null)
+    P_Idle : Cursor: crosshair
+  }
+
+  state "PenCreatingPath" as P_Creating {
+    P_Creating : Active path being created
+    P_Creating : Placing anchors and segments
+    P_Creating : Preview next segment to hover position
+    P_Creating : --
+    P_Creating : Pointer Events:
+    P_Creating : • onPointerDown → track drag start
+    P_Creating : • onPointerMove → update preview
+    P_Creating : • onPointerUp → emit anchor event
+  }
+
+  state "PenAdjustingHandles" as P_Adjusting {
+    P_Adjusting : Adjusting Bezier handles on last anchor
+    P_Adjusting : Clicked on last anchor position
+    P_Adjusting : Dragging to adjust control points
+    P_Adjusting : --
+    P_Adjusting : Alt Key Behavior:
+    P_Adjusting : • Not pressed: Symmetric handles
+    P_Adjusting : • Pressed: Independent handles
+  }
+
+  [*] --> P_Idle : onActivate()
+
+  P_Idle --> P_Creating : onPointerDown\n[first click] /\nStartGroupEvent,\nCreatePathEvent,\nset currentPathId
+
+  note right of P_Idle
+    **First Click Starts Path:**
+
+    Generate unique pathId and groupId.
+
+    Emit sequence:
+    1. StartGroupEvent:
+       - groupId: UUID
+       - description: "Create path"
+       - undoGroupStart: true
+
+    2. CreatePathEvent:
+       - pathId: UUID
+       - startAnchor: clicked position
+       - strokeColor: #000000 (default)
+       - strokeWidth: 2.0
+       - undoGroupId: same as above
+
+    Transition to creatingPath state.
+    Track _lastAnchorPosition.
+  end note
+
+  P_Creating --> P_Creating : onPointerUp\n[drag distance < 5.0] /\nAddAnchorEvent\n(anchorType: line)
+
+  note left of P_Creating
+    **Add Straight Line Anchor:**
+
+    Guard: drag distance < 5.0 pixels
+
+    Emit AddAnchorEvent:
+    - eventType: "AddAnchorEvent"
+    - pathId: current path
+    - position: pointer position
+    - anchorType: "line"
+    - undoGroupId: from StartGroupEvent
+
+    No handleIn/handleOut (straight line).
+
+    **Modifier: Shift Key**
+    Constrains angle to 45° increments.
+  end note
+
+  P_Creating --> P_Creating : onPointerUp\n[drag distance >= 5.0] /\nAddAnchorEvent\n(anchorType: bezier,\nhandleIn, handleOut)
+
+  note right of P_Creating
+    **Add Bezier Curve Anchor:**
+
+    Guard: drag distance >= 5.0 pixels
+
+    Emit AddAnchorEvent:
+    - eventType: "AddAnchorEvent"
+    - pathId: current path
+    - position: anchor position (drag start)
+    - anchorType: "bezier"
+    - handleOut: drag end - anchor position
+    - handleIn: -handleOut (symmetric)
+      OR null (Alt pressed, independent)
+    - undoGroupId: from StartGroupEvent
+
+    Drag direction determines initial handle.
+  end note
+
+  P_Creating --> P_Adjusting : onPointerDown\n[click on last anchor] /\nenter adjustment mode
+
+  note left of P_Adjusting
+    **Click on Last Anchor:**
+
+    Distance threshold: 10.0 world units
+
+    Enables user to adjust handles
+    after placing a Bezier anchor.
+
+    Checked BEFORE double-click
+    detection to prevent conflicts.
+  end note
+
+  P_Adjusting --> P_Creating : onPointerUp /\nModifyAnchorEvent\n(anchorIndex,\nhandleIn, handleOut)
+
+  note right of P_Adjusting
+    **Return to Path Creation:**
+
+    After adjusting handles, user
+    continues creating path (not finish).
+
+    ModifyAnchorEvent emitted with:
+    - pathId: current path
+    - anchorIndex: _anchorCount - 1
+    - handleOut: from drag end
+    - handleIn: -handleOut (symmetric)
+      OR null (Alt pressed)
+    - undoGroupId: from StartGroupEvent
+
+    Path creation continues until
+    explicit finish or cancel.
+  end note
+
+  P_Creating --> P_Idle : onPointerDown\n[double-click] /\nFinishPathEvent,\nEndGroupEvent,\nresetState()
+
+  P_Creating --> P_Idle : onKeyPress\n[Enter key] /\nFinishPathEvent,\nEndGroupEvent,\nresetState()
+
+  note bottom of P_Creating
+    **Finish Path (Normal Completion):**
+
+    Two triggers:
+    1. Double-click detection
+       • Time threshold: 500ms
+       • Distance threshold: 10.0 world units
+
+    2. Enter key press
+
+    Both emit same events:
+    1. FinishPathEvent:
+       - pathId: current path
+       - closed: false
+       - undoGroupId: from StartGroupEvent
+
+    2. EndGroupEvent:
+       - groupId: from StartGroupEvent
+       - undoGroupEnd: true
+
+    3. Flush events to persistence
+    4. Reset state to idle
+
+    **Complete Event Sequence:**
+    StartGroupEvent → CreatePathEvent →
+    AddAnchorEvent × N → [ModifyAnchorEvent × M] →
+    FinishPathEvent → EndGroupEvent
+  end note
+
+  P_Creating --> P_Idle : onKeyPress\n[Escape key] /\nEndGroupEvent,\nresetState()
+
+  note left of P_Creating
+    **Cancel Path:**
+
+    Escape key pressed:
+    - Emit EndGroupEvent ONLY
+      (no FinishPathEvent)
+    - Incomplete path ignored by handlers
+    - Reset state to idle
+
+    Undo group closed without
+    completing the path.
+  end note
+}
+
+' ============================================================================
+' Legend and Global Notes
+' ============================================================================
+
+legend top left
+  **Legend**
+
+  **Event Sampling (Decision 5):**
+  High-frequency events sampled at 50ms intervals
+  to reduce event volume while maintaining smooth replay.
+
+  Sampled Events:
+  • MoveObjectEvent (Selection tool drag)
+  • ModifyAnchorEvent (Direct Selection drag)
+
+  Non-Sampled Events:
+  • SelectObjectsEvent (discrete click)
+  • CreatePathEvent (lifecycle marker)
+  • AddAnchorEvent (discrete anchor placement)
+
+  **Undo Grouping:**
+  Multi-event operations grouped via:
+  • StartGroupEvent (undoGroupStart: true)
+  • Intermediate events (undoGroupId: UUID)
+  • EndGroupEvent (undoGroupEnd: true)
+
+  **Guard Conditions:**
+  [condition] → Boolean check before transition
+  Examples:
+  • [drag distance < 5.0] → click, not drag
+  • [drag distance >= 5.0] → drag operation
+  • [hover over object] → hit test passed
+
+  **Event IDs:**
+  All events include:
+  • eventId (UUIDv4)
+  • timestamp (Unix milliseconds)
+  • eventType (string, exact class name)
+  • eventSequence (zero-based index)
+  • documentId (UUIDv4)
+
+  See: docs/reference/event_schema.md
+
+  **Provider Integration (Decision 7):**
+  Tool state changes trigger notifyListeners()
+  via ToolManager to update UI reactively.
+endlegend
+
+note as N1
+  **50ms Sampling Implementation:**
+
+  Tools implementing drag operations use a sampler
+  to throttle event emission:
+
+  ```dart
+  // Inside tool's onPointerMove handler
+  final now = DateTime.now().millisecondsSinceEpoch;
+  if (now - _lastSampleTime >= 50) {
+    eventRecorder.record(
+      MoveObjectEvent(
+        objectIds: selectedIds,
+        delta: currentDelta,
+        samplingIntervalMs: 50,
+        undoGroupId: _currentGroupId,
+      ),
+    );
+    _lastSampleTime = now;
+  }
+  ```
+
+  First and last events in a drag do NOT include
+  samplingIntervalMs (lifecycle markers).
+end note
+
+note as N2
+  **Tool Activation Flow (ToolManager):**
+
+  When switching tools:
+  1. Previous tool's onDeactivate() called
+  2. EventRecorder.flush() ensures buffered events persisted
+  3. New tool's onActivate() called
+  4. CursorService.setCursor() updates cursor
+  5. ToolManager.notifyListeners() updates UI
+
+  See: lib/application/tools/framework/tool_manager.dart
+
+  **Event Recorder Coordination:**
+  Tools do NOT directly call EventRecorder—
+  they generate event objects, and ToolManager
+  coordinates with EventRecorder for:
+  • Pause/resume during replay
+  • Flush on pointer up / tool switch
+  • Undo group boundary enforcement
+end note
+
+@enduml

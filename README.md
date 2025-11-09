@@ -333,12 +333,34 @@ The diagram shows table relationships, foreign key constraints, and includes ann
 
 See [Data and Snapshot ERD Documentation](docs/diagrams/data_snapshot_erd.md) for complete schema rationale, validation checklist, and architectural decision references.
 
+**Tool Framework State Machine** ([PlantUML source](docs/diagrams/tool_framework_state_machine.puml) | [PNG](docs/diagrams/tool_framework_state_machine.png) | [SVG](docs/diagrams/tool_framework_state_machine.svg))
+
+This state machine diagram documents the complete behavior of WireTuner's three foundational tools:
+
+- **Selection Tool**: Object selection via click or marquee, drag-to-move with 50ms sampled events
+- **Direct Selection Tool**: Anchor point and Bezier control point manipulation
+- **Pen Tool**: Path creation with straight line and Bezier curve segments
+
+The diagram includes:
+- State transitions with guard conditions (drag distance thresholds, hover detection)
+- Event emissions with undo grouping markers (StartGroupEvent, EndGroupEvent)
+- 50ms sampling annotations for high-frequency drag operations (Decision 5)
+- Modifier key behaviors (Shift for angle constraint, Alt for independent handles)
+- Complete event sequences with eventId, timestamp, and eventType specifications
+
+See [Event Schema Reference](docs/reference/event_schema.md) for detailed event payload specifications.
+
 **Diagram Validation:**
 ```bash
 # Component Overview (PlantUML)
 plantuml -checkonly docs/diagrams/component_overview.puml
 bash tools/scripts/render_diagram.sh docs/diagrams/component_overview.puml svg
 bash tools/scripts/render_diagram.sh docs/diagrams/component_overview.puml png
+
+# Tool Framework State Machine (PlantUML)
+plantuml -checkonly docs/diagrams/tool_framework_state_machine.puml
+bash tools/scripts/render_diagram.sh docs/diagrams/tool_framework_state_machine.puml svg
+bash tools/scripts/render_diagram.sh docs/diagrams/tool_framework_state_machine.puml png
 
 # Event Flow Sequence (Mermaid)
 # Requires: npm install -g @mermaid-js/mermaid-cli
