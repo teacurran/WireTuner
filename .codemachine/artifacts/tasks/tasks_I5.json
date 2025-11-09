@@ -2,130 +2,195 @@
   {
     "task_id": "I5.T1",
     "iteration_id": "I5",
-    "iteration_goal": "Finalize persistence workflows (save/load/versioning), build export (SVG/PDF) and import (AI/SVG) services, and capture the supporting activity diagram plus regression tests to close Milestone 0.1.",
-    "description": "Implement Save Document pipeline (T033) tying UI commands to EventStore/SnapshotManager, ensuring atomic writes, backups, and telemetry.",
+    "iteration_goal": "Finalize save/load flows with semantic versioning, implement SVG/PDF export and Tier-2 AI import, codify interoperability specs, and run platform parity QA culminating in release packaging.",
+    "description": "Implement document save orchestrator writing snapshots + metadata into `.wiretuner` SQLite files, handling Save and Save As flows with blocking UI + progress indicators.",
     "agent_type_hint": "BackendAgent",
-    "inputs": "Save/Load spec, event store, snapshot serializer.",
-    "target_files": [
-      "lib/src/services/file_ops/save_service.dart",
-      "lib/src/services/file_ops/file_picker_adapter.dart",
-      "integration_test/save_flow_test.dart"
-    ],
-    "input_files": [
-      "lib/src/services/file_ops/save_service.dart",
-      "lib/src/event_sourcing/persistence/",
-      "test/integration/save_flow_test.dart"
-    ],
-    "deliverables": "Save service with dependency injection, UI command wiring, integration test covering save + reopen scenario.",
-    "acceptance_criteria": "- Save writes metadata/events/snapshots within single WAL-backed transaction; temp file rename ensures atomicity.\n        - Telemetry logs file size, event count, snapshot ratio.\n        - Integration test verifies reopened document equals pre-save snapshot hash.",
+    "inputs": "Snapshot serializer, event store, operation grouping for dirty state.",
+    "target_files": [],
+    "input_files": [],
+    "deliverables": "Save service with blocking dialogs, dirty-state tracking, unit tests for success/failure (disk full) scenarios.",
+    "acceptance_criteria": "Save completes <100 ms for baseline doc; errors display actionable dialog; tests simulate failure + success; logging captures file path + version.",
     "dependencies": [
-      "I4.T3",
-      "I1.T7"
+      "I2.T4",
+      "I4.T6"
     ],
     "parallelizable": false,
-    "done": true
+    "done": false
   },
   {
     "task_id": "I5.T2",
     "iteration_id": "I5",
-    "iteration_goal": "Finalize persistence workflows (save/load/versioning), build export (SVG/PDF) and import (AI/SVG) services, and capture the supporting activity diagram plus regression tests to close Milestone 0.1.",
-    "description": "Implement Load Document + version negotiation (T034/T035) and author File Ops Activity Diagram (Mermaid) covering save/load/export/import flows.",
-    "agent_type_hint": "BackendAgent",
-    "inputs": "Save service, event navigator, persistence contract.",
-    "target_files": [
-      "lib/src/services/file_ops/load_service.dart",
-      "lib/src/services/file_ops/version_migrator.dart",
-      "docs/diagrams/file_ops_activity.mmd",
-      "integration_test/load_upgrade_test.dart"
-    ],
-    "input_files": [
-      "lib/src/services/file_ops/load_service.dart",
-      "docs/diagrams/file_ops_activity.mmd",
-      "test/integration/load_flow_test.dart"
-    ],
-    "deliverables": "Load service that selects latest snapshot, replays deltas, runs migrations for older format versions, plus Mermaid activity diagram.",
-    "acceptance_criteria": "- Load handles corrupt events gracefully (skips + warns) and surfaces UI alert.\n        - Version migrator upgrades ≤ previous format version tests (fixtures) and writes upgrade notes to telemetry.\n        - Diagram illustrates branching for save, load, export, import with error nodes; passes Mermaid CLI validation.",
+    "iteration_goal": "Finalize save/load flows with semantic versioning, implement SVG/PDF export and Tier-2 AI import, codify interoperability specs, and run platform parity QA culminating in release packaging.",
+    "description": "Author `api/file_format_spec.md` describing `.wiretuner` semantic versioning, schema, backward-compatible downgrade flows, and compatibility matrix per Decision 4.",
+    "agent_type_hint": "DocumentationAgent",
+    "inputs": "Tasks `I5.T1`, `I2.T4`, Decision 4 table.",
+    "target_files": [],
+    "input_files": [],
+    "deliverables": "Markdown spec with header structure, field definitions, migration steps, degrade warnings, JSON header example.",
+    "acceptance_criteria": "Document references compatibility matrix, includes Save As degrade workflow, ties to QA plan; markdown lint passes; manifest entry added.",
     "dependencies": [
       "I5.T1"
     ],
-    "parallelizable": false,
-    "done": true
+    "parallelizable": true,
+    "done": false
   },
   {
     "task_id": "I5.T3",
     "iteration_id": "I5",
-    "iteration_goal": "Finalize persistence workflows (save/load/versioning), build export (SVG/PDF) and import (AI/SVG) services, and capture the supporting activity diagram plus regression tests to close Milestone 0.1.",
-    "description": "Build SVG export service (T036) translating Document to SVG 1.1, including metadata, transforms, styles, and test harness comparing golden SVG output.",
+    "iteration_goal": "Finalize save/load flows with semantic versioning, implement SVG/PDF export and Tier-2 AI import, codify interoperability specs, and run platform parity QA culminating in release packaging.",
+    "description": "Implement load service reading `.wiretuner` files, verifying version compatibility, running migrations, and populating UI (recent files, error dialogs) with degrade warnings.",
     "agent_type_hint": "BackendAgent",
-    "inputs": "Rendering pipeline, document model, persistence contract.",
-    "target_files": [
-      "lib/src/services/export/svg_exporter.dart",
-      "lib/src/services/export/svg_writer.dart",
-      "test/unit/svg_exporter_test.dart"
-    ],
-    "input_files": [
-      "lib/src/services/export/svg_exporter.dart",
-      "test/unit/svg_exporter_test.dart",
-      "docs/specs/export_import.md"
-    ],
-    "deliverables": "Export service + writer utilities, tests verifying path/shape serialization, style mapping, and transform preservation.",
-    "acceptance_criteria": "- Supports groups, layers, selection markers removed; output passes `svglint`.\n        - Handles >5k objects within 5 s for benchmark doc.\n        - Documented limitations (filters, gradients) noted in export spec.",
+    "inputs": "Save service, file spec, undo navigator.",
+    "target_files": [],
+    "input_files": [],
+    "deliverables": "Load service + dialogs, integration test verifying round-trip, degrade warning UI.",
+    "acceptance_criteria": "Load rejects unsupported versions gracefully; integration test uses fixture; warnings show when downgrading features; telemetry logs file versions.",
     "dependencies": [
-      "I2.T6",
-      "I4.T5"
+      "I5.T1",
+      "I5.T2"
     ],
-    "parallelizable": true,
-    "done": true
+    "parallelizable": false,
+    "done": false
   },
   {
     "task_id": "I5.T4",
     "iteration_id": "I5",
-    "iteration_goal": "Finalize persistence workflows (save/load/versioning), build export (SVG/PDF) and import (AI/SVG) services, and capture the supporting activity diagram plus regression tests to close Milestone 0.1.",
-    "description": "Implement PDF export (T037) leveraging `pdf` package, ensuring vector fidelity, page sizing, and metadata insertion.",
+    "iteration_goal": "Finalize save/load flows with semantic versioning, implement SVG/PDF export and Tier-2 AI import, codify interoperability specs, and run platform parity QA culminating in release packaging.",
+    "description": "Generate AI import feature matrix (Tier-2) documenting supported constructs, partial support, warnings; build parser leveraging PDF structure to extract paths/shapes.",
     "agent_type_hint": "BackendAgent",
-    "inputs": "SVG exporter, document model.",
-    "target_files": [
-      "lib/src/services/export/pdf_exporter.dart",
-      "test/unit/pdf_exporter_test.dart"
-    ],
-    "input_files": [
-      "lib/src/services/export/pdf_exporter.dart",
-      "test/unit/pdf_exporter_test.dart"
-    ],
-    "deliverables": "PDF exporter with artboard/page selection, CMYK color conversion helper, tests verifying Bezier accuracy via path length comparison.",
-    "acceptance_criteria": "- Exported PDF opens in Preview/Adobe without rasterization; vector selectors confirm path presence.\n        - Color profiles embedded; metadata includes document title/version.\n        - Exports complete with <10 s for benchmark doc.",
+    "inputs": "Decision 5, vector engine, event schema, file format spec.",
+    "target_files": [],
+    "input_files": [],
+    "deliverables": "Matrix doc, importer converting Tier-2 constructs to events, tests with sample AI fixtures + warning logs.",
+    "acceptance_criteria": "Matrix lists Tier-1/Tier-2 coverage; importer warns on unsupported Tier-3 features; tests verify gradient/stroke conversions; doc cross-links to Decision 5.",
     "dependencies": [
-      "I5.T3"
+      "I2.T3",
+      "I5.T2"
     ],
     "parallelizable": false,
-    "done": true
+    "done": false
   },
   {
     "task_id": "I5.T5",
     "iteration_id": "I5",
-    "iteration_goal": "Finalize persistence workflows (save/load/versioning), build export (SVG/PDF) and import (AI/SVG) services, and capture the supporting activity diagram plus regression tests to close Milestone 0.1.",
-    "description": "Implement AI import pipeline (T038) focusing on PDF-based AI files plus SVG import (T039), sharing a common parser abstraction and validation harness.",
+    "iteration_goal": "Finalize save/load flows with semantic versioning, implement SVG/PDF export and Tier-2 AI import, codify interoperability specs, and run platform parity QA culminating in release packaging.",
+    "description": "Implement SVG export (Tier-2) supporting paths, shapes, gradients, clipping masks, compound paths, and metadata; ensure exported files pass W3C validator.",
     "agent_type_hint": "BackendAgent",
-    "inputs": "Event schema, document model, persistence contract.",
-    "target_files": [
-      "lib/src/services/import/ai_importer.dart",
-      "lib/src/services/import/svg_importer.dart",
-      "lib/src/services/import/import_validator.dart",
-      "integration_test/import_roundtrip_test.dart",
-      "docs/specs/import_compatibility.md"
-    ],
-    "input_files": [
-      "lib/src/services/import/",
-      "test/integration/import_flow_test.dart",
-      "docs/specs/import_compatibility.md"
-    ],
-    "deliverables": "Import services for AI (PDF parser) and SVG (XML parser) that convert inputs into event streams, plus documentation outlining supported features/limitations.",
-    "acceptance_criteria": "- Imports basic shapes, paths, groups, transforms; unsupported features logged but do not crash.\n        - Round-trip golden test: import AI/SVG → render → export SVG matches baseline within tolerance.\n        - Security constraints (max file size, disabled external entities) enforced.",
+    "inputs": "Vector engine, render pipeline, file spec.",
+    "target_files": [],
+    "input_files": [],
+    "deliverables": "SVG exporter, unit tests verifying DOM output, integration test comparing against golden file opened via CLI validator.",
+    "acceptance_criteria": "Exporter handles gradients/clipping; tests assert XML equality; validator CLI returns success; doc snippet explains known limitations.",
     "dependencies": [
-      "I5.T2",
-      "I5.T3"
+      "I2.T6",
+      "I5.T2"
+    ],
+    "parallelizable": true,
+    "done": false
+  },
+  {
+    "task_id": "I5.T6",
+    "iteration_id": "I5",
+    "iteration_goal": "Finalize save/load flows with semantic versioning, implement SVG/PDF export and Tier-2 AI import, codify interoperability specs, and run platform parity QA culminating in release packaging.",
+    "description": "Implement PDF export leveraging `pdf` package, mapping vector objects to PDF operators, embedding fonts for text-as-path, and verifying output via external viewer tests.",
+    "agent_type_hint": "BackendAgent",
+    "inputs": "SVG exporter (for parity), vector engine, performance metrics.",
+    "target_files": [],
+    "input_files": [],
+    "deliverables": "PDF exporter, tests verifying page size/objects, integration test opening file via `pdfinfo` or similar CLI.",
+    "acceptance_criteria": "PDF opens in Preview/Acrobat without warnings; tests ensure gradients/fills map correctly; documentation lists color management assumptions.",
+    "dependencies": [
+      "I5.T5"
     ],
     "parallelizable": false,
-    "done": true
+    "done": false
+  },
+  {
+    "task_id": "I5.T7",
+    "iteration_id": "I5",
+    "iteration_goal": "Finalize save/load flows with semantic versioning, implement SVG/PDF export and Tier-2 AI import, codify interoperability specs, and run platform parity QA culminating in release packaging.",
+    "description": "Implement SVG import (Tier-1/Tier-2) to complement AI import, focusing on path, gradient, clipping, and text-as-path conversion with warning logs for unsupported elements.",
+    "agent_type_hint": "BackendAgent",
+    "inputs": "SVG exporter knowledge, event schema, vector model.",
+    "target_files": [],
+    "input_files": [],
+    "deliverables": "Importer with DOM parser, tests using sample files, doc describing supported tags/attributes.",
+    "acceptance_criteria": "Imports Round-trip sample doc (export then import) without diff; warnings issued for filters/blend modes; doc lists fallback behaviors.",
+    "dependencies": [
+      "I5.T5"
+    ],
+    "parallelizable": true,
+    "done": false
+  },
+  {
+    "task_id": "I5.T8",
+    "iteration_id": "I5",
+    "iteration_goal": "Finalize save/load flows with semantic versioning, implement SVG/PDF export and Tier-2 AI import, codify interoperability specs, and run platform parity QA culminating in release packaging.",
+    "description": "Build platform parity QA checklist + automation (where possible) ensuring keyboard shortcuts, window chrome, file dialogs, and exporters behave identically on macOS/Windows.",
+    "agent_type_hint": "QAAgent",
+    "inputs": "Decisions 2 & 6, tasks `I5.T1`–`I5.T7`.",
+    "target_files": [],
+    "input_files": [],
+    "deliverables": "Updated checklist, automated smoke test verifying shortcuts + exports per platform (guarded by tags), report template for manual QA.",
+    "acceptance_criteria": "Checklist covers menus, shortcuts, file pickers; automation verifies parity-critical flows; doc includes sign-off template; manifest updated.",
+    "dependencies": [
+      "I5.T1",
+      "I5.T7"
+    ],
+    "parallelizable": false,
+    "done": false
+  },
+  {
+    "task_id": "I5.T9",
+    "iteration_id": "I5",
+    "iteration_goal": "Finalize save/load flows with semantic versioning, implement SVG/PDF export and Tier-2 AI import, codify interoperability specs, and run platform parity QA culminating in release packaging.",
+    "description": "Prepare release packaging scripts (macOS notarized DMG, Windows signed installer), update CI pipelines to build artifacts, and document release checklist.",
+    "agent_type_hint": "DevOpsAgent",
+    "inputs": "Section 2 deployment plan, CI from `I1.T7`, parity checklist.",
+    "target_files": [],
+    "input_files": [],
+    "deliverables": "Build scripts, release workflow (manual trigger), checklist describing signing/notarization steps.",
+    "acceptance_criteria": "Scripts produce DMG/EXE locally; release workflow uploads artifacts; checklist includes hash verification + gate approvals.",
+    "dependencies": [
+      "I5.T8"
+    ],
+    "parallelizable": true,
+    "done": false
+  },
+  {
+    "task_id": "I5.T10",
+    "iteration_id": "I5",
+    "iteration_goal": "Finalize save/load flows with semantic versioning, implement SVG/PDF export and Tier-2 AI import, codify interoperability specs, and run platform parity QA culminating in release packaging.",
+    "description": "Conduct end-to-end regression suite (unit, widget, integration, benchmarks, QA checklists) and create final report summarizing readiness, risks, and follow-up work.",
+    "agent_type_hint": "QAAgent",
+    "inputs": "All prior tasks, verification strategy (Section 6), manifest for referencing artifacts.",
+    "target_files": [],
+    "input_files": [],
+    "deliverables": "Final QA report with pass/fail matrix, backlog of post-v0.1 items, attachments referencing logs/artifacts.",
+    "acceptance_criteria": "Report includes summary, risks, metrics; CSV lists each test suite; document cross-links to plan anchors; stakeholder sign-off recorded.",
+    "dependencies": [
+      "I5.T1",
+      "I5.T9"
+    ],
+    "parallelizable": false,
+    "done": false
+  },
+  {
+    "task_id": "I5.T11",
+    "iteration_id": "I5",
+    "iteration_goal": "Finalize save/load flows with semantic versioning, implement SVG/PDF export and Tier-2 AI import, codify interoperability specs, and run platform parity QA culminating in release packaging.",
+    "description": "Update README + marketing snippet with feature list (pen, shapes, undo, import/export), include download/install instructions, and link to release artifacts.",
+    "agent_type_hint": "DocumentationAgent",
+    "inputs": "Final QA report, release scripts, architecture docs.",
+    "target_files": [],
+    "input_files": [],
+    "deliverables": "Updated README, release notes summarizing highlights/known issues, references to file format spec + troubleshooting docs.",
+    "acceptance_criteria": "README badges updated; release notes mention compatibility matrix + Tier-2 import limitations; Markdown lint passes; manifest updated.",
+    "dependencies": [
+      "I5.T9",
+      "I5.T10"
+    ],
+    "parallelizable": false,
+    "done": false
   }
 ]

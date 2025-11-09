@@ -2,151 +2,201 @@
   {
     "task_id": "I3.T1",
     "iteration_id": "I3",
-    "iteration_goal": "Build the extensible tool framework, deliver selection/direct selection experiences, and implement the full pen workflow (anchors, straight segments, Bezier curves, BCP adjustments) with supporting diagrams and telemetry.",
-    "description": "Create the Tool Framework (T018) including `ToolManager`, base `ITool` interface, cursor service, overlay hooks, and integrate with Provider/app shell.",
-    "agent_type_hint": "FrontendAgent",
-    "inputs": "Sections 2 & 2.1, rendering outputs, selection overlay.",
-    "target_files": [
-      "lib/src/tools/framework/tool_manager.dart",
-      "lib/src/tools/framework/tool_interface.dart",
-      "lib/src/tools/framework/cursor_service.dart",
-      "test/unit/tool_manager_test.dart"
-    ],
-    "input_files": [
-      "lib/src/tools/framework/",
-      "lib/src/app/shell/",
-      "test/unit/tool_manager_test.dart"
-    ],
-    "deliverables": "Tool lifecycle APIs (activate/deactivate), keyboard routing, cursor management, unit tests for state transitions.",
-    "acceptance_criteria": "- Tools register/unregister cleanly; only one active tool at a time.\n        - Cursor updates propagate within <1 frame.\n        - Test suite covers tool activation, hotkeys, and ensures overlays render via callbacks.",
+    "iteration_goal": "Establish a robust tool framework with selection/direct-selection tooling, pen tool creation flows, overlays, and cursor/state management so later iterations can add shape tools, direct manipulation, and undo orchestration.",
+    "description": "Implement the tool framework runtime: `ITool` interface, tool manager, dependency injection wiring, activation/deactivation lifecycle hooks, and provider integration for UI components.",
+    "agent_type_hint": "BackendAgent",
+    "inputs": "Section 2 key components, Task `I2.T7` hit testing, Task `I2.T8` viewport notifications.",
+    "target_files": [],
+    "input_files": [],
+    "deliverables": "Tool manager with registration API, active tool stream, hotkey mapping placeholder, plus tests verifying activation order and singleton enforcement.",
+    "acceptance_criteria": "Switching tools triggers lifecycle callbacks; tool provider notifies UI; tests cover invalid activation attempts; documentation references Section 2.",
     "dependencies": [
-      "I2.T6"
+      "I2.T7",
+      "I2.T8"
     ],
     "parallelizable": false,
-    "done": true
+    "done": false
   },
   {
     "task_id": "I3.T2",
     "iteration_id": "I3",
-    "iteration_goal": "Build the extensible tool framework, deliver selection/direct selection experiences, and implement the full pen workflow (anchors, straight segments, Bezier curves, BCP adjustments) with supporting diagrams and telemetry.",
-    "description": "Document the Tool Interaction Sequence (PlantUML) focusing on pen + selection flows and pointer sampling, aligning with event recorder behavior.",
+    "iteration_goal": "Establish a robust tool framework with selection/direct-selection tooling, pen tool creation flows, overlays, and cursor/state management so later iterations can add shape tools, direct manipulation, and undo orchestration.",
+    "description": "Produce PlantUML state-machine diagram covering selection, direct selection, and pen tool states (Idle, Hover, PointerDown, Dragging, Commit) with undo grouping markers.",
     "agent_type_hint": "DiagrammingAgent",
-    "inputs": "Tool framework, event flow doc.",
-    "target_files": [
-      "docs/diagrams/tool_interaction_sequence.puml",
-      "docs/specs/tool_interactions.md"
-    ],
-    "input_files": [
-      "docs/diagrams/tool_interaction_sequence.puml",
-      "docs/specs/event_lifecycle.md"
-    ],
-    "deliverables": "Sequence diagram + narrative describing pointer down/move/up events, event batching, and undo grouping.",
-    "acceptance_criteria": "- Diagram renders; includes states for `ToolManager`, `PenTool`, `EventRecorder`, `SnapshotManager`.\n        - Markdown outlines undo grouping rules (start/end markers) and acceptance for sampling accuracy.",
+    "inputs": "Task `I3.T1` framework, Decisions 5 & 7, Section 2.1 artifact plan.",
+    "target_files": [],
+    "input_files": [],
+    "deliverables": "Diagram including state transitions, guard conditions, notes for 50 ms sampling, anchors + legend.",
+    "acceptance_criteria": "PlantUML renders cleanly; diagram cross-referenced from README and manifest; includes explicit undo boundary markers and event IDs.",
     "dependencies": [
       "I3.T1"
     ],
     "parallelizable": true,
-    "done": true
+    "done": false
   },
   {
     "task_id": "I3.T3",
     "iteration_id": "I3",
-    "iteration_goal": "Build the extensible tool framework, deliver selection/direct selection experiences, and implement the full pen workflow (anchors, straight segments, Bezier curves, BCP adjustments) with supporting diagrams and telemetry.",
-    "description": "Implement Selection Tool (T019) including marquee selection, object transforms, and integration with selection overlay/telemetry.",
+    "iteration_goal": "Establish a robust tool framework with selection/direct-selection tooling, pen tool creation flows, overlays, and cursor/state management so later iterations can add shape tools, direct manipulation, and undo orchestration.",
+    "description": "Implement Selection Tool supporting object selection (click, marquee), multi-select (Shift), and move operations emitting `MoveObject` events via recorder stub.",
     "agent_type_hint": "FrontendAgent",
-    "inputs": "Tool framework, selection overlay, document query APIs.",
-    "target_files": [
-      "lib/src/tools/selection/selection_tool.dart",
-      "lib/src/tools/selection/marquee_controller.dart",
-      "test/widget/selection_tool_test.dart"
-    ],
-    "input_files": [
-      "lib/src/tools/selection/",
-      "lib/src/domain/document/",
-      "test/widget/selection_tool_test.dart"
-    ],
-    "deliverables": "Selection tool with Shift/Cmd modifiers, marquee rectangle, translations emitting MoveObject events, widget tests verifying selection states.",
-    "acceptance_criteria": "- Tool selects via click, multi-select via modifiers, and marquee respects viewport transforms.\n        - Event recorder receives MoveObject events with aggregated deltas.\n        - Tests assert selection state updates and overlays highlight correctly.",
+    "inputs": "Tool framework, hit testing, viewport, event recorder interface.",
+    "target_files": [],
+    "input_files": [],
+    "deliverables": "Selection tool class, overlay updates for bounding boxes, tests simulating pointer events and verifying event recorder interactions.",
+    "acceptance_criteria": "Tool selects multiple objects, handles keyboard modifiers, emits move events with proper payload, passes widget + unit tests.",
     "dependencies": [
-      "I3.T1"
+      "I3.T1",
+      "I2.T7",
+      "I1.T3"
     ],
     "parallelizable": false,
-    "done": true
+    "done": false
   },
   {
     "task_id": "I3.T4",
     "iteration_id": "I3",
-    "iteration_goal": "Build the extensible tool framework, deliver selection/direct selection experiences, and implement the full pen workflow (anchors, straight segments, Bezier curves, BCP adjustments) with supporting diagrams and telemetry.",
-    "description": "Deliver Direct Selection Tool (T020) for anchor/BCP interaction, hooking into hit-testing and event sampling, plus telemetry instrumentation for drag latency.",
+    "iteration_goal": "Establish a robust tool framework with selection/direct-selection tooling, pen tool creation flows, overlays, and cursor/state management so later iterations can add shape tools, direct manipulation, and undo orchestration.",
+    "description": "Implement Direct Selection Tool enabling anchor/BCP selection, dragging with 50 ms sampled events, and snapping toggles (grid, angles) for advanced editing.",
     "agent_type_hint": "FrontendAgent",
-    "inputs": "Selection overlay, event recorder, tool diagram.",
-    "target_files": [
-      "lib/src/tools/direct_selection/direct_selection_tool.dart",
-      "lib/src/tools/direct_selection/drag_controller.dart",
-      "test/widget/direct_selection_tool_test.dart",
-      "lib/src/services/telemetry/tool_metrics.dart"
-    ],
-    "input_files": [
-      "lib/src/tools/direct_selection/",
-      "lib/src/domain/geometry/",
-      "test/widget/direct_selection_tool_test.dart"
-    ],
-    "deliverables": "Direct selection interactions (anchor selection, BCP display, drag), telemetry counters (events/sec, latency), tests for anchor hit logic.",
-    "acceptance_criteria": "- Dragging anchors emits MoveAnchor events at 50 ms cadence with final flush on pointer up.\n        - Telemetry event logged when drag > threshold (configurable) or sampler backlog occurs.\n        - Tests verify BCP symmetry toggles and anchor type conversions.",
+    "inputs": "Selection tool behaviors, geometry library, event schema sampling metadata.",
+    "target_files": [],
+    "input_files": [],
+    "deliverables": "Direct selection tool class, overlay for handles, tests verifying anchor selection + event emission.",
+    "acceptance_criteria": "Dragging anchors generates `MoveAnchorEvent` sequences respecting sampler; snapping toggle documented; tests hit anchor-level accuracy thresholds.",
     "dependencies": [
-      "I3.T3"
+      "I3.T3",
+      "I2.T3",
+      "I1.T3"
     ],
     "parallelizable": false,
-    "done": true
+    "done": false
   },
   {
     "task_id": "I3.T5",
     "iteration_id": "I3",
-    "iteration_goal": "Build the extensible tool framework, deliver selection/direct selection experiences, and implement the full pen workflow (anchors, straight segments, Bezier curves, BCP adjustments) with supporting diagrams and telemetry.",
-    "description": "Implement Pen Tool anchor placement and straight segments (T021/T022) with visual preview, undo grouping, and event emission.",
+    "iteration_goal": "Establish a robust tool framework with selection/direct-selection tooling, pen tool creation flows, overlays, and cursor/state management so later iterations can add shape tools, direct manipulation, and undo orchestration.",
+    "description": "Build cursor manager + tool overlays that change cursor icons per tool state and show contextual hints (angle lock, snapping). Integrate with macOS/Windows conventions.",
     "agent_type_hint": "FrontendAgent",
-    "inputs": "Tool framework, tool interaction doc, path models.",
-    "target_files": [
-      "lib/src/tools/pen/pen_tool.dart",
-      "lib/src/tools/pen/pen_preview_overlay.dart",
-      "test/widget/pen_tool_straight_test.dart"
-    ],
-    "input_files": [
-      "lib/src/tools/pen/",
-      "lib/src/domain/models/",
-      "test/widget/pen_tool_straight_test.dart"
-    ],
-    "deliverables": "Pen tool state machine (idle, creating path, editing), preview overlay for forthcoming segment, tests verifying anchor creation order and event payloads.",
-    "acceptance_criteria": "- Single-click adds anchor; Enter/double-click completes open path; Shift+click constrains angles.\n        - Recorder receives CreatePath + AddAnchor events with sequential IDs.\n        - Undo removes entire path creation session via grouping tokens.",
+    "inputs": "Section 2 tech stack, Decisions 6 (parity), Tasks `I3.T1`–`I3.T4`.",
+    "target_files": [],
+    "input_files": [],
+    "deliverables": "Cursor manager service, UI hints widget, tests verifying platform-specific mappings.",
+    "acceptance_criteria": "Cursor updates within 1 frame; macOS uses `SystemMouseCursors.precise`, Windows uses `basic`; hints internationalization-ready; tests cover parity rules.",
     "dependencies": [
+      "I3.T3",
       "I3.T4"
     ],
-    "parallelizable": false,
-    "done": true
+    "parallelizable": true,
+    "done": false
   },
   {
     "task_id": "I3.T6",
     "iteration_id": "I3",
-    "iteration_goal": "Build the extensible tool framework, deliver selection/direct selection experiences, and implement the full pen workflow (anchors, straight segments, Bezier curves, BCP adjustments) with supporting diagrams and telemetry.",
-    "description": "Extend Pen Tool for Bezier curves and BCP adjustments (T023/T024), including drag-to-curve gestures, BCP symmetry toggles, and BCP adjustment UI.",
+    "iteration_goal": "Establish a robust tool framework with selection/direct-selection tooling, pen tool creation flows, overlays, and cursor/state management so later iterations can add shape tools, direct manipulation, and undo orchestration.",
+    "description": "Implement Pen Tool phase 1—creating anchors, toggling between straight vs. curved points, closing paths, and previewing upcoming segments before commit.",
     "agent_type_hint": "FrontendAgent",
-    "inputs": "Pen tool base, direct selection behaviors, geometry utilities.",
-    "target_files": [
-      "lib/src/tools/pen/pen_bezier_controller.dart",
-      "lib/src/tools/pen/pen_handle_overlay.dart",
-      "test/widget/pen_tool_bezier_test.dart"
-    ],
-    "input_files": [
-      "lib/src/tools/pen/",
-      "lib/src/domain/geometry/",
-      "test/widget/pen_tool_bezier_test.dart"
-    ],
-    "deliverables": "Drag-to-create Bezier segments, automatic BCP mirroring, handle editing prior to path completion, tests covering symmetric/corner anchor transitions.",
-    "acceptance_criteria": "- Holding mouse drag during anchor placement emits AddAnchor with handle vectors scaled to drag distance.\n        - ALT/Option toggles corner/smooth anchor types mid-gesture.\n        - BCP adjustments emit AdjustHandle events and replay deterministically.",
+    "inputs": "Tool framework, geometry, event schema, selection overlay.",
+    "target_files": [],
+    "input_files": [],
+    "deliverables": "Pen tool class covering anchor creation + preview lines, overlay for rubber-band preview, tests verifying event payloads for `CreatePath` + `AddAnchor` events.",
+    "acceptance_criteria": "Path creation works for open/closed shapes; preview overlay matches pointer movement; events recorded with correct metadata; tests cover both straight + curved toggles.",
     "dependencies": [
-      "I3.T5"
+      "I3.T4",
+      "I2.T3",
+      "I1.T3"
     ],
     "parallelizable": false,
-    "done": true
+    "done": false
+  },
+  {
+    "task_id": "I3.T7",
+    "iteration_id": "I3",
+    "iteration_goal": "Establish a robust tool framework with selection/direct-selection tooling, pen tool creation flows, overlays, and cursor/state management so later iterations can add shape tools, direct manipulation, and undo orchestration.",
+    "description": "Extend Pen Tool with Bezier curve handles (dragging out BCPs during placement), handle locking (symmetrical/corner), and keyboard modifiers for converting anchors.",
+    "agent_type_hint": "FrontendAgent",
+    "inputs": "Task `I3.T6`, geometry library, undo granularity decision.",
+    "target_files": [],
+    "input_files": [],
+    "deliverables": "Enhanced pen tool supporting BCP manipulation, tests verifying handle math + event output, and user-facing doc describing modifiers.",
+    "acceptance_criteria": "Handles obey symmetrical/corner rules; events include handle positions; doc lists keyboard shortcuts; tests assert geometry outputs.",
+    "dependencies": [
+      "I3.T6"
+    ],
+    "parallelizable": false,
+    "done": false
+  },
+  {
+    "task_id": "I3.T8",
+    "iteration_id": "I3",
+    "iteration_goal": "Establish a robust tool framework with selection/direct-selection tooling, pen tool creation flows, overlays, and cursor/state management so later iterations can add shape tools, direct manipulation, and undo orchestration.",
+    "description": "Implement tool overlay rendering order + z-index management to coordinate selection boxes, pen previews, snapping guides, and future shape guides.",
+    "agent_type_hint": "FrontendAgent",
+    "inputs": "Tasks `I3.T3`–`I3.T7`, canvas pipeline from `I2`.",
+    "target_files": [],
+    "input_files": [],
+    "deliverables": "Overlay registry with deterministic stacking, tests verifying order + hit pass-through, documentation snippet.",
+    "acceptance_criteria": "Overlays stack as configured; pointer events route to active overlay; tests cover stacking + removal; README references overlay architecture.",
+    "dependencies": [
+      "I3.T5",
+      "I3.T7"
+    ],
+    "parallelizable": true,
+    "done": false
+  },
+  {
+    "task_id": "I3.T9",
+    "iteration_id": "I3",
+    "iteration_goal": "Establish a robust tool framework with selection/direct-selection tooling, pen tool creation flows, overlays, and cursor/state management so later iterations can add shape tools, direct manipulation, and undo orchestration.",
+    "description": "Add telemetry + undo boundary annotations for tools: ensure operations flush pending sampled events, emit human-readable labels (“Move Rectangle”) for UI, and log tool usage counts.",
+    "agent_type_hint": "BackendAgent",
+    "inputs": "Task `I1.T8` metrics, `I3` tool implementations, Decision 7 undo granularity.",
+    "target_files": [],
+    "input_files": [],
+    "deliverables": "Telemetry helper, undo label mapping table, tests verifying labels for each tool, and documentation for UI surfaces.",
+    "acceptance_criteria": "Each tool registers descriptive labels; telemetry aggregated per tool; doc lists operations; metrics exported via logger.",
+    "dependencies": [
+      "I3.T3",
+      "I3.T7",
+      "I1.T8"
+    ],
+    "parallelizable": true,
+    "done": false
+  },
+  {
+    "task_id": "I3.T10",
+    "iteration_id": "I3",
+    "iteration_goal": "Establish a robust tool framework with selection/direct-selection tooling, pen tool creation flows, overlays, and cursor/state management so later iterations can add shape tools, direct manipulation, and undo orchestration.",
+    "description": "Deliver manual + automated QA scripts covering selection + pen flows: widget tests simulating pointer sequences, integration test verifying events persisted, and QA checklist referencing Decision 6 parity.",
+    "agent_type_hint": "QAAgent",
+    "inputs": "All prior I3 tasks, event schema, metrics outputs.",
+    "target_files": [],
+    "input_files": [],
+    "deliverables": "Integration test verifying pen + selection interplay, QA checklist with macOS/Windows steps, recorded expected telemetry ranges.",
+    "acceptance_criteria": "Tests pass headless; QA checklist includes parity notes; telemetry thresholds documented; references anchors for manifest.",
+    "dependencies": [
+      "I3.T3",
+      "I3.T9"
+    ],
+    "parallelizable": false,
+    "done": false
+  },
+  {
+    "task_id": "I3.T11",
+    "iteration_id": "I3",
+    "iteration_goal": "Establish a robust tool framework with selection/direct-selection tooling, pen tool creation flows, overlays, and cursor/state management so later iterations can add shape tools, direct manipulation, and undo orchestration.",
+    "description": "Update documentation + onboarding materials (README, developer workflow) with tool usage gifs/screenshots (if possible) and describe how to enable mock events for demos.",
+    "agent_type_hint": "DocumentationAgent",
+    "inputs": "Tool outputs, QA checklist, Section 1 goal statement.",
+    "target_files": [],
+    "input_files": [],
+    "deliverables": "Refreshed docs explaining tool states, keybindings, screenshots/gifs references, plus instructions for running integration tests.",
+    "acceptance_criteria": "README tool section matches shipped features, links to plan anchors; dev workflow doc updated; Markdown lint passes; assets added to `.gitignore` if needed.",
+    "dependencies": [
+      "I3.T6",
+      "I3.T10"
+    ],
+    "parallelizable": false,
+    "done": false
   }
 ]

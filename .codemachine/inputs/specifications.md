@@ -281,7 +281,6 @@ Group related events into logical operations, with one undo action reversing an 
 
 These decisions have been reviewed and approved by the project stakeholder and serve as the canonical architectural foundation for WireTuner v0.1 development.
 
-# Tickets
 
 **Total Tickets**: 39
 **Milestone 0.1 Goal**: Working pen tool, shape creation (rect, ellipse, polygon, star), anchor/BCP manipulation, save/load

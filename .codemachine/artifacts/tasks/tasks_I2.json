@@ -2,157 +2,195 @@
   {
     "task_id": "I2.T1",
     "iteration_id": "I2",
-    "iteration_goal": "Complete immutable geometry/data models, formalize persistence schemas, and deliver a performant CustomPainter pipeline with viewport transforms and basic selection visualization.",
-    "description": "Implement core geometry primitives (T009) and path/shape data models (T010/T011) while authoring the combined Data & Domain ERD (Mermaid) that maps SQLite tables to in-memory aggregates.",
-    "agent_type_hint": "DatabaseAgent",
-    "inputs": "Sections 2 & 2.1, `I1` event model outputs.",
-    "target_files": [
-      "lib/src/domain/models/path.dart",
-      "lib/src/domain/models/shape.dart",
-      "lib/src/domain/models/segment.dart",
-      "docs/diagrams/data_domain_erd.mmd"
-    ],
-    "input_files": [
-      "lib/src/domain/models/",
-      "docs/diagrams/data_domain_erd.mmd"
-    ],
-    "deliverables": "Immutable classes with Freezed, factory helpers, unit tests for serialization, ERD diagram synced with schema definitions.",
-    "acceptance_criteria": "- Supports lines, cubic Beziers, polygons, stars, with validation for smooth/corner anchors.\n        - ERD passes Mermaid lint; references table/field names exactly as in SQLite repo.\n        - Unit tests cover copyWith semantics and ensure equality relies on deep comparison.",
+    "iteration_goal": "Deliver immutable vector data models, geometry utilities, snapshot serialization, and the first rendering pass (canvas, viewport, selection overlay) so tool agents in I3 can operate on reliable primitives.",
+    "description": "Create the Mermaid ERD describing `events`, `snapshots`, `metadata`, plus derived cache tables (future) and annotate snapshot cadence + compression fields.",
+    "agent_type_hint": "DiagrammingAgent",
+    "inputs": "Section 2 data model overview, Decision 1 snapshot rules, Task `I1.T4` schema stub.",
+    "target_files": [],
+    "input_files": [],
+    "deliverables": "ERD source with legend + anchor, README link, and comment referencing Decision 1.",
+    "acceptance_criteria": "Diagram renders via Mermaid CLI; table/column names align with SQL script; snapshot frequency + compression noted; added to manifest.",
     "dependencies": [
-      "I1.T4",
-      "I1.T6"
+      "I1.T4"
     ],
-    "parallelizable": false,
-    "done": true
+    "parallelizable": true,
+    "done": false
   },
   {
     "task_id": "I2.T2",
     "iteration_id": "I2",
-    "iteration_goal": "Complete immutable geometry/data models, formalize persistence schemas, and deliver a performant CustomPainter pipeline with viewport transforms and basic selection visualization.",
-    "description": "Design and implement Canvas System with CustomPainter (T013) plus Rendering Pipeline Diagram communicating flow between document provider, viewport, painter, and overlays.",
-    "agent_type_hint": "FrontendAgent",
-    "inputs": "Sections 2 & 2.1, ERD.",
-    "target_files": [
-      "lib/src/canvas/painter/document_painter.dart",
-      "lib/src/canvas/viewport/viewport_controller.dart",
-      "docs/diagrams/rendering_pipeline.puml",
-      "test/widget/document_painter_test.dart"
-    ],
-    "input_files": [
-      "lib/src/canvas/painter/",
-      "lib/src/canvas/viewport/",
-      "docs/diagrams/rendering_pipeline.puml"
-    ],
-    "deliverables": "CustomPainter subsystem with repaint notifier hooks, viewport controller handling pan/zoom with inertial scrolling, PlantUML diagram describing rendering stages.",
-    "acceptance_criteria": "- Painter renders path outlines with placeholder styles; `flutter test` widget suite validates repaint boundary usage.\n        - Viewport controller exposes matrix conversions and clamps zoom (0.05–8.0).\n        - Diagram explains dirty-region strategy and indicates telemetry insertion points.",
+    "iteration_goal": "Deliver immutable vector data models, geometry utilities, snapshot serialization, and the first rendering pass (canvas, viewport, selection overlay) so tool agents in I3 can operate on reliable primitives.",
+    "description": "Author the vector model specification describing Document, Layer, VectorObject, Path, Shape, Segment, Anchor, Style, Transform, Selection, and Viewport structures with immutability + copyWith rules.",
+    "agent_type_hint": "DocumentationAgent",
+    "inputs": "Section 2 data overview, Task `I2.T1` ERD, Task `I1.T6` event schema for ID formats.",
+    "target_files": [],
+    "input_files": [],
+    "deliverables": "Markdown doc with UML-style text diagrams, invariants (e.g., anchor handles), serialization guidance, and sample JSON blocks.",
+    "acceptance_criteria": "Each entity lists fields, types, immutability notes; includes at least two examples (rectangle path, Bezier); cross-referenced in README + manifest.",
     "dependencies": [
       "I2.T1"
     ],
-    "parallelizable": false,
-    "done": true
+    "parallelizable": true,
+    "done": false
   },
   {
     "task_id": "I2.T3",
     "iteration_id": "I2",
-    "iteration_goal": "Complete immutable geometry/data models, formalize persistence schemas, and deliver a performant CustomPainter pipeline with viewport transforms and basic selection visualization.",
-    "description": "Define Path Data Model behaviors (T009/T010) and capture Event Payload JSON Schema covering all event types plus validation helpers.",
+    "iteration_goal": "Deliver immutable vector data models, geometry utilities, snapshot serialization, and the first rendering pass (canvas, viewport, selection overlay) so tool agents in I3 can operate on reliable primitives.",
+    "description": "Implement core geometry primitives inside `vector_engine`: points, anchors, segments (line, cubic Bezier, arc), bounding boxes, and conversions between shapes and paths.",
     "agent_type_hint": "BackendAgent",
-    "inputs": "Event model, ERD, component diagram.",
-    "target_files": [
-      "docs/specs/event_payload.schema.json",
-      "docs/specs/event_payload.md",
-      "test/unit/event_schema_validation_test.dart"
-    ],
-    "input_files": [
-      "lib/src/event_sourcing/model/",
-      "docs/specs/event_payload.schema.json",
-      "docs/specs/"
-    ],
-    "deliverables": "Draft JSON Schema (Draft 2020-12), Markdown table for each event, validation tests ensuring schema matches Freezed classes.",
-    "acceptance_criteria": "- Schema validated via `npm exec ajv` (document command) or Dart schema validator; all event fixtures pass.\n        - Markdown spec explains sampling metadata fields and upgrade strategy.\n        - Tests fail when event model adds new required field without schema update.",
+    "inputs": "`docs/reference/vector_model.md`, Decisions 5 & 7 requirements (Tier-2 features + undo granularity), Task `I1.T3` interfaces.",
+    "target_files": [],
+    "input_files": [],
+    "deliverables": "Dart classes w/ Freezed data (if chosen) or manual immutability, helper methods for curve evaluation, JSON serialization hooks, and thorough geometry tests.",
+    "acceptance_criteria": "Unit tests cover line + Bezier calculations, bounding boxes, equality; code documented referencing Decision 5; `dart test` passes on CI matrix.",
     "dependencies": [
-      "I1.T4",
-      "I2.T1"
+      "I1.T3",
+      "I2.T2"
     ],
-    "parallelizable": true,
-    "done": true
+    "parallelizable": false,
+    "done": false
   },
   {
     "task_id": "I2.T4",
     "iteration_id": "I2",
-    "iteration_goal": "Complete immutable geometry/data models, formalize persistence schemas, and deliver a performant CustomPainter pipeline with viewport transforms and basic selection visualization.",
-    "description": "Implement Document aggregate (T012) with layer management, selection snapshot, serialization hooks, and integrate snapshot serialization/deserialization with replay engine.",
+    "iteration_goal": "Deliver immutable vector data models, geometry utilities, snapshot serialization, and the first rendering pass (canvas, viewport, selection overlay) so tool agents in I3 can operate on reliable primitives.",
+    "description": "Build the snapshot serializer/deserializer bridging vector models and SQLite BLOBs, including versioned headers, compression toggles, and schema migration placeholders.",
     "agent_type_hint": "BackendAgent",
-    "inputs": "ERD, snapshot manager, geometry models.",
-    "target_files": [
-      "lib/src/domain/document/document.dart",
-      "lib/src/domain/document/selection.dart",
-      "lib/src/event_sourcing/snapshots/snapshot_serializer.dart",
-      "test/unit/document_snapshot_test.dart"
-    ],
-    "input_files": [
-      "lib/src/domain/document/",
-      "lib/src/event_sourcing/snapshots/",
-      "test/unit/"
-    ],
-    "deliverables": "Document root class with Freezed, selection helpers, snapshot serializer hooking into SnapshotManager, tests ensuring deterministic serialization.",
-    "acceptance_criteria": "- Snapshot round-trip retains ordering, IDs, selection state.\n        - Document exposes query helpers for viewport/hit-test consumers.\n        - Serializer handles version field for future migrations.",
+    "inputs": "Tasks `I2.T2`–`I2.T3`, Decision 4 file-versioning rules, `I1.T4` SQLite gateway.",
+    "target_files": [],
+    "input_files": [],
+    "deliverables": "Serializer with CRC/size metadata, tests verifying round-trip fidelity for sample documents, and doc describing version compatibility + downgrade warnings.",
+    "acceptance_criteria": "Snapshot round-trips succeed for sample doc containing paths + shapes; serialization speed measured (<20 ms for medium doc); doc references Decision 4 matrix and includes TODO for degrade flow.",
     "dependencies": [
-      "I2.T1",
-      "I1.T7"
+      "I2.T3",
+      "I1.T4"
     ],
     "parallelizable": false,
-    "done": true
+    "done": false
   },
   {
     "task_id": "I2.T5",
     "iteration_id": "I2",
-    "iteration_goal": "Complete immutable geometry/data models, formalize persistence schemas, and deliver a performant CustomPainter pipeline with viewport transforms and basic selection visualization.",
-    "description": "Build viewport transform utilities (T014) and integrate them into canvas interactions; include unit/widget tests for pan/zoom inertia and bounds.",
+    "iteration_goal": "Deliver immutable vector data models, geometry utilities, snapshot serialization, and the first rendering pass (canvas, viewport, selection overlay) so tool agents in I3 can operate on reliable primitives.",
+    "description": "Implement the CustomPainter canvas, viewport manager, and selection overlay foundation (bounding boxes, anchor handles) in `packages/app_shell` using mock data until tools exist.",
     "agent_type_hint": "FrontendAgent",
-    "inputs": "Viewport controller from `I2.T2`, document model.",
-    "target_files": [
-      "lib/src/canvas/viewport/viewport_state.dart",
-      "lib/src/canvas/viewport/viewport_binding.dart",
-      "test/widget/viewport_gesture_test.dart"
-    ],
-    "input_files": [
-      "lib/src/canvas/viewport/",
-      "lib/src/services/telemetry/",
-      "test/widget/viewport_controller_test.dart"
-    ],
-    "deliverables": "Gesture detectors hooking into viewport controller, telemetry metrics (FPS, pan latency) counters, tests verifying transformation matrices.",
-    "acceptance_criteria": "- Drag/scroll gestures update viewport smoothly at 60 FPS on simulator.\n        - Telemetry logs include FPS + pan delta when debug flag enabled.\n        - Unit tests confirm conversions between world/screen coordinates.",
+    "inputs": "Section 2 technology stack, Task `I2.T3` geometry outputs, Task `I1.T8` logging hooks.",
+    "target_files": [],
+    "input_files": [],
+    "deliverables": "Canvas widget with repaint boundary, pan/zoom gestures, selection overlay placeholders, widget test ensuring tree builds at 60 FPS using golden/perf baseline, and docstring referencing Section 2.",
+    "acceptance_criteria": "Widget test verifies no exceptions; viewport clamps zoom; selection overlay draws handles for mock anchors; logging captures frame times; code passes `flutter analyze`.",
     "dependencies": [
-      "I2.T2",
-      "I2.T4"
+      "I2.T3"
     ],
-    "parallelizable": false,
-    "done": true
+    "parallelizable": true,
+    "done": false
   },
   {
     "task_id": "I2.T6",
     "iteration_id": "I2",
-    "iteration_goal": "Complete immutable geometry/data models, formalize persistence schemas, and deliver a performant CustomPainter pipeline with viewport transforms and basic selection visualization.",
-    "description": "Implement path and shape rendering (T015/T016) plus selection visualization (T017) leveraging overlays and hit-testing utilities.",
+    "iteration_goal": "Deliver immutable vector data models, geometry utilities, snapshot serialization, and the first rendering pass (canvas, viewport, selection overlay) so tool agents in I3 can operate on reliable primitives.",
+    "description": "Implement rendering of paths/shapes with stroke/fill, gradient placeholders, and GPU-friendly caching strategy; integrate with viewport transforms and add performance profiling overlay toggle.",
     "agent_type_hint": "FrontendAgent",
-    "inputs": "Document/geometry models, viewport transforms.",
-    "target_files": [
-      "lib/src/canvas/overlays/selection_overlay.dart",
-      "lib/src/canvas/painter/path_renderer.dart",
-      "test/widget/selection_overlay_test.dart"
-    ],
-    "input_files": [
-      "lib/src/canvas/overlays/",
-      "lib/src/domain/geometry/",
-      "test/widget/"
-    ],
-    "deliverables": "Renderers for path segments, filled/stroked shapes, selection bounding boxes and anchor handles, widget tests verifying highlight states.",
-    "acceptance_criteria": "- Selection overlay displays anchors/BCPs with correct colors/states.\n        - Rendering pipeline handles >1,000 objects within 16 ms average frame (profiled sample doc).\n        - Hit-testing returns correct object/anchor IDs for upcoming tool work.",
+    "inputs": "Tasks `I2.T3`, `I2.T5`, Decision 5 supported features, Decision 6 parity requirements.",
+    "target_files": [],
+    "input_files": [],
+    "deliverables": "Render pipeline module with caching toggles, gradient TODO markers, tests verifying stroke widths & transforms, and README snippet on performance overlay.",
+    "acceptance_criteria": "Sample document renders correctly in debug mode; tests assert pixel colors (golden) for strokes/fills; performance overlay toggle accessible via keyboard shortcut; parity statement added to doc.",
     "dependencies": [
       "I2.T5"
     ],
     "parallelizable": false,
-    "done": true
+    "done": false
+  },
+  {
+    "task_id": "I2.T7",
+    "iteration_id": "I2",
+    "iteration_goal": "Deliver immutable vector data models, geometry utilities, snapshot serialization, and the first rendering pass (canvas, viewport, selection overlay) so tool agents in I3 can operate on reliable primitives.",
+    "description": "Build geometry-driven hit-testing utilities (point-in-path, distance-to-curve, bounding volume hierarchy) and expose selection queries for upcoming tool work.",
+    "agent_type_hint": "BackendAgent",
+    "inputs": "Task `I2.T3` geometry, Task `I2.T5` selection overlay, Section 2 communication patterns for synchronous queries.",
+    "target_files": [],
+    "input_files": [],
+    "deliverables": "Hit testing service w/ BVH acceleration, tests covering anchor/object selection, doc describing heuristics + edge cases (tolerance, zoom scaling).",
+    "acceptance_criteria": "Hit testing handles 10k objects within target (<2 ms average); tests cover anchors, segments, shapes; doc outlines future spatial indexing improvements and profiling hooks.",
+    "dependencies": [
+      "I2.T3",
+      "I2.T5"
+    ],
+    "parallelizable": true,
+    "done": false
+  },
+  {
+    "task_id": "I2.T8",
+    "iteration_id": "I2",
+    "iteration_goal": "Deliver immutable vector data models, geometry utilities, snapshot serialization, and the first rendering pass (canvas, viewport, selection overlay) so tool agents in I3 can operate on reliable primitives.",
+    "description": "Integrate viewport controller with keyboard shortcuts (space-bar pan, +/- zoom), persistence of viewport state in document, and expose Provider notifiers for UI binding.",
+    "agent_type_hint": "FrontendAgent",
+    "inputs": "Task `I2.T5` viewport foundation, Task `I1.T3` provider wiring assumptions, Section 2 communication patterns.",
+    "target_files": [],
+    "input_files": [],
+    "deliverables": "Keyboard + mouse gesture bindings, persisted viewport info inside Document, widget tests verifying state sync across Provider consumers, and doc snippet describing shortcuts.",
+    "acceptance_criteria": "Zoom/pan gestures respect min/max; viewport saved/restored on document reopen (mock); tests cover keyboard shortcuts; doc update referencing Section 2 + Decision 6.",
+    "dependencies": [
+      "I2.T5"
+    ],
+    "parallelizable": true,
+    "done": false
+  },
+  {
+    "task_id": "I2.T9",
+    "iteration_id": "I2",
+    "iteration_goal": "Deliver immutable vector data models, geometry utilities, snapshot serialization, and the first rendering pass (canvas, viewport, selection overlay) so tool agents in I3 can operate on reliable primitives.",
+    "description": "Create automated performance benchmark harness (e.g., `dev/benchmarks/render_bench.dart`) that renders synthetic docs at varying complexity and records FPS + frame time stats.",
+    "agent_type_hint": "DevOpsAgent",
+    "inputs": "Logging hooks from `I1.T8`, rendering pipeline `I2.T6`, viewport controller `I2.T8`.",
+    "target_files": [],
+    "input_files": [],
+    "deliverables": "Benchmark script, documentation on running + interpreting results, CI optional step (manual trigger) capturing metrics artifact.",
+    "acceptance_criteria": "Benchmark outputs CSV/JSON with FPS, frame time, memory; README explains dataset; script runs headless on macOS/Windows; CI stores artifact when triggered.",
+    "dependencies": [
+      "I2.T6",
+      "I2.T8"
+    ],
+    "parallelizable": true,
+    "done": false
+  },
+  {
+    "task_id": "I2.T10",
+    "iteration_id": "I2",
+    "iteration_goal": "Deliver immutable vector data models, geometry utilities, snapshot serialization, and the first rendering pass (canvas, viewport, selection overlay) so tool agents in I3 can operate on reliable primitives.",
+    "description": "Conduct integration test wiring event replay → snapshot serializer → canvas rendering using mocked events to render a simple rectangle + path, ensuring end-to-end data flow before tools exist.",
+    "agent_type_hint": "IntegrationAgent",
+    "inputs": "Tasks `I1.T3`, `I1.T4`, `I2.T3`–`I2.T6`.",
+    "target_files": [],
+    "input_files": [],
+    "deliverables": "Integration test verifying document reconstructs from events and renders expected widget tree; fixture data referencing event schema.",
+    "acceptance_criteria": "Test passes headless; asserts number of draw calls + selection overlay states; fixture validated by schema from `I1.T6`; CI marks test as part of integration suite.",
+    "dependencies": [
+      "I2.T3",
+      "I2.T4",
+      "I2.T6"
+    ],
+    "parallelizable": false,
+    "done": false
+  },
+  {
+    "task_id": "I2.T11",
+    "iteration_id": "I2",
+    "iteration_goal": "Deliver immutable vector data models, geometry utilities, snapshot serialization, and the first rendering pass (canvas, viewport, selection overlay) so tool agents in I3 can operate on reliable primitives.",
+    "description": "Document a rendering troubleshooting guide summarizing known issues (precision loss, z-fighting, performance dips), diagnostic commands (benchmark harness, perf overlay), and escalation paths for future iterations.",
+    "agent_type_hint": "DocumentationAgent",
+    "inputs": "Outputs from Tasks `I2.T5`–`I2.T10`, benchmark results, Section 6 verification expectations.",
+    "target_files": [],
+    "input_files": [],
+    "deliverables": "Markdown guide with symptom/diagnosis tables, references to metrics, and TODOs for GPU acceleration; linked in README troubleshooting section.",
+    "acceptance_criteria": "Contains at least five scenarios with remediation steps; cross-links to metrics + benchmark docs; passes markdown lint; anchor added for manifest.",
+    "dependencies": [
+      "I2.T9",
+      "I2.T10"
+    ],
+    "parallelizable": false,
+    "done": false
   }
 ]

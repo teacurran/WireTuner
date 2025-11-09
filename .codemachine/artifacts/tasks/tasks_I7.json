@@ -16,7 +16,7 @@
       "I2.T3"
     ],
     "parallelizable": true,
-    "done": true
+    "done": false
   },
   {
     "task_id": "I7.T2",
@@ -34,7 +34,7 @@
       "I3.T4"
     ],
     "parallelizable": true,
-    "done": true
+    "done": false
   },
   {
     "task_id": "I7.T3",
@@ -52,7 +52,7 @@
       "I3.T4"
     ],
     "parallelizable": true,
-    "done": true
+    "done": false
   },
   {
     "task_id": "I7.T4",
@@ -70,7 +70,7 @@
       "I3.T4"
     ],
     "parallelizable": false,
-    "done": true
+    "done": false
   },
   {
     "task_id": "I7.T5",
@@ -90,6 +90,6 @@
       "I7.T4"
     ],
     "parallelizable": false,
-    "done": true
+    "done": false
   }
 ]
