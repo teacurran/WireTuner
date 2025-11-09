@@ -1,0 +1,152 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Setup: Install Dependencies",
+      "type": "shell",
+      "command": "just",
+      "args": ["setup"],
+      "problemMatcher": [],
+      "presentation": {
+        "reveal": "always",
+        "panel": "new"
+      }
+    },
+    {
+      "label": "Lint: Run All Checks",
+      "type": "shell",
+      "command": "just",
+      "args": ["lint"],
+      "problemMatcher": ["$dart-analyze"],
+      "group": {
+        "kind": "test",
+        "isDefault": false
+      },
+      "presentation": {
+        "reveal": "always"
+      }
+    },
+    {
+      "label": "Test: Run All Tests",
+      "type": "shell",
+      "command": "just",
+      "args": ["test"],
+      "problemMatcher": ["$dart-test"],
+      "group": {
+        "kind": "test",
+        "isDefault": true
+      },
+      "presentation": {
+        "reveal": "always"
+      }
+    },
+    {
+      "label": "Test: Widget Tests Only",
+      "type": "shell",
+      "command": "just",
+      "args": ["test-widgets"],
+      "problemMatcher": ["$dart-test"],
+      "group": "test",
+      "presentation": {
+        "reveal": "always"
+      }
+    },
+    {
+      "label": "Test: Integration Tests Only",
+      "type": "shell",
+      "command": "just",
+      "args": ["test-integration"],
+      "problemMatcher": ["$dart-test"],
+      "group": "test",
+      "presentation": {
+        "reveal": "always"
+      }
+    },
+    {
+      "label": "Test: Coverage Report",
+      "type": "shell",
+      "command": "just",
+      "args": ["coverage"],
+      "problemMatcher": [],
+      "presentation": {
+        "reveal": "always"
+      }
+    },
+    {
+      "label": "Format: Format Code",
+      "type": "shell",
+      "command": "just",
+      "args": ["format"],
+      "problemMatcher": [],
+      "presentation": {
+        "reveal": "silent"
+      }
+    },
+    {
+      "label": "Diagrams: Validate and Render",
+      "type": "shell",
+      "command": "just",
+      "args": ["diagrams"],
+      "problemMatcher": [],
+      "presentation": {
+        "reveal": "always"
+      }
+    },
+    {
+      "label": "CI: Run Full CI Checks",
+      "type": "shell",
+      "command": "just",
+      "args": ["ci"],
+      "problemMatcher": ["$dart-analyze", "$dart-test"],
+      "group": {
+        "kind": "build",
+        "isDefault": true
+      },
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated"
+      }
+    },
+    {
+      "label": "Clean: Remove Build Artifacts",
+      "type": "shell",
+      "command": "just",
+      "args": ["clean"],
+      "problemMatcher": [],
+      "presentation": {
+        "reveal": "always"
+      }
+    },
+    {
+      "label": "Doctor: Check Environment",
+      "type": "shell",
+      "command": "just",
+      "args": ["doctor"],
+      "problemMatcher": [],
+      "presentation": {
+        "reveal": "always",
+        "panel": "new"
+      }
+    },
+    {
+      "label": "Melos: Bootstrap",
+      "type": "shell",
+      "command": "melos",
+      "args": ["bootstrap"],
+      "problemMatcher": [],
+      "presentation": {
+        "reveal": "always"
+      }
+    },
+    {
+      "label": "Melos: Clean",
+      "type": "shell",
+      "command": "melos",
+      "args": ["clean"],
+      "problemMatcher": [],
+      "presentation": {
+        "reveal": "always"
+      }
+    }
+  ]
+}

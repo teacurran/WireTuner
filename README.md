@@ -26,6 +26,46 @@ WireTuner is a desktop vector drawing application designed with an event-sourcin
 
 ## Getting Started
 
+### Quick Start with Just
+
+WireTuner provides a streamlined developer experience using `just` for common commands. See the [Developer Workflow Guide](docs/reference/dev_workflow.md) for complete setup instructions.
+
+**Prerequisites**: Install [just](https://github.com/casey/just) command runner:
+- macOS: `brew install just`
+- Windows: `scoop install just` or `choco install just`
+
+**Initial Setup**:
+```bash
+# Clone the repository
+git clone https://github.com/yourusername/wiretuner.git
+cd wiretuner
+
+# Install all dependencies and bootstrap workspace
+just setup
+
+# Verify your environment
+just doctor
+```
+
+**Common Commands**:
+```bash
+just lint      # Run linting checks
+just test      # Run all tests
+just diagrams  # Validate and render diagrams
+just ci        # Run complete CI suite locally
+just --list    # Show all available commands
+```
+
+**Editor Integration**: Pre-configured launch and task configurations available for:
+- **VS Code**: `.vscode/launch.json` and `.vscode/tasks.json`
+- **IntelliJ IDEA**: `.idea/runConfigurations/`
+
+See [Developer Workflow Guide](docs/reference/dev_workflow.md) for editor setup and advanced usage.
+
+### Manual Setup (Alternative)
+
+If you prefer not to use `just`, you can run commands manually:
+
 ### 1. Verify Flutter Installation
 
 Before starting, ensure your Flutter environment is correctly configured:
@@ -47,6 +87,8 @@ cd wiretuner
 
 ```bash
 flutter pub get
+dart pub global activate melos
+melos bootstrap
 ```
 
 **Note**: SQLite desktop support is automatically configured when the application starts. No additional setup command is required.
@@ -222,6 +264,7 @@ Detailed documentation is available in the `docs/` directory:
 - `docs/api/`: API documentation and contracts
 - `docs/adr/`: Architectural Decision Records
 - `docs/reference/`: Reference documentation
+  - **[Developer Workflow Guide](docs/reference/dev_workflow.md)**: Complete guide to development tooling, editor setup, testing, and CI integration
   - [Event Schema Reference](docs/reference/event_schema.md): Universal event metadata, sampling rules, snapshot policy, and collaboration fields
 - `docs/specs/`: Technical specifications
   - [Event Payload Specification](docs/specs/event_payload.md): Per-event field definitions and JSON Schema

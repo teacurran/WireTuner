@@ -1,0 +1,64 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "WireTuner (Debug)",
+      "request": "launch",
+      "type": "dart",
+      "program": "packages/app_shell/lib/main.dart",
+      "cwd": "${workspaceFolder}",
+      "args": []
+    },
+    {
+      "name": "WireTuner (Profile)",
+      "request": "launch",
+      "type": "dart",
+      "program": "packages/app_shell/lib/main.dart",
+      "cwd": "${workspaceFolder}",
+      "flutterMode": "profile"
+    },
+    {
+      "name": "WireTuner (Release)",
+      "request": "launch",
+      "type": "dart",
+      "program": "packages/app_shell/lib/main.dart",
+      "cwd": "${workspaceFolder}",
+      "flutterMode": "release"
+    },
+    {
+      "name": "Event Core - Unit Tests",
+      "request": "launch",
+      "type": "dart",
+      "program": "packages/event_core/test",
+      "cwd": "${workspaceFolder}/packages/event_core"
+    },
+    {
+      "name": "Vector Engine - Unit Tests",
+      "request": "launch",
+      "type": "dart",
+      "program": "packages/vector_engine/test",
+      "cwd": "${workspaceFolder}/packages/vector_engine"
+    },
+    {
+      "name": "Tool Framework - Unit Tests",
+      "request": "launch",
+      "type": "dart",
+      "program": "packages/tool_framework/test",
+      "cwd": "${workspaceFolder}/packages/tool_framework"
+    },
+    {
+      "name": "IO Services - Unit Tests",
+      "request": "launch",
+      "type": "dart",
+      "program": "packages/io_services/test",
+      "cwd": "${workspaceFolder}/packages/io_services"
+    },
+    {
+      "name": "All Tests (Current File)",
+      "request": "launch",
+      "type": "dart",
+      "program": "${file}",
+      "cwd": "${workspaceFolder}"
+    }
+  ]
+}

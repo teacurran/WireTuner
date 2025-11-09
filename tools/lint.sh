@@ -32,18 +32,27 @@ else
 
     # Parse analyze output line by line
     while IFS= read -r line; do
-        # Match lines like: "  info • Description • path/to/file.dart:123:45 • rule_name"
-        if echo "$line" | grep -qE '^\s+(error|warning|info)\s+•'; then
-            # Extract components
-            TYPE=$(echo "$line" | sed -E 's/^\s+(error|warning|info)\s+•.*/\1/')
-            MESSAGE=$(echo "$line" | sed -E 's/^\s+(error|warning|info)\s+•\s+([^•]+)\s+•.*/\2/' | xargs)
-            FILE_AND_LOCATION=$(echo "$line" | sed -E 's/.*•\s+([^•]+)\s+•\s+([a-z_]+)$/\1/')
-            RULE=$(echo "$line" | sed -E 's/.*•\s+([a-z_]+)$/\1/')
+        # Match lines like: "warning • Message • path/to/file.dart:123:45 • rule_name"
+        if echo "$line" | grep -qE '^\s*(error|warning|info)\s+•'; then
+            # Split by bullet points
+            IFS='•' read -ra PARTS <<< "$line"
 
-            # Extract file path, line, and column
-            FILE_PATH=$(echo "$FILE_AND_LOCATION" | sed -E 's/^([^:]+):.*/\1/')
-            LINE_NUM=$(echo "$FILE_AND_LOCATION" | sed -E 's/^[^:]+:([0-9]+):.*/\1/')
-            COLUMN_NUM=$(echo "$FILE_AND_LOCATION" | sed -E 's/^[^:]+:[0-9]+:([0-9]+).*/\1/')
+            # Extract type (first part before first bullet)
+            TYPE=$(echo "${PARTS[0]}" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
+
+            # Extract message (second part)
+            MESSAGE=$(echo "${PARTS[1]}" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
+
+            # Extract file location (third part)
+            FILE_AND_LOCATION=$(echo "${PARTS[2]}" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
+
+            # Extract rule (fourth part)
+            RULE=$(echo "${PARTS[3]}" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
+
+            # Extract file path, line, and column from location
+            FILE_PATH=$(echo "$FILE_AND_LOCATION" | cut -d':' -f1)
+            LINE_NUM=$(echo "$FILE_AND_LOCATION" | cut -d':' -f2)
+            COLUMN_NUM=$(echo "$FILE_AND_LOCATION" | cut -d':' -f3)
 
             # Print comma before entry if not first
             if [ "$FIRST_ENTRY" = true ]; then
@@ -52,8 +61,9 @@ else
                 echo ","
             fi
 
-            # Output JSON object
-            echo -n "{\"type\":\"$TYPE\",\"path\":\"$FILE_PATH\",\"obj\":\"\",\"message\":\"$MESSAGE\",\"line\":\"$LINE_NUM\",\"column\":\"$COLUMN_NUM\"}"
+            # Output JSON object with proper escaping
+            MESSAGE_ESC=$(echo "$MESSAGE" | sed 's/\\/\\\\/g; s/"/\\"/g')
+            echo -n "{\"type\":\"$TYPE\",\"path\":\"$FILE_PATH\",\"obj\":\"\",\"message\":\"$MESSAGE_ESC\",\"line\":\"$LINE_NUM\",\"column\":\"$COLUMN_NUM\",\"rule\":\"$RULE\"}"
         fi
     done <<< "$ANALYZE_OUTPUT"
 fi
