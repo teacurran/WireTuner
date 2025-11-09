@@ -14,6 +14,7 @@ import 'package:wiretuner/infrastructure/event_sourcing/event_recorder.dart';
 import 'package:wiretuner/infrastructure/persistence/event_store.dart';
 import 'package:wiretuner/presentation/canvas/painter/path_renderer.dart';
 import 'package:wiretuner/presentation/canvas/viewport/viewport_controller.dart';
+import 'package:wiretuner/presentation/state/document_provider.dart';
 import 'package:wiretuner/presentation/shell/editor_shell.dart';
 import 'package:wiretuner/domain/events/event_base.dart';
 
@@ -37,7 +38,7 @@ class App extends StatelessWidget {
 /// Internal widget that initializes all services and provides them via Provider.
 ///
 /// This widget creates and manages the lifecycle of core application services:
-/// - Document: The vector document model
+/// - DocumentProvider: Mutable document state with ChangeNotifier (Decision 7)
 /// - EventRecorder: Event sourcing system (with mock EventStore for now)
 /// - ViewportController: Canvas viewport transformations
 /// - PathRenderer: Path-to-UI conversion service
@@ -45,6 +46,7 @@ class App extends StatelessWidget {
 /// - ToolManager: Tool lifecycle and event routing
 ///
 /// All 7 tools are registered and the Selection tool is activated by default.
+/// Viewport state is persisted within the document and synced bidirectionally.
 class _AppInitializer extends StatefulWidget {
   const _AppInitializer();
 
@@ -54,7 +56,7 @@ class _AppInitializer extends StatefulWidget {
 
 class _AppInitializerState extends State<_AppInitializer> {
   // Core services
-  late final Document _document;
+  late final DocumentProvider _documentProvider;
   late final EventRecorder _eventRecorder;
   late final ViewportController _viewportController;
   late final PathRenderer _pathRenderer;
@@ -69,10 +71,13 @@ class _AppInitializerState extends State<_AppInitializer> {
 
   /// Initializes all application services and registers tools.
   void _initializeServices() {
-    // Create core document model
-    _document = const Document(id: 'default-doc', title: 'Untitled');
+    // Create document provider with default document
+    _documentProvider = DocumentProvider(
+      initialDocument: const Document(id: 'default-doc', title: 'Untitled'),
+    );
 
     // Create viewport controller with default zoom and pan
+    // Initial state will be synced from document viewport
     _viewportController = ViewportController(
       initialPan: Offset.zero,
       initialZoom: 1.0,
@@ -89,7 +94,7 @@ class _AppInitializerState extends State<_AppInitializer> {
     final mockEventStore = _MockEventStore();
     _eventRecorder = EventRecorder(
       eventStore: mockEventStore,
-      documentId: _document.id,
+      documentId: _documentProvider.document.id,
     );
 
     // Create tool manager with services
@@ -115,11 +120,14 @@ class _AppInitializerState extends State<_AppInitializer> {
   /// 5. Ellipse Tool (ID: 'ellipse')
   /// 6. Polygon Tool (ID: 'polygon')
   /// 7. Star Tool (ID: 'star')
+  ///
+  /// Note: Tools receive the current document snapshot. In future iterations,
+  /// they should observe DocumentProvider for changes.
   void _registerTools() {
     // Register Selection Tool
     _toolManager.registerTool(
       SelectionTool(
-        document: _document,
+        document: _documentProvider.document,
         viewportController: _viewportController,
         eventRecorder: _eventRecorder,
       ),
@@ -128,7 +136,7 @@ class _AppInitializerState extends State<_AppInitializer> {
     // Register Direct Selection Tool
     _toolManager.registerTool(
       DirectSelectionTool(
-        document: _document,
+        document: _documentProvider.document,
         viewportController: _viewportController,
         eventRecorder: _eventRecorder,
         pathRenderer: _pathRenderer,
@@ -139,7 +147,7 @@ class _AppInitializerState extends State<_AppInitializer> {
     // Register Pen Tool
     _toolManager.registerTool(
       PenTool(
-        document: _document,
+        document: _documentProvider.document,
         viewportController: _viewportController,
         eventRecorder: _eventRecorder,
       ),
@@ -148,7 +156,7 @@ class _AppInitializerState extends State<_AppInitializer> {
     // Register Rectangle Tool
     _toolManager.registerTool(
       RectangleTool(
-        document: _document,
+        document: _documentProvider.document,
         viewportController: _viewportController,
         eventRecorder: _eventRecorder,
       ),
@@ -157,7 +165,7 @@ class _AppInitializerState extends State<_AppInitializer> {
     // Register Ellipse Tool
     _toolManager.registerTool(
       EllipseTool(
-        document: _document,
+        document: _documentProvider.document,
         viewportController: _viewportController,
         eventRecorder: _eventRecorder,
       ),
@@ -166,7 +174,7 @@ class _AppInitializerState extends State<_AppInitializer> {
     // Register Polygon Tool
     _toolManager.registerTool(
       PolygonTool(
-        document: _document,
+        document: _documentProvider.document,
         viewportController: _viewportController,
         eventRecorder: _eventRecorder,
       ),
@@ -175,7 +183,7 @@ class _AppInitializerState extends State<_AppInitializer> {
     // Register Star Tool
     _toolManager.registerTool(
       StarTool(
-        document: _document,
+        document: _documentProvider.document,
         viewportController: _viewportController,
         eventRecorder: _eventRecorder,
       ),
@@ -189,12 +197,17 @@ class _AppInitializerState extends State<_AppInitializer> {
     _cursorService.dispose();
     _viewportController.dispose();
     _eventRecorder.dispose();
+    _documentProvider.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) => MultiProvider(
         providers: [
+          // Provide DocumentProvider for mutable document state (Decision 7)
+          ChangeNotifierProvider<DocumentProvider>.value(
+            value: _documentProvider,
+          ),
           // Provide ToolManager for toolbar and canvas
           ChangeNotifierProvider<ToolManager>.value(
             value: _toolManager,
@@ -202,10 +215,6 @@ class _AppInitializerState extends State<_AppInitializer> {
           // Provide ViewportController for canvas transformations
           ChangeNotifierProvider<ViewportController>.value(
             value: _viewportController,
-          ),
-          // Provide Document for future use
-          Provider<Document>.value(
-            value: _document,
           ),
         ],
         child: const EditorShell(),

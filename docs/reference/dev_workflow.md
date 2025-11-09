@@ -264,6 +264,54 @@ All diagrams are validated and rendered in CI via `scripts/ci/diagram_check.sh`.
 
 ---
 
+## Viewport Keyboard Shortcuts
+
+WireTuner provides keyboard shortcuts for efficient viewport navigation and control. These shortcuts are implemented in Task I2.T8 and follow the communication patterns defined in Section 2 and the persistence principles of Decision 6 (snapshot-based state restoration).
+
+### Available Shortcuts
+
+| Shortcut | Action | Description |
+|----------|--------|-------------|
+| **Space + Drag** | Pan Mode | Hold space bar and drag to pan the canvas. Cursor changes to grab/grabbing hand. |
+| **+** or **Shift+=** | Zoom In | Zoom in by 10% increments around current pan point |
+| **Numpad +** | Zoom In | Alternative zoom in using numpad |
+| **-** | Zoom Out | Zoom out by 10% increments around current pan point |
+| **Numpad -** | Zoom Out | Alternative zoom out using numpad |
+| **Cmd+0** (Mac) | Reset Viewport | Reset zoom to 100% and pan to origin |
+| **Ctrl+0** (Win/Linux) | Reset Viewport | Reset zoom to 100% and pan to origin |
+| **Scroll Wheel** | Zoom | Zoom in/out around cursor position |
+
+### Zoom Constraints
+
+Viewport zoom is clamped to maintain usability:
+- **Minimum Zoom**: 5% (0.05) - maximum zoom out
+- **Maximum Zoom**: 800% (8.0) - maximum zoom in
+
+### Viewport Persistence
+
+All viewport changes (pan, zoom, canvas size) are automatically persisted within the document model:
+- Viewport state is saved when gestures end (pan end, zoom end, scroll)
+- Keyboard shortcuts trigger immediate persistence via `DocumentProvider.updateViewport`
+- Document serialization includes viewport state for restore on reopen
+- Coordinate transformations between controller (screen space) and domain (world space) are handled by `ViewportState` converters
+
+### Implementation Details
+
+The viewport integration follows **Decision 7** (Provider for State Management) and **Section 2 Communication Patterns**:
+
+1. **ViewportBinding** provides keyboard shortcuts via Flutter's Shortcuts/Actions API
+2. **Space bar pan mode** uses RawKeyboardListener to track key down/up state
+3. **ViewportState** syncs controller changes to domain viewport via `onViewportChanged` callback
+4. **DocumentProvider** persists viewport in the immutable Document aggregate
+5. Round-trip conversion preserves viewport state across save/restore cycles
+
+**References**:
+- Architecture: [Communication Patterns](../../.codemachine/artifacts/architecture/04_Behavior_and_Communication.md#communication-patterns)
+- Decision: [Provider State Management](../../.codemachine/artifacts/architecture/06_Rationale_and_Future.md#decision-provider-state-mgmt)
+- Task: [I2.T8 Viewport Integration](../../.codemachine/artifacts/plan/02_Iteration_I2.md#task-i2-t8)
+
+---
+
 ## Testing Strategy
 
 WireTuner follows a comprehensive testing approach:
