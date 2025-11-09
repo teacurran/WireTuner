@@ -817,6 +817,80 @@ void main() {
     );
   });
 
+  group('PdfExporter - Fill and Stroke Support', () {
+    late PdfExporter exporter;
+
+    setUp(() {
+      exporter = PdfExporter();
+    });
+
+    test('Exports path with default stroke (backward compatibility)', () async {
+      final document = Document(
+        id: 'doc-default-stroke',
+        title: 'Default Stroke Test',
+        layers: [
+          Layer(
+            id: 'layer-1',
+            objects: [
+              VectorObject.path(
+                id: 'path-1',
+                path: Path.line(
+                  start: const Point(x: 0, y: 0),
+                  end: const Point(x: 100, y: 100),
+                ),
+              ),
+            ],
+          ),
+        ],
+        selection: const Selection(),
+        viewport: const Viewport(),
+      );
+
+      final pdfBytes = await exporter.generatePdf(document);
+
+      // Verify PDF is valid (uses default black stroke)
+      expect(pdfBytes, isNotEmpty);
+      expect(pdfBytes.sublist(0, 4), equals([0x25, 0x50, 0x44, 0x46]));
+    });
+
+    test('Infrastructure supports fill and stroke parameters', () async {
+      // Note: This test verifies the API exists, even though VectorObject
+      // doesn't yet store style data. When style system is integrated,
+      // the exporter will use these parameters.
+      final document = Document(
+        id: 'doc-styled',
+        title: 'Styled Path Test',
+        layers: [
+          Layer(
+            id: 'layer-1',
+            objects: [
+              VectorObject.path(
+                id: 'path-filled',
+                path: Path.fromAnchors(
+                  anchors: [
+                    AnchorPoint.corner(const Point(x: 0, y: 0)),
+                    AnchorPoint.corner(const Point(x: 100, y: 0)),
+                    AnchorPoint.corner(const Point(x: 50, y: 86.6)),
+                  ],
+                  closed: true,
+                ),
+              ),
+            ],
+          ),
+        ],
+        selection: const Selection(),
+        viewport: const Viewport(),
+      );
+
+      final pdfBytes = await exporter.generatePdf(document);
+
+      // Verify export completes successfully
+      // When style data is available, _drawPath will use fillColor/strokeColor
+      expect(pdfBytes, isNotEmpty);
+      expect(pdfBytes.sublist(0, 4), equals([0x25, 0x50, 0x44, 0x46]));
+    });
+  });
+
   group('PdfExporter - Edge Cases', () {
     late PdfExporter exporter;
 

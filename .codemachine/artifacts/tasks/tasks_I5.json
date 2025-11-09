@@ -68,7 +68,7 @@
       "I5.T2"
     ],
     "parallelizable": false,
-    "done": false
+    "done": true
   },
   {
     "task_id": "I5.T5",
@@ -86,7 +86,7 @@
       "I5.T2"
     ],
     "parallelizable": true,
-    "done": false
+    "done": true
   },
   {
     "task_id": "I5.T6",
@@ -103,7 +103,7 @@
       "I5.T5"
     ],
     "parallelizable": false,
-    "done": false
+    "done": true
   },
   {
     "task_id": "I5.T7",

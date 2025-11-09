@@ -224,11 +224,18 @@ class PdfExporter {
   /// **Handle Conversion**:
   /// Anchor handles are stored as relative offsets. This method converts
   /// them to absolute positions: `absoluteHandle = anchorPosition + handle`
+  ///
+  /// **Style Rendering** (Milestone 0.2+):
+  /// When VectorObject gains style data, this method will apply stroke/fill
+  /// colors and gradients. Current implementation uses default black stroke.
   void _drawPath(
     PdfGraphics graphics,
     Path path,
-    double pageHeight,
-  ) {
+    double pageHeight, {
+    PdfColor? strokeColor,
+    PdfColor? fillColor,
+    double strokeWidth = 1.0,
+  }) {
     if (path.anchors.isEmpty) {
       return; // Nothing to draw
     }
@@ -289,12 +296,30 @@ class PdfExporter {
       graphics.closePath();
     }
 
-    // Set stroke style (black, 1pt width)
-    // TODO(Milestone 0.2): Add style system with CMYK color support
-    graphics
-      ..setStrokeColor(PdfColors.black) // RGB black for Milestone 0.1
-      ..setLineWidth(1.0)
-      ..strokePath();
+    // Apply stroke and/or fill based on provided colors
+    // Default: black stroke with no fill (Milestone 0.1 behavior)
+    final hasStroke = strokeColor != null;
+    final hasFill = fillColor != null;
+
+    if (hasStroke && hasFill) {
+      // Both stroke and fill
+      graphics
+        ..setStrokeColor(strokeColor)
+        ..setLineWidth(strokeWidth)
+        ..setFillColor(fillColor)
+        ..fillAndStrokePath();
+    } else if (hasFill) {
+      // Fill only
+      graphics
+        ..setFillColor(fillColor)
+        ..fillPath();
+    } else {
+      // Stroke only (default)
+      graphics
+        ..setStrokeColor(strokeColor ?? PdfColors.black)
+        ..setLineWidth(strokeWidth)
+        ..strokePath();
+    }
   }
 
   /// Transforms WireTuner Y coordinate to PDF Y coordinate.
