@@ -14,15 +14,21 @@ void main() {
     });
   });
 
-  group('Geometry', () {
-    test('can be instantiated', () {
-      const geometry = Geometry();
-      expect(geometry, isNotNull);
+  group('Geometry constants', () {
+    test('kGeometryEpsilon has correct value', () {
+      expect(kGeometryEpsilon, equals(1e-10));
     });
 
-    test('has correct epsilon value', () {
-      const geometry = Geometry();
-      expect(geometry.epsilon, equals(1e-10));
+    test('approximatelyEqual returns true for equal values', () {
+      expect(approximatelyEqual(1.0, 1.0), isTrue);
+    });
+
+    test('approximatelyEqual returns true for values within epsilon', () {
+      expect(approximatelyEqual(1.0, 1.0 + 1e-11), isTrue);
+    });
+
+    test('approximatelyEqual returns false for values outside epsilon', () {
+      expect(approximatelyEqual(1.0, 1.1), isFalse);
     });
   });
 
