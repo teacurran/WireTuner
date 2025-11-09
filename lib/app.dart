@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:logger/logger.dart';
+import 'package:event_core/event_core.dart';
+import 'package:app_shell/app_shell.dart';
 import 'package:wiretuner/application/tools/direct_selection/direct_selection_tool.dart';
 import 'package:wiretuner/application/tools/framework/cursor_service.dart';
 import 'package:wiretuner/application/tools/framework/tool_manager.dart';
@@ -10,7 +13,8 @@ import 'package:wiretuner/application/tools/shapes/polygon_tool.dart';
 import 'package:wiretuner/application/tools/shapes/rectangle_tool.dart';
 import 'package:wiretuner/application/tools/shapes/star_tool.dart';
 import 'package:wiretuner/domain/document/document.dart';
-import 'package:wiretuner/infrastructure/event_sourcing/event_recorder.dart';
+import 'package:wiretuner/infrastructure/event_sourcing/event_recorder.dart'
+    as app_event_recorder;
 import 'package:wiretuner/infrastructure/persistence/event_store.dart';
 import 'package:wiretuner/presentation/canvas/painter/path_renderer.dart';
 import 'package:wiretuner/presentation/canvas/viewport/viewport_controller.dart';
@@ -57,11 +61,18 @@ class _AppInitializer extends StatefulWidget {
 class _AppInitializerState extends State<_AppInitializer> {
   // Core services
   late final DocumentProvider _documentProvider;
-  late final EventRecorder _eventRecorder;
+  late final app_event_recorder.EventRecorder _eventRecorder;
   late final ViewportController _viewportController;
   late final PathRenderer _pathRenderer;
   late final CursorService _cursorService;
   late final ToolManager _toolManager;
+
+  // Undo/redo services
+  late final Logger _logger;
+  late final MetricsSink _metricsSink;
+  late final OperationGroupingService _operationGrouping;
+  late final UndoNavigator _undoNavigator;
+  late final UndoProvider _undoProvider;
 
   @override
   void initState() {
@@ -71,6 +82,18 @@ class _AppInitializerState extends State<_AppInitializer> {
 
   /// Initializes all application services and registers tools.
   void _initializeServices() {
+    // Create logger
+    _logger = Logger(
+      printer: PrettyPrinter(
+        methodCount: 0,
+        errorMethodCount: 5,
+        lineLength: 80,
+        colors: true,
+        printEmojis: true,
+        printTime: false,
+      ),
+    );
+
     // Create document provider with default document
     _documentProvider = DocumentProvider(
       initialDocument: const Document(id: 'default-doc', title: 'Untitled'),
@@ -92,10 +115,13 @@ class _AppInitializerState extends State<_AppInitializer> {
     // Create mock event store and recorder
     // Note: In production, this would be a real SQLite-backed EventStore
     final mockEventStore = _MockEventStore();
-    _eventRecorder = EventRecorder(
+    _eventRecorder = app_event_recorder.EventRecorder(
       eventStore: mockEventStore,
       documentId: _documentProvider.document.id,
     );
+
+    // Initialize undo/redo infrastructure
+    _initializeUndoSystem(mockEventStore);
 
     // Create tool manager with services
     _toolManager = ToolManager(
@@ -108,6 +134,46 @@ class _AppInitializerState extends State<_AppInitializer> {
 
     // Activate default tool (Selection)
     _toolManager.activateTool('selection');
+  }
+
+  /// Initializes undo/redo system with operation grouping and navigator.
+  void _initializeUndoSystem(EventStore eventStore) {
+    // Create metrics sink
+    _metricsSink = _NoOpMetricsSink();
+
+    // Create diagnostics config (production mode for now)
+    final config = EventCoreDiagnosticsConfig(
+      enableMetrics: false,
+      enableDetailedLogging: false,
+    );
+
+    // Create operation grouping service
+    _operationGrouping = OperationGroupingService(
+      clock: const SystemClock(),
+      metricsSink: _metricsSink,
+      logger: _logger,
+      config: config,
+      idleThresholdMs: 200,
+    );
+
+    // Create event replayer (stub for now since we're using mock event store)
+    final eventReplayer = _StubEventReplayer();
+
+    // Create undo navigator
+    _undoNavigator = UndoNavigator(
+      operationGrouping: _operationGrouping,
+      eventReplayer: eventReplayer,
+      metricsSink: _metricsSink,
+      logger: _logger,
+      config: config,
+      documentId: _documentProvider.document.id,
+    );
+
+    // Create undo provider (Flutter bridge)
+    _undoProvider = UndoProvider(
+      navigator: _undoNavigator,
+      documentProvider: _documentProvider,
+    );
   }
 
   /// Registers all tools with the ToolManager.
@@ -193,6 +259,9 @@ class _AppInitializerState extends State<_AppInitializer> {
   @override
   void dispose() {
     // Dispose services in reverse order of creation
+    _undoProvider.dispose();
+    _undoNavigator.dispose();
+    _operationGrouping.dispose();
     _toolManager.dispose();
     _cursorService.dispose();
     _viewportController.dispose();
@@ -215,6 +284,10 @@ class _AppInitializerState extends State<_AppInitializer> {
           // Provide ViewportController for canvas transformations
           ChangeNotifierProvider<ViewportController>.value(
             value: _viewportController,
+          ),
+          // Provide UndoProvider for history panel and undo/redo
+          ChangeNotifierProvider<UndoProvider>.value(
+            value: _undoProvider,
           ),
         ],
         child: const EditorShell(),
@@ -249,4 +322,79 @@ class _MockEventStore implements EventStore {
     List<EventBase> events,
   ) async =>
       List.filled(events.length, 0);
+}
+
+/// No-op metrics sink for development.
+///
+/// This is a temporary implementation that satisfies the metrics dependency
+/// without requiring a full telemetry setup.
+class _NoOpMetricsSink implements MetricsSink {
+  @override
+  void recordEvent({
+    required String eventType,
+    required bool sampled,
+    int? durationMs,
+  }) {
+    // No-op
+  }
+
+  @override
+  void recordNavigation({
+    required String operation,
+    required int durationMs,
+    required int sequenceJump,
+  }) {
+    // No-op
+  }
+
+  @override
+  void recordReplay({
+    required int eventCount,
+    required int durationMs,
+    required int fromSequence,
+    required int toSequence,
+  }) {
+    // No-op
+  }
+
+  @override
+  void recordSnapshot({
+    required int sequenceNumber,
+    required int snapshotSizeBytes,
+    required int durationMs,
+  }) {
+    // No-op
+  }
+
+  @override
+  void recordSnapshotLoad({
+    required int sequenceNumber,
+    required int durationMs,
+  }) {
+    // No-op
+  }
+
+  @override
+  Future<void> flush() async {
+    // No-op
+  }
+}
+
+/// Stub event replayer for development.
+///
+/// This is a temporary implementation that satisfies the EventReplayer dependency
+/// without requiring full event replay infrastructure.
+class _StubEventReplayer implements EventReplayer {
+  @override
+  Future<void> replay({int fromSequence = 0, int? toSequence}) async {
+    // No-op - would replay events in production
+  }
+
+  @override
+  Future<void> replayFromSnapshot({int? maxSequence}) async {
+    // No-op - would replay from snapshot in production
+  }
+
+  @override
+  bool get isReplaying => false;
 }

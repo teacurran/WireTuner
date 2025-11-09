@@ -11,6 +11,12 @@ dependencies:
   flutter:
     sdk: flutter
 
+  # Local packages
+  app_shell:
+    path: packages/app_shell
+  event_core:
+    path: packages/event_core
+
   # State Management
   provider: ^6.0.0
 
