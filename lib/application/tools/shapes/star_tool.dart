@@ -35,7 +35,10 @@ import 'package:wiretuner/domain/models/shape.dart' as shape_model;
 ///
 /// Related: T028 (Star Tool), I4.T2
 class StarTool extends ShapeToolBase {
-
+  /// Creates a new StarTool instance.
+  ///
+  /// Requires [document] for shape storage, [viewportController] for coordinate
+  /// conversion, and [eventRecorder] for event sourcing.
   StarTool({
     required super.document,
     required super.viewportController,
@@ -43,12 +46,12 @@ class StarTool extends ShapeToolBase {
   });
   final Logger _logger = Logger();
 
-  /// Number of points for the star (minimum 3).
+  /// Number of points for the star (minimum 3, maximum 20).
   ///
-  /// Future enhancement: Make this configurable via property panel.
-  /// For MVP, use fixed value of 5 (classic 5-point star).
+  /// Can be configured via [setPointCount] method.
+  /// Default: 5 (classic 5-point star).
   static const int _defaultPointCount = 5;
-  final int _pointCount = _defaultPointCount;
+  int _pointCount = _defaultPointCount;
 
   /// Inner radius as a ratio of outer radius (0.0 to 1.0).
   ///
@@ -117,7 +120,7 @@ class StarTool extends ShapeToolBase {
 
     // Fill preview with semi-transparent blue
     final fillPaint = Paint()
-      ..color = Colors.blue.withOpacity(0.3)
+      ..color = Colors.blue.withValues(alpha: 0.3)
       ..style = PaintingStyle.fill;
     canvas.drawPath(flutterPath, fillPaint);
 
@@ -130,7 +133,7 @@ class StarTool extends ShapeToolBase {
 
     // Optional: Draw center point for visual feedback
     final centerPaint = Paint()
-      ..color = Colors.blue.withOpacity(0.5)
+      ..color = Colors.blue.withValues(alpha: 0.5)
       ..style = PaintingStyle.fill;
     canvas.drawCircle(
       Offset(center.x, center.y),
@@ -197,6 +200,20 @@ class StarTool extends ShapeToolBase {
   @override
   ShapeType getShapeType() => ShapeType.star;
 
+  /// Sets the number of points for the star.
+  ///
+  /// The point count must be between 3 and 20 (inclusive).
+  /// Values outside this range will be clamped.
+  ///
+  /// This method allows configuring the star before dragging.
+  /// In the future, this will be integrated with the property panel UI.
+  void setPointCount(int count) {
+    _pointCount = count.clamp(3, 20);
+  }
+
+  /// Gets the current number of points.
+  int get pointCount => _pointCount;
+
   /// Draws constraint labels to provide visual feedback during drag.
   void _drawConstraintLabels(
     ui.Canvas canvas,
@@ -238,7 +255,7 @@ class StarTool extends ShapeToolBase {
       textPainter.height + 4,
     );
     final backgroundPaint = Paint()
-      ..color = Colors.white.withOpacity(0.9)
+      ..color = Colors.white.withValues(alpha: 0.9)
       ..style = PaintingStyle.fill;
     canvas.drawRect(backgroundRect, backgroundPaint);
 

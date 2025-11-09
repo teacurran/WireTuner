@@ -41,7 +41,7 @@ class _CloseToPoint extends Matcher {
   final double epsilon;
 
   @override
-  bool matches(item, Map matchState) {
+  bool matches(item, Map<dynamic, dynamic> matchState) {
     if (item is! Point) return false;
     final dx = (item.x - expected.x).abs();
     final dy = (item.y - expected.y).abs();
@@ -770,6 +770,184 @@ void main() {
             closeToPoint(originalPath.anchors[i].position, epsilon: 0.01),
           );
         }
+      });
+    });
+
+    group('Configurable Point Count', () {
+      test('should create 3-point star when configured', () {
+        // Configure star tool for 3-point star
+        starTool.setPointCount(3);
+        expect(starTool.pointCount, equals(3));
+
+        // Clear any previous events
+        eventRecorder.clear();
+
+        // Create star via drag
+        starTool.onPointerDown(const PointerDownEvent(
+          position: ui.Offset(100, 100),
+        ),);
+
+        starTool.onPointerUp(const PointerUpEvent(
+          position: ui.Offset(200, 200),
+        ),);
+
+        // Verify event was created
+        expect(eventRecorder.recordedEvents.length, equals(1));
+
+        final event = eventRecorder.recordedEvents[0] as CreateShapeEvent;
+        expect(event.shapeType, equals(ShapeType.star));
+
+        // Verify 3-point star parameters
+        final params = event.parameters;
+        expect(params['sides'], equals(3.0));
+        expect(params['centerX'], equals(150.0));
+        expect(params['centerY'], equals(150.0));
+        expect(params['radius'], equals(50.0));
+        expect(params['innerRadius'], equals(25.0)); // 0.5 * 50
+
+        // Create shape from event and verify geometry
+        final starShape = shape_model.Shape.star(
+          center: Point(
+            x: params['centerX']!,
+            y: params['centerY']!,
+          ),
+          outerRadius: params['radius']!,
+          innerRadius: params['innerRadius']!,
+          pointCount: params['sides']!.toInt(),
+          rotation: params['rotation'] ?? 0.0,
+        );
+
+        final path = starShape.toPath();
+
+        // 3-point star should have exactly 6 vertices (2 × 3)
+        expect(path.anchors.length, equals(6));
+        expect(path.closed, isTrue);
+      });
+
+      test('should create 8-point star when configured', () {
+        // Configure star tool for 8-point star
+        starTool.setPointCount(8);
+        expect(starTool.pointCount, equals(8));
+
+        // Clear any previous events
+        eventRecorder.clear();
+
+        // Create star via drag
+        starTool.onPointerDown(const PointerDownEvent(
+          position: ui.Offset(100, 100),
+        ),);
+
+        starTool.onPointerUp(const PointerUpEvent(
+          position: ui.Offset(300, 300),
+        ),);
+
+        // Verify event was created
+        expect(eventRecorder.recordedEvents.length, equals(1));
+
+        final event = eventRecorder.recordedEvents[0] as CreateShapeEvent;
+        expect(event.shapeType, equals(ShapeType.star));
+
+        // Verify 8-point star parameters
+        final params = event.parameters;
+        expect(params['sides'], equals(8.0));
+        expect(params['centerX'], equals(200.0));
+        expect(params['centerY'], equals(200.0));
+        expect(params['radius'], equals(100.0));
+        expect(params['innerRadius'], equals(50.0)); // 0.5 * 100
+
+        // Create shape from event and verify geometry
+        final starShape = shape_model.Shape.star(
+          center: Point(
+            x: params['centerX']!,
+            y: params['centerY']!,
+          ),
+          outerRadius: params['radius']!,
+          innerRadius: params['innerRadius']!,
+          pointCount: params['sides']!.toInt(),
+          rotation: params['rotation'] ?? 0.0,
+        );
+
+        final path = starShape.toPath();
+
+        // 8-point star should have exactly 16 vertices (2 × 8)
+        expect(path.anchors.length, equals(16));
+        expect(path.closed, isTrue);
+
+        // Verify star has alternating outer/inner points by checking radii
+        final center = Point(x: params['centerX']!, y: params['centerY']!);
+        final outerRadius = params['radius']!;
+        final innerRadius = params['innerRadius']!;
+
+        for (int i = 0; i < path.anchors.length; i++) {
+          final pos = path.anchors[i].position;
+          final dx = pos.x - center.x;
+          final dy = pos.y - center.y;
+          final radius = sqrt(dx * dx + dy * dy);
+
+          // Even indices should be outer points, odd indices inner points
+          if (i % 2 == 0) {
+            expect(radius, closeTo(outerRadius, 0.01));
+          } else {
+            expect(radius, closeTo(innerRadius, 0.01));
+          }
+        }
+      });
+
+      test('should clamp point count to valid range (3-20)', () {
+        // Test minimum clamping
+        starTool.setPointCount(1);
+        expect(starTool.pointCount, equals(3));
+
+        starTool.setPointCount(2);
+        expect(starTool.pointCount, equals(3));
+
+        // Test maximum clamping
+        starTool.setPointCount(25);
+        expect(starTool.pointCount, equals(20));
+
+        starTool.setPointCount(100);
+        expect(starTool.pointCount, equals(20));
+
+        // Test valid values
+        starTool.setPointCount(5);
+        expect(starTool.pointCount, equals(5));
+
+        starTool.setPointCount(12);
+        expect(starTool.pointCount, equals(12));
+      });
+
+      test('should use configured point count in event parameters', () {
+        // Configure for 6-point star
+        starTool.setPointCount(6);
+        eventRecorder.clear();
+
+        starTool.onPointerDown(const PointerDownEvent(
+          position: ui.Offset(100, 100),
+        ),);
+
+        starTool.onPointerUp(const PointerUpEvent(
+          position: ui.Offset(200, 200),
+        ),);
+
+        final params =
+            (eventRecorder.recordedEvents[0] as CreateShapeEvent).parameters;
+        expect(params['sides'], equals(6.0));
+
+        // Change to 10-point star and verify
+        starTool.setPointCount(10);
+        eventRecorder.clear();
+
+        starTool.onPointerDown(const PointerDownEvent(
+          position: ui.Offset(100, 100),
+        ),);
+
+        starTool.onPointerUp(const PointerUpEvent(
+          position: ui.Offset(200, 200),
+        ),);
+
+        final params2 =
+            (eventRecorder.recordedEvents[0] as CreateShapeEvent).parameters;
+        expect(params2['sides'], equals(10.0));
       });
     });
 
