@@ -9,6 +9,7 @@ import 'package:wiretuner/domain/events/event_base.dart';
 import 'package:wiretuner/domain/events/path_events.dart';
 import 'package:wiretuner/domain/events/group_events.dart';
 import 'package:wiretuner/presentation/canvas/viewport/viewport_controller.dart';
+import 'package:wiretuner/presentation/canvas/overlays/pen_preview_overlay.dart';
 import 'dart:ui' as ui;
 
 /// State machine for pen tool.
@@ -33,6 +34,29 @@ enum PathState {
 /// - Enter or double-click to finish path
 /// - Escape to cancel path creation
 /// - Visual preview of next segment and handles
+///
+/// ## Rendering Architecture
+///
+/// The pen tool separates state management from rendering:
+/// - State management happens in this class (PenTool)
+/// - Visual preview rendering is delegated to [PenPreviewOverlayPainter]
+/// - The [previewState] getter exposes preview data to the UI layer
+///
+/// ### Overlay Integration
+///
+/// For UI applications, use [PenPreviewOverlayPainter] in a CustomPaint widget:
+///
+/// ```dart
+/// CustomPaint(
+///   painter: PenPreviewOverlayPainter(
+///     state: penTool.previewState,
+///     viewportController: viewportController,
+///   ),
+/// )
+/// ```
+///
+/// The [renderOverlay] method is kept for backward compatibility and direct
+/// canvas access, but delegates to the same painter implementation.
 ///
 /// ## Interaction Flow
 ///
@@ -123,6 +147,10 @@ class PenTool implements ITool {
   /// Position of the last anchor placed (world coordinates).
   Point? _lastAnchorPosition;
 
+  /// Position of the first anchor (start of path, world coordinates).
+  /// Used to detect clicks on start anchor for closing paths.
+  Point? _firstAnchorPosition;
+
   /// Timestamp of last click for double-click detection.
   int? _lastClickTime;
 
@@ -161,6 +189,20 @@ class PenTool implements ITool {
   @override
   MouseCursor get cursor => SystemMouseCursors.precise;
 
+  /// Exposes the current preview state for the overlay renderer.
+  ///
+  /// This getter creates a [PenPreviewState] snapshot that the overlay
+  /// painter can use to render visual feedback during path creation.
+  PenPreviewState get previewState => PenPreviewState(
+        lastAnchorPosition: _lastAnchorPosition,
+        hoverPosition: _hoverPosition,
+        dragStartPosition: _dragStartPosition,
+        currentDragPosition: _currentDragPosition,
+        isDragging: _isDragging,
+        isAdjustingHandles: _state == PathState.adjustingHandles,
+        isAltPressed: HardwareKeyboard.instance.isAltPressed,
+      );
+
   @override
   void onActivate() {
     _logger.i('Pen tool activated');
@@ -197,6 +239,14 @@ class PenTool implements ITool {
       _updateClickTracking(worldPos, now);
       return true;
     } else if (_state == PathState.creatingPath) {
+      // Check if click is on first anchor (close path)
+      // This must be checked FIRST to enable path closing
+      if (_isClickOnFirstAnchor(worldPos)) {
+        _logger.d('Click on first anchor - closing path');
+        _finishPath(closed: true);
+        return true;
+      }
+
       // Check if click is on last anchor (enable handle adjustment)
       // This must be checked BEFORE double-click detection, because clicking
       // on the last anchor would otherwise be detected as a double-click
@@ -313,177 +363,21 @@ class PenTool implements ITool {
 
   @override
   void renderOverlay(Canvas canvas, ui.Size size) {
+    // Note: The recommended approach is to use PenPreviewOverlayPainter
+    // in the UI layer via CustomPaint, consuming the previewState getter.
+    // This inline rendering is kept for backward compatibility and
+    // for cases where direct canvas access is needed.
+
     if (_state != PathState.creatingPath && _state != PathState.adjustingHandles) {
       return;
     }
 
-    final zoomLevel = _viewportController.zoomLevel;
-
-    // If dragging (either creating anchor or adjusting handles), render handle preview
-    if (_isDragging && _dragStartPosition != null && _currentDragPosition != null) {
-      if (_state == PathState.adjustingHandles) {
-        _renderHandleAdjustmentPreview(canvas, zoomLevel);
-      } else {
-        _renderHandlePreview(canvas, zoomLevel);
-      }
-    }
-    // Otherwise, render normal path preview
-    else if (_hoverPosition != null && _lastAnchorPosition != null && _state == PathState.creatingPath) {
-      _renderPathPreview(canvas, zoomLevel);
-    }
-  }
-
-  /// Renders handle preview during drag gesture (for new anchor creation).
-  void _renderHandlePreview(Canvas canvas, double zoomLevel) {
-    final anchorPos = _dragStartPosition!;
-    final dragPos = _currentDragPosition!;
-
-    // Paint for handle lines
-    final handlePaint = ui.Paint()
-      ..color = const ui.Color(0xFF2196F3) // Blue for handles
-      ..style = ui.PaintingStyle.stroke
-      ..strokeWidth = 1.0 / zoomLevel
-      ..strokeCap = ui.StrokeCap.round;
-
-    // Paint for handle control points
-    final handlePointPaint = ui.Paint()
-      ..color = const ui.Color(0xFF2196F3)
-      ..style = ui.PaintingStyle.fill;
-
-    // Paint for anchor point
-    final anchorPaint = ui.Paint()
-      ..color = const ui.Color(0xFFFFFFFF) // White
-      ..style = ui.PaintingStyle.fill;
-
-    final anchorStrokePaint = ui.Paint()
-      ..color = const ui.Color(0xFF000000) // Black stroke
-      ..style = ui.PaintingStyle.stroke
-      ..strokeWidth = 1.0 / zoomLevel;
-
-    final anchorOffset = ui.Offset(anchorPos.x, anchorPos.y);
-    final dragOffset = ui.Offset(dragPos.x, dragPos.y);
-
-    // Draw handleOut line from anchor to drag position
-    canvas.drawLine(anchorOffset, dragOffset, handlePaint);
-
-    // Draw handleOut control point
-    canvas.drawCircle(dragOffset, 3.0 / zoomLevel, handlePointPaint);
-
-    // If Alt not pressed (smooth anchor mode), draw mirrored handleIn
-    if (!HardwareKeyboard.instance.isAltPressed) {
-      // Calculate mirrored position: anchor - (drag - anchor) = anchor - handleOut
-      final mirrorX = anchorPos.x - (dragPos.x - anchorPos.x);
-      final mirrorY = anchorPos.y - (dragPos.y - anchorPos.y);
-      final mirrorOffset = ui.Offset(mirrorX, mirrorY);
-
-      // Draw handleIn line
-      canvas.drawLine(anchorOffset, mirrorOffset, handlePaint);
-
-      // Draw handleIn control point
-      canvas.drawCircle(mirrorOffset, 3.0 / zoomLevel, handlePointPaint);
-    }
-
-    // Draw anchor point (on top of handles)
-    canvas.drawCircle(anchorOffset, 5.0 / zoomLevel, anchorPaint);
-    canvas.drawCircle(anchorOffset, 5.0 / zoomLevel, anchorStrokePaint);
-  }
-
-  /// Renders handle adjustment preview (when adjusting existing anchor handles).
-  ///
-  /// Similar to _renderHandlePreview, but uses _lastAnchorPosition as the
-  /// anchor base instead of _dragStartPosition, since the user is adjusting
-  /// handles on an already-placed anchor.
-  void _renderHandleAdjustmentPreview(Canvas canvas, double zoomLevel) {
-    if (_lastAnchorPosition == null) {
-      return;
-    }
-
-    final anchorPos = _lastAnchorPosition!;
-    final dragPos = _currentDragPosition!;
-
-    // Paint for handle lines
-    final handlePaint = ui.Paint()
-      ..color = const ui.Color(0xFF2196F3) // Blue for handles
-      ..style = ui.PaintingStyle.stroke
-      ..strokeWidth = 1.0 / zoomLevel
-      ..strokeCap = ui.StrokeCap.round;
-
-    // Paint for handle control points
-    final handlePointPaint = ui.Paint()
-      ..color = const ui.Color(0xFF2196F3)
-      ..style = ui.PaintingStyle.fill;
-
-    // Paint for anchor point
-    final anchorPaint = ui.Paint()
-      ..color = const ui.Color(0xFFFFFFFF) // White
-      ..style = ui.PaintingStyle.fill;
-
-    final anchorStrokePaint = ui.Paint()
-      ..color = const ui.Color(0xFF000000) // Black stroke
-      ..style = ui.PaintingStyle.stroke
-      ..strokeWidth = 1.0 / zoomLevel;
-
-    final anchorOffset = ui.Offset(anchorPos.x, anchorPos.y);
-    final dragOffset = ui.Offset(dragPos.x, dragPos.y);
-
-    // Draw handleOut line from anchor to drag position
-    canvas.drawLine(anchorOffset, dragOffset, handlePaint);
-
-    // Draw handleOut control point
-    canvas.drawCircle(dragOffset, 3.0 / zoomLevel, handlePointPaint);
-
-    // If Alt not pressed (smooth anchor mode), draw mirrored handleIn
-    if (!HardwareKeyboard.instance.isAltPressed) {
-      // Calculate mirrored position: anchor - (drag - anchor) = anchor - handleOut
-      final mirrorX = anchorPos.x - (dragPos.x - anchorPos.x);
-      final mirrorY = anchorPos.y - (dragPos.y - anchorPos.y);
-      final mirrorOffset = ui.Offset(mirrorX, mirrorY);
-
-      // Draw handleIn line
-      canvas.drawLine(anchorOffset, mirrorOffset, handlePaint);
-
-      // Draw handleIn control point
-      canvas.drawCircle(mirrorOffset, 3.0 / zoomLevel, handlePointPaint);
-    }
-
-    // Draw anchor point (on top of handles)
-    canvas.drawCircle(anchorOffset, 5.0 / zoomLevel, anchorPaint);
-    canvas.drawCircle(anchorOffset, 5.0 / zoomLevel, anchorStrokePaint);
-  }
-
-  /// Renders path preview line (when not dragging).
-  void _renderPathPreview(Canvas canvas, double zoomLevel) {
-    // Draw preview line from last anchor to hover position
-    final previewPaint = ui.Paint()
-      ..color = const ui.Color(0xFF4CAF50) // Green for path preview
-      ..style = ui.PaintingStyle.stroke
-      ..strokeWidth = 1.0 / zoomLevel
-      ..strokeCap = ui.StrokeCap.round;
-
-    final lastOffset = ui.Offset(
-      _lastAnchorPosition!.x,
-      _lastAnchorPosition!.y,
+    // Delegate to the overlay painter for consistent rendering
+    final painter = PenPreviewOverlayPainter(
+      state: previewState,
+      viewportController: _viewportController,
     );
-    final hoverOffset = ui.Offset(
-      _hoverPosition!.x,
-      _hoverPosition!.y,
-    );
-
-    canvas.drawLine(lastOffset, hoverOffset, previewPaint);
-
-    // Draw anchor preview circle at hover position
-    final anchorPaint = ui.Paint()
-      ..color = const ui.Color(0xFF4CAF50)
-      ..style = ui.PaintingStyle.fill;
-
-    canvas.drawCircle(hoverOffset, 4.0 / zoomLevel, anchorPaint);
-
-    // Draw anchor circle at last anchor position
-    final lastAnchorPaint = ui.Paint()
-      ..color = const ui.Color(0xFF1976D2)
-      ..style = ui.PaintingStyle.fill;
-
-    canvas.drawCircle(lastOffset, 4.0 / zoomLevel, lastAnchorPaint);
+    painter.paint(canvas, size);
   }
 
   // ========== Private Methods ==========
@@ -495,6 +389,7 @@ class PenTool implements ITool {
     _currentGroupId = null;
     _hoverPosition = null;
     _lastAnchorPosition = null;
+    _firstAnchorPosition = null;
     _lastClickTime = null;
     _lastClickPosition = null;
     _isDragging = false;
@@ -534,6 +429,7 @@ class PenTool implements ITool {
     _currentPathId = pathId;
     _currentGroupId = groupId;
     _lastAnchorPosition = startAnchor;
+    _firstAnchorPosition = startAnchor;
     _anchorCount = 1; // First anchor (index 0)
 
     _logger.i('Path created: pathId=$pathId, groupId=$groupId');
@@ -721,6 +617,25 @@ class PenTool implements ITool {
   void _updateClickTracking(Point worldPos, int timestamp) {
     _lastClickTime = timestamp;
     _lastClickPosition = worldPos;
+  }
+
+  /// Checks if the current click is on the first anchor position.
+  ///
+  /// This is used to close the path when the user clicks on the first anchor.
+  ///
+  /// Returns true if:
+  /// - A first anchor position exists
+  /// - Path has at least 3 anchors (need minimum anchors for a closed shape)
+  /// - The distance between worldPos and first anchor is within threshold
+  ///
+  /// Uses the same distance threshold as double-click detection (10.0 world units).
+  bool _isClickOnFirstAnchor(Point worldPos) {
+    if (_firstAnchorPosition == null || _anchorCount < 3) {
+      return false;
+    }
+
+    final distance = _calculateDistance(worldPos, _firstAnchorPosition!);
+    return distance < _doubleClickDistanceThreshold;
   }
 
   /// Checks if the current click is on the last anchor position.
