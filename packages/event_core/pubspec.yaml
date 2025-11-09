@@ -17,6 +17,9 @@ dependencies:
   freezed_annotation: ^2.4.0
   json_annotation: ^4.8.0
 
+  # Compression and checksums
+  archive: ^3.6.1
+
 dev_dependencies:
   test: ^1.24.0
 

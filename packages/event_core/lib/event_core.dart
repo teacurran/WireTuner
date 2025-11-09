@@ -43,6 +43,7 @@ library event_core;
 export 'src/event_recorder.dart';
 export 'src/event_replayer.dart';
 export 'src/snapshot_manager.dart';
+export 'src/snapshot_serializer.dart';
 
 // Supporting abstractions
 export 'src/event_sampler.dart';
