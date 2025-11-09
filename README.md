@@ -241,14 +241,31 @@ This C4 component diagram captures the seven major architectural boundaries of W
 
 The diagram includes metadata (version, date, references) and a comprehensive legend mapping components to architectural decisions (1-7) detailed in [Section 2 Core Architecture](.codemachine/artifacts/plan/01_Plan_Overview_and_Setup.md#core-architecture).
 
+**Event Flow Sequence Diagram** ([Mermaid source](docs/diagrams/event_flow_sequence.mmd) | [PNG](docs/diagrams/event_flow_sequence.png) | [SVG](docs/diagrams/event_flow_sequence.svg))
+
+This sequence diagram illustrates the complete event sourcing lifecycle, showing the flow from user input through event recording, sampling, persistence, snapshot management, and replay:
+
+- **Pointer Input → Sampler → Event Recorder**: 50ms sampling for high-frequency inputs (drag operations)
+- **Event Recorder → SQLite → Snapshot Manager**: Event persistence with snapshot creation every 500 events
+- **Snapshot Manager → Event Replayer → Provider**: Document reconstruction and UI notification
+
+The diagram includes Decision 1 KPIs and logging touchpoints:
+- Document load time: <100ms (final state only)
+- History replay: 5K events/second playback rate
+- Snapshot creation: <25ms latency, every 500 events
+- Replay section latency: <100ms
+
 **Diagram Validation:**
 ```bash
-# Validate PlantUML syntax
+# Component Overview (PlantUML)
 plantuml -checkonly docs/diagrams/component_overview.puml
-
-# Regenerate PNG/SVG outputs
 bash tools/scripts/render_diagram.sh docs/diagrams/component_overview.puml svg
 bash tools/scripts/render_diagram.sh docs/diagrams/component_overview.puml png
+
+# Event Flow Sequence (Mermaid)
+# Requires: npm install -g @mermaid-js/mermaid-cli
+mmdc -i docs/diagrams/event_flow_sequence.mmd -o docs/diagrams/event_flow_sequence.svg
+mmdc -i docs/diagrams/event_flow_sequence.mmd -o docs/diagrams/event_flow_sequence.png
 ```
 
 ## Project Status

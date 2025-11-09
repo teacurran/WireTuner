@@ -36,6 +36,8 @@ User Input → Tool Controller → Event Recorder → Event Store (SQLite)
                                                                     UI Rebuild (Provider)
 ```
 
+**Detailed Sequence:** See [Event Flow Sequence Diagram](../../docs/diagrams/event_flow_sequence.mmd) ([SVG](../../docs/diagrams/event_flow_sequence.svg) | [PNG](../../docs/diagrams/event_flow_sequence.png)) for the complete lifecycle showing pointer input → sampler → event recorder → SQLite → snapshot manager → replayer → Provider notification flow with Decision 1 KPIs and logging touchpoints.
+
 **Example Events:**
 - `CreatePathEvent(pathId, style)`
 - `AddAnchorEvent(pathId, position, handles)`
