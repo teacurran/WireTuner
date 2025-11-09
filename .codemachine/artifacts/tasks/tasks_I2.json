@@ -173,7 +173,7 @@
       "I2.T6"
     ],
     "parallelizable": false,
-    "done": false
+    "done": true
   },
   {
     "task_id": "I2.T11",
@@ -191,6 +191,6 @@
       "I2.T10"
     ],
     "parallelizable": false,
-    "done": false
+    "done": true
   }
 ]
