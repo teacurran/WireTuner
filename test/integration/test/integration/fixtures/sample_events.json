@@ -1,0 +1,68 @@
+[
+  {
+    "eventType": "CreateShapeEvent",
+    "eventId": "evt-001",
+    "timestamp": 1699305600000,
+    "shapeId": "rect-1",
+    "shapeType": "rectangle",
+    "parameters": {
+      "x": 100.0,
+      "y": 100.0,
+      "width": 200.0,
+      "height": 150.0
+    },
+    "fillColor": "#3498db",
+    "strokeColor": "#2c3e50",
+    "strokeWidth": 2.0,
+    "opacity": 1.0
+  },
+  {
+    "eventType": "CreatePathEvent",
+    "eventId": "evt-002",
+    "timestamp": 1699305601000,
+    "pathId": "path-1",
+    "startAnchor": {
+      "x": 400.0,
+      "y": 150.0
+    },
+    "strokeColor": "#e74c3c",
+    "strokeWidth": 3.0,
+    "opacity": 1.0
+  },
+  {
+    "eventType": "AddAnchorEvent",
+    "eventId": "evt-003",
+    "timestamp": 1699305602000,
+    "pathId": "path-1",
+    "position": {
+      "x": 500.0,
+      "y": 200.0
+    },
+    "anchorType": "line"
+  },
+  {
+    "eventType": "AddAnchorEvent",
+    "eventId": "evt-004",
+    "timestamp": 1699305603000,
+    "pathId": "path-1",
+    "position": {
+      "x": 450.0,
+      "y": 250.0
+    },
+    "anchorType": "line"
+  },
+  {
+    "eventType": "FinishPathEvent",
+    "eventId": "evt-005",
+    "timestamp": 1699305604000,
+    "pathId": "path-1",
+    "closed": false
+  },
+  {
+    "eventType": "SelectObjectsEvent",
+    "eventId": "evt-006",
+    "timestamp": 1699305605000,
+    "objectIds": ["rect-1"],
+    "mode": "replace"
+  }
+]
