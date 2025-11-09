@@ -223,6 +223,34 @@ Detailed documentation is available in the `docs/` directory:
 
 For comprehensive architecture documentation, see `.codemachine/artifacts/architecture/`.
 
+### Architecture Diagrams
+
+The system architecture is documented through interactive diagrams that illustrate the key components, their responsibilities, and relationships:
+
+**Component Overview Diagram** ([PlantUML source](docs/diagrams/component_overview.puml) | [PNG](docs/diagrams/component_overview.png) | [SVG](docs/diagrams/component_overview.svg))
+
+This C4 component diagram captures the seven major architectural boundaries of WireTuner:
+
+1. **UI Shell & Window Manager** - Flutter widgets, application chrome, menu, window lifecycle
+2. **Rendering Pipeline** - CustomPainter for 60 FPS rendering, viewport transforms
+3. **Tool Framework** - ITool interface, state machines for selection/pen/shape tools
+4. **Event Recorder & Replayer** - 50ms sampler, SQLite event store, snapshot manager, undo navigator
+5. **Vector Engine** - Immutable data models: paths, shapes, anchors, styles, geometry utilities
+6. **Persistence Services** - SQLite event store, snapshot manager, file versioning
+7. **Import/Export Services** - AI/SVG import, SVG/PDF export modules
+
+The diagram includes metadata (version, date, references) and a comprehensive legend mapping components to architectural decisions (1-7) detailed in [Section 2 Core Architecture](.codemachine/artifacts/plan/01_Plan_Overview_and_Setup.md#core-architecture).
+
+**Diagram Validation:**
+```bash
+# Validate PlantUML syntax
+plantuml -checkonly docs/diagrams/component_overview.puml
+
+# Regenerate PNG/SVG outputs
+bash tools/scripts/render_diagram.sh docs/diagrams/component_overview.puml svg
+bash tools/scripts/render_diagram.sh docs/diagrams/component_overview.puml png
+```
+
 ## Project Status
 
 **Current Phase**: Infrastructure Setup (Iteration 1)
