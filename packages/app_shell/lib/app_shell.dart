@@ -7,8 +7,14 @@
 ///
 /// - [ToolProvider]: Tool system provider configuration
 /// - [UndoProvider]: Undo/redo navigator Flutter adapter
+///
+/// ## Multi-Window Management
+///
+/// - [WindowManager]: Multi-window lifecycle and coordination manager
+/// - [WindowScope]: Window-scoped dependency container
 library app_shell;
 
 export 'src/app_shell_base.dart';
 export 'src/state/tool_provider.dart';
 export 'src/state/undo_provider.dart';
+export 'src/window/window_manager.dart';
