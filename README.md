@@ -267,6 +267,7 @@ Detailed documentation is available in the `docs/` directory:
 - `docs/reference/`: Reference documentation
   - **[Developer Workflow Guide](docs/reference/dev_workflow.md)**: Complete guide to development tooling, editor setup, testing, and CI integration
   - **[Rendering Troubleshooting Guide](docs/reference/rendering_troubleshooting.md)**: Diagnostic procedures for rendering performance issues, including known problems (precision loss, z-fighting, performance dips), diagnostic commands (benchmark harness, performance overlay), and remediation steps with escalation paths
+  - **[Overlay Architecture](docs/reference/overlay_architecture.md)**: Z-index management system for coordinating selection boxes, pen previews, snapping guides, and tool overlays with deterministic stacking order
   - [Event Schema Reference](docs/reference/event_schema.md): Universal event metadata, sampling rules, snapshot policy, and collaboration fields
   - [Vector Model Specification](docs/reference/vector_model.md): Immutable domain model structures (Document, Layer, Path, Shape, Segment, Anchor, Style, Transform, Selection, Viewport) with invariants, copyWith patterns, and JSON serialization examples
 - `docs/specs/`: Technical specifications

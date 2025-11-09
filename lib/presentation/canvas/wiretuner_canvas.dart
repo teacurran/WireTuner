@@ -3,6 +3,8 @@ import 'package:wiretuner/domain/document/selection.dart';
 import 'package:wiretuner/domain/models/path.dart' as domain;
 import 'package:wiretuner/domain/models/shape.dart';
 import 'package:wiretuner/infrastructure/telemetry/telemetry_service.dart';
+import 'package:wiretuner/presentation/canvas/overlay_layer.dart';
+import 'package:wiretuner/presentation/canvas/overlay_registry.dart';
 import 'package:wiretuner/presentation/canvas/overlays/performance_overlay.dart';
 import 'package:wiretuner/presentation/canvas/overlays/selection_overlay.dart';
 import 'package:wiretuner/presentation/canvas/painter/document_painter.dart';
@@ -15,7 +17,7 @@ import 'package:wiretuner/presentation/canvas/viewport/viewport_state.dart';
 ///
 /// WireTunerCanvas is the primary rendering component that orchestrates:
 /// - Document rendering via [DocumentPainter]
-/// - Selection overlay rendering via [SelectionOverlayPainter]
+/// - Overlay rendering via [OverlayLayer] and [OverlayRegistry]
 /// - Viewport transformations and gestures via [ViewportController]
 /// - Performance telemetry via [TelemetryService]
 ///
@@ -23,7 +25,10 @@ import 'package:wiretuner/presentation/canvas/viewport/viewport_state.dart';
 ///
 /// The canvas uses a layered rendering architecture with Flutter's CustomPainter:
 /// - **Base layer**: Document paths rendered with world-space transformations
-/// - **Overlay layer**: Selection decorations (handles, bounding boxes)
+/// - **Overlay layer**: Managed overlays in deterministic z-index order
+///   - Document-derived (selection, bounds)
+///   - Tool-state painters (pen preview, snapping guides)
+///   - Widget overlays (tool hints, performance HUD)
 /// - **Gesture layer**: Pan/zoom interaction handling
 /// - **Telemetry layer**: Performance monitoring (FPS, frame times)
 ///
@@ -32,6 +37,7 @@ import 'package:wiretuner/presentation/canvas/viewport/viewport_state.dart';
 /// - Matrix4 transformations for viewport pan/zoom
 /// - RepaintBoundary optimization for dirty-region tracking
 /// - Independent layer repaints (document vs. overlay)
+/// - Deterministic overlay stacking with z-index management
 ///
 /// ## Performance Optimizations
 ///
@@ -131,6 +137,9 @@ class _WireTunerCanvasState extends State<WireTunerCanvas> {
   /// Viewport state manager for gesture handling.
   late final ViewportState _viewportState;
 
+  /// Overlay registry for managing overlay z-index and rendering order.
+  late final OverlayRegistry _overlayRegistry;
+
   /// Stopwatch for measuring frame build times.
   final Stopwatch _frameStopwatch = Stopwatch();
 
@@ -158,6 +167,9 @@ class _WireTunerCanvasState extends State<WireTunerCanvas> {
       controller: widget.viewportController,
       onTelemetry: _onTelemetry,
     );
+
+    // Initialize overlay registry
+    _overlayRegistry = OverlayRegistry();
 
     // Listen to viewport controller for frame time measurement
     widget.viewportController.addListener(_onViewportChanged);
@@ -206,6 +218,9 @@ class _WireTunerCanvasState extends State<WireTunerCanvas> {
       pathsMap['path-$i'] = widget.paths[i];
     }
 
+    // Register overlays in the registry with deterministic z-index
+    _registerOverlays(pathsMap);
+
     final canvasWidget = RepaintBoundary(
       child: Listener(
         // Handle scroll events for zoom
@@ -231,19 +246,8 @@ class _WireTunerCanvasState extends State<WireTunerCanvas> {
                 // Fill available space
                 size: Size.infinite,
               ),
-              // Top layer: Selection overlay
-              CustomPaint(
-                painter: SelectionOverlayPainter(
-                  selection: widget.selection,
-                  paths: pathsMap,
-                  shapes: widget.shapes,
-                  viewportController: widget.viewportController,
-                  pathRenderer: _pathRenderer,
-                  hoveredAnchor: widget.hoveredAnchor,
-                ),
-                // Fill available space
-                size: Size.infinite,
-              ),
+              // Overlay layer: All overlays in z-index order
+              OverlayLayer(registry: _overlayRegistry),
             ],
           ),
         ),
@@ -256,5 +260,39 @@ class _WireTunerCanvasState extends State<WireTunerCanvas> {
       viewportController: widget.viewportController,
       child: canvasWidget,
     );
+  }
+
+  /// Registers overlays in the registry based on current widget state.
+  ///
+  /// This method is called on each build to ensure overlays reflect the
+  /// current document and tool state. The registry handles deduplication
+  /// via overlay IDs, so re-registering with the same ID updates the entry.
+  void _registerOverlays(Map<String, domain.Path> pathsMap) {
+    // Register selection overlay (document-derived, z-index 110)
+    if (widget.selection.isNotEmpty) {
+      _overlayRegistry.register(
+        CanvasOverlayEntry.painter(
+          id: 'selection',
+          zIndex: OverlayZIndex.selection,
+          painter: SelectionOverlayPainter(
+            selection: widget.selection,
+            paths: pathsMap,
+            shapes: widget.shapes,
+            viewportController: widget.viewportController,
+            pathRenderer: _pathRenderer,
+            hoveredAnchor: widget.hoveredAnchor,
+          ),
+          hitTestBehavior: HitTestBehavior.translucent,
+        ),
+      );
+    } else {
+      // Unregister if no selection
+      _overlayRegistry.unregister('selection');
+    }
+
+    // TODO(I3.T8+): Register pen preview overlay when pen tool is active
+    // TODO(I3.T8+): Register snapping guide overlay when snapping is enabled
+    // TODO(I3.T8+): Register tool hints widget overlay
+    // TODO(I3.T8+): Register active tool overlay from ToolManager.renderOverlay
   }
 }
