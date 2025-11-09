@@ -219,6 +219,11 @@ Detailed documentation is available in the `docs/` directory:
 - `docs/diagrams/`: Architecture diagrams (PlantUML)
 - `docs/api/`: API documentation and contracts
 - `docs/adr/`: Architectural Decision Records
+- `docs/reference/`: Reference documentation
+  - [Event Schema Reference](docs/reference/event_schema.md): Universal event metadata, sampling rules, snapshot policy, and collaboration fields
+- `docs/specs/`: Technical specifications
+  - [Event Payload Specification](docs/specs/event_payload.md): Per-event field definitions and JSON Schema
+  - [Event Lifecycle](docs/specs/event_lifecycle.md): Complete event flow from creation through replay
 - `docs/testing/`: Testing strategy and coverage reports
 
 For comprehensive architecture documentation, see `.codemachine/artifacts/architecture/`.
