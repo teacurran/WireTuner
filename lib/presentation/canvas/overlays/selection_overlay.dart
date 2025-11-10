@@ -115,15 +115,20 @@ class SelectionOverlayPainter extends CustomPainter {
     canvas.save();
     canvas.transform(viewportController.worldToScreenMatrix.storage);
 
-    // Render each selected object
-    for (final objectId in selection.objectIds) {
-      final path = paths[objectId];
-      final shape = shapes[objectId];
+    // Render unified bounding box if multiple objects selected
+    if (selection.selectedCount > 1) {
+      _paintUnifiedBoundingBox(canvas);
+    } else {
+      // Render each selected object (single selection)
+      for (final objectId in selection.objectIds) {
+        final path = paths[objectId];
+        final shape = shapes[objectId];
 
-      if (path != null) {
-        _paintPathSelection(canvas, objectId, path);
-      } else if (shape != null) {
-        _paintShapeSelection(canvas, objectId, shape);
+        if (path != null) {
+          _paintPathSelection(canvas, objectId, path);
+        } else if (shape != null) {
+          _paintShapeSelection(canvas, objectId, shape);
+        }
       }
     }
 
@@ -185,6 +190,69 @@ class SelectionOverlayPainter extends CustomPainter {
         component: hoveredAnchor?.component,
       );
     }
+  }
+
+  /// Paints a unified bounding box that encompasses all selected objects.
+  ///
+  /// This method computes the union of all selected object bounds and draws
+  /// a single bounding box around them. Used for multi-selection visualization.
+  void _paintUnifiedBoundingBox(Canvas canvas) {
+    // Collect bounds of all selected objects
+    final selectedBounds = <geom.Rectangle>[];
+
+    for (final objectId in selection.objectIds) {
+      final path = paths[objectId];
+      final shape = shapes[objectId];
+
+      if (path != null && path.anchors.isNotEmpty) {
+        selectedBounds.add(path.bounds());
+      } else if (shape != null) {
+        final shapePath = shape.toPath();
+        if (shapePath.anchors.isNotEmpty) {
+          selectedBounds.add(shapePath.bounds());
+        }
+      }
+    }
+
+    if (selectedBounds.isEmpty) {
+      return;
+    }
+
+    // Compute union of all bounds
+    final unifiedBounds = _computeUnionBounds(selectedBounds);
+
+    // Draw unified bounding box
+    _drawBoundingBox(canvas, unifiedBounds);
+  }
+
+  /// Computes the union of multiple rectangles.
+  ///
+  /// Returns a rectangle that encompasses all input rectangles.
+  geom.Rectangle _computeUnionBounds(List<geom.Rectangle> bounds) {
+    if (bounds.isEmpty) {
+      return const geom.Rectangle(x: 0, y: 0, width: 0, height: 0);
+    }
+
+    double minX = bounds.first.x;
+    double minY = bounds.first.y;
+    double maxX = bounds.first.x + bounds.first.width;
+    double maxY = bounds.first.y + bounds.first.height;
+
+    for (final rect in bounds.skip(1)) {
+      minX = minX < rect.x ? minX : rect.x;
+      minY = minY < rect.y ? minY : rect.y;
+      final rectMaxX = rect.x + rect.width;
+      final rectMaxY = rect.y + rect.height;
+      maxX = maxX > rectMaxX ? maxX : rectMaxX;
+      maxY = maxY > rectMaxY ? maxY : rectMaxY;
+    }
+
+    return geom.Rectangle(
+      x: minX,
+      y: minY,
+      width: maxX - minX,
+      height: maxY - minY,
+    );
   }
 
   /// Draws a dashed bounding box around the object.
