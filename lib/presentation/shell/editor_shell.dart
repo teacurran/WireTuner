@@ -138,6 +138,9 @@ class _CanvasAdapter extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Get tool manager from context
+    final toolManager = context.watch<ToolManager>();
+
     // Extract paths and shapes from all layers
     final paths = <domain.Path>[];
     final shapes = <String, Shape>{};
@@ -156,6 +159,7 @@ class _CanvasAdapter extends StatelessWidget {
       shapes: shapes,
       selection: document.selection,
       viewportController: viewportController,
+      toolManager: toolManager,
     );
   }
 }

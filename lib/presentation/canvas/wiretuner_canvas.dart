@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:wiretuner/application/tools/framework/tool_manager.dart';
 import 'package:wiretuner/domain/document/selection.dart';
 import 'package:wiretuner/domain/models/path.dart' as domain;
 import 'package:wiretuner/domain/models/shape.dart';
@@ -7,6 +8,7 @@ import 'package:wiretuner/presentation/canvas/overlay_layer.dart';
 import 'package:wiretuner/presentation/canvas/overlay_registry.dart';
 import 'package:wiretuner/presentation/canvas/overlays/performance_overlay.dart';
 import 'package:wiretuner/presentation/canvas/overlays/selection_overlay.dart';
+import 'package:wiretuner/presentation/canvas/overlays/tool_overlay_painter.dart';
 import 'package:wiretuner/presentation/canvas/painter/document_painter.dart';
 import 'package:wiretuner/presentation/canvas/painter/path_renderer.dart';
 import 'package:wiretuner/presentation/canvas/render_pipeline.dart';
@@ -79,7 +81,7 @@ class WireTunerCanvas extends StatefulWidget {
   /// Creates a WireTuner canvas widget.
   ///
   /// All parameters are required except [telemetryService], [hoveredAnchor],
-  /// and [enableRenderPipeline].
+  /// [toolManager], and [enableRenderPipeline].
   ///
   /// The [paths] list contains document path objects to render.
   /// The [shapes] map contains shape objects by ID.
@@ -87,6 +89,7 @@ class WireTunerCanvas extends StatefulWidget {
   /// The [viewportController] manages pan/zoom transformations.
   /// The [telemetryService] is optional and enables performance monitoring.
   /// The [hoveredAnchor] indicates the currently hovered anchor (if any).
+  /// The [toolManager] is optional and enables tool overlay rendering.
   /// The [enableRenderPipeline] enables advanced rendering optimizations (default: true).
   ///
   /// The performance overlay can be toggled at runtime using Cmd+Shift+P (macOS)
@@ -98,6 +101,7 @@ class WireTunerCanvas extends StatefulWidget {
     required this.viewportController,
     this.telemetryService,
     this.hoveredAnchor,
+    this.toolManager,
     this.enableRenderPipeline = true,
     super.key,
   });
@@ -119,6 +123,9 @@ class WireTunerCanvas extends StatefulWidget {
 
   /// Currently hovered anchor point (if any).
   final HoveredAnchor? hoveredAnchor;
+
+  /// Optional tool manager for rendering tool overlays.
+  final ToolManager? toolManager;
 
   /// Enable advanced render pipeline with optimizations.
   final bool enableRenderPipeline;
@@ -291,9 +298,24 @@ class _WireTunerCanvasState extends State<WireTunerCanvas> {
       _overlayRegistry.unregister('selection');
     }
 
-    // TODO(I3.T8+): Register pen preview overlay when pen tool is active
+    // Register active tool overlay (tool-state, z-index 240)
+    if (widget.toolManager != null && widget.toolManager!.activeTool != null) {
+      _overlayRegistry.register(
+        CanvasOverlayEntry.painter(
+          id: 'tool',
+          zIndex: OverlayZIndex.activeTool,
+          painter: ToolOverlayPainter(
+            toolManager: widget.toolManager!,
+            viewportController: widget.viewportController,
+          ),
+          hitTestBehavior: HitTestBehavior.translucent,
+        ),
+      );
+    } else {
+      _overlayRegistry.unregister('tool');
+    }
+
     // TODO(I3.T8+): Register snapping guide overlay when snapping is enabled
     // TODO(I3.T8+): Register tool hints widget overlay
-    // TODO(I3.T8+): Register active tool overlay from ToolManager.renderOverlay
   }
 }
