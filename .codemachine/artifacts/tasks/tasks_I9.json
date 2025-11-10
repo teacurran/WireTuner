@@ -136,6 +136,6 @@
     "acceptance_criteria": "*   Document covers unit, widget, integration, performance testing\n        *   Coverage target: 80%+ for lib/domain and lib/infrastructure\n        *   Widget test guidelines with examples\n        *   Integration test scenarios listed (save/load, pen tool workflow, undo/redo)\n        *   Performance benchmarks documented (60 FPS target, document load < 2s)",
     "dependencies": [],
     "parallelizable": true,
-    "done": false
+    "done": true
   }
 ]
