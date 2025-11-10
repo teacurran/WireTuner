@@ -413,32 +413,17 @@ class DirectSelectionTool implements ITool {
       }
     }
 
-    // Calculate delta from start position
+    // Calculate delta from start position to current position
+    // This delta is cumulative from the drag start point
     final delta = Point(
       x: effectiveWorldPos.x - context.startPosition.x,
       y: effectiveWorldPos.y - context.startPosition.y,
     );
 
-    // Get current anchor
-    final obj = _document.getObjectById(context.objectId);
-    if (obj == null) {
-      _logger.w('Object no longer exists during drag');
-      _cancelDrag();
-      return;
-    }
-
-    final domainPath = obj.when(
-      path: (id, path) => path,
-      shape: (id, shape) => shape.toPath(),
-    );
-
-    if (context.anchorIndex >= domainPath.anchors.length) {
-      _logger.w('Anchor no longer exists during drag');
-      _cancelDrag();
-      return;
-    }
-
     // Use appropriate drag controller based on component
+    // IMPORTANT: Use context.originalAnchor (captured at drag start) rather than
+    // fetching from document, because the document may be updated in real-time
+    // as events are persisted, which would cause double-delta application.
     DragResult result;
     Map<String, dynamic>? feedbackMetrics;
 

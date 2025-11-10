@@ -170,18 +170,18 @@ void main() {
           reason: 'Should record drag events',
         );
 
-        // Verify final anchor position
-        final finalEvent = recorder.anchorEvents.last;
-        expect(finalEvent.pathId, equals('path-1'));
-        expect(finalEvent.anchorIndex, equals(1)); // Second anchor
-        expect(finalEvent.position, isNotNull);
+        // Verify drag anchor position (first event is the drag, subsequent events may be inertia)
+        final dragEvent = recorder.anchorEvents.first;
+        expect(dragEvent.pathId, equals('path-1'));
+        expect(dragEvent.anchorIndex, equals(1)); // Second anchor
+        expect(dragEvent.position, isNotNull);
         expect(
-          finalEvent.position!.x,
+          dragEvent.position!.x,
           closeTo(300, 1.0),
           reason: 'Anchor moved 100px right',
         );
         expect(
-          finalEvent.position!.y,
+          dragEvent.position!.y,
           closeTo(100, 1.0),
           reason: 'Anchor Y unchanged',
         );
