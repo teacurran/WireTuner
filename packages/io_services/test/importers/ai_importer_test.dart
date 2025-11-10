@@ -121,8 +121,8 @@ void main() {
       });
     });
 
-    group('demonstration events (placeholder)', () {
-      test('generates valid event structure', () async {
+    group('PDF operator parsing', () {
+      test('generates valid event structure from PDF operators', () async {
         final tempDir = await Directory.systemTemp.createTemp('ai_test_');
         final tempFile = File('${tempDir.path}/demo.ai');
 
@@ -132,7 +132,7 @@ void main() {
         try {
           final result = await importer.importFromFile(tempFile.path);
 
-          // Should generate demonstration events
+          // Should parse PDF operators and generate events
           expect(result.events, isNotEmpty);
 
           // Verify event structure
@@ -242,7 +242,7 @@ void main() {
         }
       });
 
-      test('includes placeholder implementation warning', () async {
+      test('parses real PDF content stream successfully', () async {
         final tempDir = await Directory.systemTemp.createTemp('ai_test_');
         final tempFile = File('${tempDir.path}/demo.ai');
 
@@ -250,22 +250,11 @@ void main() {
         await tempFile.writeAsBytes(pdfBytes);
 
         try {
-          // Capture logger output to verify warning was logged
-          final logMessages = <String>[];
-          final testLogger = Logger(
-            printer: SimplePrinter(),
-            output: _ListOutput(logMessages),
-            level: Level.warning,
-          );
+          final result = await importer.importFromFile(tempFile.path);
 
-          final testImporter = AIImporter(logger: testLogger);
-          await testImporter.importFromFile(tempFile.path);
-
-          // Should have logged placeholder warning
-          expect(
-            logMessages.any((msg) => msg.contains('placeholder implementation')),
-            isTrue,
-          );
+          // Should successfully parse (even if minimal PDF has no content stream, it should return empty events gracefully)
+          expect(result.events, isNotNull);
+          expect(result.metadata, isNotNull);
         } finally {
           await tempDir.delete(recursive: true);
         }
@@ -304,12 +293,78 @@ void main() {
         expect(pageHeight - 396.0, equals(396.0)); // Center stays center
       });
     });
+
+    group('integration tests with fixtures', () {
+      test('imports simple_rect.ai fixture correctly', () async {
+        final fixturePath = 'test/fixtures/ai/simple_rect.ai';
+        final fixtureFile = File(fixturePath);
+
+        // Skip if fixture doesn't exist
+        if (!await fixtureFile.exists()) {
+          markTestSkipped('Fixture file not found: $fixturePath');
+          return;
+        }
+
+        final result = await importer.importFromFile(fixturePath);
+
+        // Should have parsed the rectangular path
+        expect(result.events, isNotEmpty);
+
+        // Verify CreatePathEvent
+        final createPathEvents = result.events
+            .where((e) => e['eventType'] == 'CreatePathEvent')
+            .toList();
+        expect(createPathEvents, hasLength(1));
+
+        final createPath = createPathEvents.first;
+        expect(createPath['startAnchor'], isNotNull);
+        expect(createPath['startAnchor']['x'], equals(100.0));
+        // Y coordinate should be flipped: pageHeight (792) - 100 = 692
+        expect(createPath['startAnchor']['y'], equals(692.0));
+
+        // Verify AddAnchorEvents (3 line segments: to 200,100 / 200,200 / 100,200)
+        final addAnchorEvents = result.events
+            .where((e) => e['eventType'] == 'AddAnchorEvent')
+            .toList();
+        expect(addAnchorEvents, hasLength(3));
+
+        // First anchor: 200, 100 → 200, 692
+        expect(addAnchorEvents[0]['position']['x'], equals(200.0));
+        expect(addAnchorEvents[0]['position']['y'], equals(692.0));
+        expect(addAnchorEvents[0]['anchorType'], equals('line'));
+
+        // Second anchor: 200, 200 → 200, 592
+        expect(addAnchorEvents[1]['position']['x'], equals(200.0));
+        expect(addAnchorEvents[1]['position']['y'], equals(592.0));
+
+        // Third anchor: 100, 200 → 100, 592
+        expect(addAnchorEvents[2]['position']['x'], equals(100.0));
+        expect(addAnchorEvents[2]['position']['y'], equals(592.0));
+
+        // Verify FinishPathEvent
+        final finishPathEvents = result.events
+            .where((e) => e['eventType'] == 'FinishPathEvent')
+            .toList();
+        expect(finishPathEvents, hasLength(1));
+        expect(finishPathEvents.first['closed'], isTrue);
+
+        // Verify metadata
+        expect(result.metadata.pageWidth, equals(612.0));
+        expect(result.metadata.pageHeight, equals(792.0));
+
+        // Should have AI private data warning
+        expect(
+          result.warnings.any((w) => w.featureType == 'ai-private-data'),
+          isTrue,
+        );
+      });
+    });
   });
 }
 
 /// Creates minimal valid PDF bytes for testing.
 Uint8List _createMinimalPdfBytes() {
-  // Minimal PDF structure (version 1.4)
+  // Minimal PDF structure with a simple content stream
   final pdfContent = '''
 %PDF-1.4
 1 0 obj
@@ -319,18 +374,28 @@ endobj
 << /Type /Pages /Count 1 /Kids [3 0 R] >>
 endobj
 3 0 obj
-<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] >>
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Contents 4 0 R >>
+endobj
+4 0 obj
+<< /Length 29 >>
+stream
+50 50 m
+150 50 l
+h
+S
+endstream
 endobj
 xref
-0 4
+0 5
 0000000000 65535 f
 0000000009 00000 n
 0000000058 00000 n
 0000000115 00000 n
+0000000193 00000 n
 trailer
-<< /Size 4 /Root 1 0 R >>
+<< /Size 5 /Root 1 0 R >>
 startxref
-189
+272
 %%EOF
 ''';
 

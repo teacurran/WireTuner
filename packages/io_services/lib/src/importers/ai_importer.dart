@@ -180,12 +180,6 @@ class AIImporter {
   /// Page height for Y-axis flipping.
   double _pageHeight = 0.0;
 
-  /// Current path ID being constructed.
-  String? _currentPathId;
-
-  /// Anchor index within current path.
-  int _anchorIndex = 0;
-
   /// Imports an Adobe Illustrator file and returns an import result.
   ///
   /// The returned result contains:
@@ -225,8 +219,6 @@ class AIImporter {
     _timestampCounter = 0;
     _currentPoint = (x: 0.0, y: 0.0);
     _pageHeight = 0.0;
-    _currentPathId = null;
-    _anchorIndex = 0;
 
     // Validate file
     await _validateFile(filePath);
@@ -308,26 +300,23 @@ class AIImporter {
 
   /// Parses PDF content to extract graphics operators.
   ///
-  /// **IMPORTANT: Milestone 0.1 Implementation**
+  /// This implementation uses a lightweight custom PDF parser to extract
+  /// the content stream from AI files (which are PDF-based). It does not
+  /// use a full PDF library since the `pdf` package is focused on generation.
   ///
-  /// The `pdf` package (^3.10.0) is designed for PDF generation, not parsing.
-  /// This implementation provides a structured demonstration of the parsing
-  /// architecture with placeholder PDF reading.
+  /// **Implementation:**
   ///
-  /// **Production Implementation Path:**
-  ///
-  /// 1. Add PDF parsing dependency (e.g., `pdfium_bindings`, custom parser)
-  /// 2. Extract content streams from PDF pages
-  /// 3. Parse PostScript-like operators: m, l, c, h, re
+  /// 1. Extract MediaBox dimensions from page object
+  /// 2. Locate and extract content stream
+  /// 3. Tokenize PostScript operators: m, l, c, v, y, h, re
   /// 4. Apply Y-axis flip transformation
   /// 5. Generate CreatePath/AddAnchor/FinishPath/CreateShape events
   ///
-  /// **Current Behavior:**
+  /// **Limitations:**
   ///
-  /// For Milestone 0.1, this method:
-  /// 1. Validates the bytes as PDF-like (checks for PDF header)
-  /// 2. Logs placeholder parsing warning
-  /// 3. Returns demonstration events to show expected output structure
+  /// - Only parses first page (multi-page warning logged)
+  /// - Does not handle compressed streams (assumes uncompressed)
+  /// - Basic error recovery for malformed operators
   Future<List<Map<String, dynamic>>> _parsePdfContent(
     Uint8List bytes,
     String filePath,
@@ -337,33 +326,31 @@ class AIImporter {
       throw AIImportException('Invalid AI file: not a valid PDF structure');
     }
 
-    _logger.w(
-      'PDF content parsing uses placeholder implementation in Milestone 0.1. '
-      'The pdf package (^3.10.0) is for PDF generation, not parsing. '
-      'A future milestone will add a PDF parsing library to extract '
-      'graphics operators from AI files.',
-    );
+    try {
+      // Extract page dimensions (MediaBox)
+      final mediaBox = _extractMediaBox(bytes);
+      _pageHeight = mediaBox.height;
 
-    // For demonstration, assume a standard page size
-    _pageHeight = 792.0; // Letter size: 11 inches * 72 DPI
+      _logger.d(
+        'PDF page dimensions: ${mediaBox.width} x ${mediaBox.height} pt',
+      );
 
-    // Placeholder: In a production implementation, this would:
-    // 1. Use a PDF parsing library to load the document
-    // 2. Extract page dimensions for Y-flip calculation
-    // 3. Extract content stream operators
-    // 4. Parse operators and generate events
-    //
-    // Example with hypothetical PDF parsing library:
-    // ```dart
-    // final pdfDoc = await PdfParser.load(bytes);
-    // final page = pdfDoc.getPage(0);
-    // _pageHeight = page.height;
-    // final operators = page.getContentStreamOperators();
-    // return _parseOperators(operators);
-    // ```
+      // Extract content stream
+      final contentStream = _extractContentStream(bytes);
 
-    // For demonstration, create events showing expected output structure
-    return _createDemonstrationEvents();
+      if (contentStream.isEmpty) {
+        _logger.w('No content stream found in PDF, returning empty events');
+        return [];
+      }
+
+      _logger.d('Content stream length: ${contentStream.length} bytes');
+
+      // Parse operators and generate events
+      return _parseOperators(contentStream);
+    } catch (e, stackTrace) {
+      _logger.e('PDF parsing error', error: e, stackTrace: stackTrace);
+      throw AIImportException('Failed to parse PDF content: $e');
+    }
   }
 
   /// Checks if bytes start with PDF header.
@@ -377,78 +364,558 @@ class AIImporter {
         bytes[4] == 0x2D;
   }
 
-  /// Creates demonstration events to show expected output structure.
-  ///
-  /// This method exists only to demonstrate the event generation pattern.
-  /// In a production implementation, events would be generated from
-  /// actual PDF content stream operators.
-  ///
-  /// The demonstration creates a simple rectangular path to show:
-  /// - Event ID generation (UUID)
-  /// - Timestamp ordering (monotonic)
-  /// - Y-axis flip (if page height were known from actual PDF)
-  /// - Path construction from operators (moveto, lineto, closepath)
-  List<Map<String, dynamic>> _createDemonstrationEvents() {
-    _logger.d('Creating demonstration events (placeholder for PDF parsing)');
+  /// Extracts MediaBox dimensions from PDF bytes.
+  ({double width, double height}) _extractMediaBox(Uint8List bytes) {
+    // Convert to string for regex parsing
+    final pdfText = String.fromCharCodes(bytes);
 
-    // In a real implementation, these coordinates would come from
-    // PDF operators like: "100 100 m 200 100 l 200 200 l 100 200 l h"
-    final pathId = 'import_ai_demo_${_uuid.v4()}';
+    // Look for MediaBox definition: /MediaBox [x1 y1 x2 y2]
+    final mediaBoxRegex = RegExp(r'/MediaBox\s*\[\s*(\d+(?:\.\d+)?)\s+(\d+(?:\.\d+)?)\s+(\d+(?:\.\d+)?)\s+(\d+(?:\.\d+)?)\s*\]');
+    final match = mediaBoxRegex.firstMatch(pdfText);
+
+    if (match == null) {
+      _logger.w('MediaBox not found, using default Letter size');
+      return (width: 612.0, height: 792.0); // Letter size default
+    }
+
+    // MediaBox format: [x1 y1 x2 y2] where (x1,y1) is lower-left, (x2,y2) is upper-right
+    final x1 = double.parse(match.group(1)!);
+    final y1 = double.parse(match.group(2)!);
+    final x2 = double.parse(match.group(3)!);
+    final y2 = double.parse(match.group(4)!);
+
+    final width = x2 - x1;
+    final height = y2 - y1;
+
+    _logger.d('MediaBox: [$x1 $y1 $x2 $y2] → ${width}x$height');
+
+    return (width: width, height: height);
+  }
+
+  /// Extracts content stream from PDF bytes.
+  String _extractContentStream(Uint8List bytes) {
+    // Convert to string
+    final pdfText = String.fromCharCodes(bytes);
+
+    // Find content stream between "stream" and "endstream"
+    // Pattern: << /Length N >> stream\n<content>\nendstream
+    // Note: \s* allows for flexible whitespace including newlines
+    final streamRegex = RegExp(
+      r'stream\s+(.*?)\s+endstream',
+      multiLine: true,
+      dotAll: true,
+    );
+
+    final match = streamRegex.firstMatch(pdfText);
+
+    if (match == null) {
+      _logger.w('No content stream found in PDF');
+      return '';
+    }
+
+    final streamContent = match.group(1) ?? '';
+
+    _logger.d('Extracted content stream: ${streamContent.length} chars');
+
+    return streamContent.trim();
+  }
+
+  /// Parses PDF operators from content stream and generates events.
+  List<Map<String, dynamic>> _parseOperators(String contentStream) {
+    final events = <Map<String, dynamic>>[];
+    final tokens = _tokenize(contentStream);
+
+    _logger.d('Tokenized ${tokens.length} tokens from content stream');
+
+    // Operand stack (PostScript-style)
+    final operandStack = <double>[];
+
+    // Current path state
+    String? currentPathId;
+    int anchorIndex = 0;
+    ({double x, double y}) subpathStart = (x: 0.0, y: 0.0);
+
+    // Graphics state
+    String strokeColor = '#000000';
+    String? fillColor;
+    double strokeWidth = 1.0;
+    double opacity = 1.0;
+
     final baseTime = DateTime.now().millisecondsSinceEpoch;
 
-    return [
-      // CreatePathEvent - start of path
-      {
-        'eventId': _generateEventId(),
-        'timestamp': baseTime + _timestampCounter++,
-        'eventType': 'CreatePathEvent',
-        'eventSequence': _eventSequence++,
-        'pathId': pathId,
-        'startAnchor': {'x': 100.0, 'y': 100.0},
-        'strokeColor': '#000000',
-        'strokeWidth': 1.0,
-        'opacity': 1.0,
-      },
+    for (final token in tokens) {
+      // Try to parse as number (operand)
+      final numberValue = double.tryParse(token);
 
-      // AddAnchorEvent - add line segment anchors
-      {
-        'eventId': _generateEventId(),
-        'timestamp': baseTime + _timestampCounter++,
-        'eventType': 'AddAnchorEvent',
-        'eventSequence': _eventSequence++,
-        'pathId': pathId,
-        'position': {'x': 200.0, 'y': 100.0},
-        'anchorType': 'line',
-      },
-      {
-        'eventId': _generateEventId(),
-        'timestamp': baseTime + _timestampCounter++,
-        'eventType': 'AddAnchorEvent',
-        'eventSequence': _eventSequence++,
-        'pathId': pathId,
-        'position': {'x': 200.0, 'y': 200.0},
-        'anchorType': 'line',
-      },
-      {
-        'eventId': _generateEventId(),
-        'timestamp': baseTime + _timestampCounter++,
-        'eventType': 'AddAnchorEvent',
-        'eventSequence': _eventSequence++,
-        'pathId': pathId,
-        'position': {'x': 100.0, 'y': 200.0},
-        'anchorType': 'line',
-      },
+      if (numberValue != null) {
+        // Push operand onto stack
+        operandStack.add(numberValue);
+        continue;
+      }
 
-      // FinishPathEvent - close path
-      {
+      // Token is an operator
+      final operator = token;
+
+      try {
+        switch (operator) {
+          case 'm': // moveto - start new subpath
+            if (operandStack.length < 2) {
+              _addWarning(
+                severity: 'warning',
+                featureType: 'malformed-operator',
+                message: 'moveto operator requires 2 operands',
+              );
+              operandStack.clear();
+              continue;
+            }
+
+            final y = operandStack.removeLast();
+            final x = operandStack.removeLast();
+
+            final yFlipped = _flipY(y);
+            _validateCoordinate(x, 'x coordinate');
+            _validateCoordinate(yFlipped, 'y coordinate');
+
+            // Start new path
+            currentPathId = 'import_ai_${_uuid.v4()}';
+            anchorIndex = 0;
+            _currentPoint = (x: x, y: yFlipped);
+            subpathStart = _currentPoint;
+
+            events.add({
+              'eventId': _generateEventId(),
+              'timestamp': baseTime + _timestampCounter++,
+              'eventType': 'CreatePathEvent',
+              'eventSequence': _eventSequence++,
+              'pathId': currentPathId,
+              'startAnchor': {'x': x, 'y': yFlipped},
+              'strokeColor': strokeColor,
+              'strokeWidth': strokeWidth,
+              'opacity': opacity,
+              if (fillColor != null) 'fillColor': fillColor,
+            });
+
+            _logger.d('moveto: ($x, $y) → ($x, $yFlipped)');
+            break;
+
+          case 'l': // lineto - add line segment
+            if (currentPathId == null) {
+              _addWarning(
+                severity: 'warning',
+                featureType: 'malformed-path',
+                message: 'lineto operator without preceding moveto',
+              );
+              operandStack.clear();
+              continue;
+            }
+
+            if (operandStack.length < 2) {
+              _addWarning(
+                severity: 'warning',
+                featureType: 'malformed-operator',
+                message: 'lineto operator requires 2 operands',
+              );
+              operandStack.clear();
+              continue;
+            }
+
+            final y = operandStack.removeLast();
+            final x = operandStack.removeLast();
+
+            final yFlipped = _flipY(y);
+            _validateCoordinate(x, 'x coordinate');
+            _validateCoordinate(yFlipped, 'y coordinate');
+
+            events.add({
+              'eventId': _generateEventId(),
+              'timestamp': baseTime + _timestampCounter++,
+              'eventType': 'AddAnchorEvent',
+              'eventSequence': _eventSequence++,
+              'pathId': currentPathId,
+              'position': {'x': x, 'y': yFlipped},
+              'anchorType': 'line',
+            });
+
+            _currentPoint = (x: x, y: yFlipped);
+            anchorIndex++;
+
+            _logger.d('lineto: ($x, $y) → ($x, $yFlipped)');
+            break;
+
+          case 'c': // curveto - cubic Bezier curve
+            if (currentPathId == null) {
+              _addWarning(
+                severity: 'warning',
+                featureType: 'malformed-path',
+                message: 'curveto operator without preceding moveto',
+              );
+              operandStack.clear();
+              continue;
+            }
+
+            if (operandStack.length < 6) {
+              _addWarning(
+                severity: 'warning',
+                featureType: 'malformed-operator',
+                message: 'curveto operator requires 6 operands',
+              );
+              operandStack.clear();
+              continue;
+            }
+
+            final y3 = operandStack.removeLast();
+            final x3 = operandStack.removeLast();
+            final y2 = operandStack.removeLast();
+            final x2 = operandStack.removeLast();
+            final y1 = operandStack.removeLast();
+            final x1 = operandStack.removeLast();
+
+            final y1Flipped = _flipY(y1);
+            final y2Flipped = _flipY(y2);
+            final y3Flipped = _flipY(y3);
+
+            _validateCoordinate(x1, 'control point 1 x');
+            _validateCoordinate(y1Flipped, 'control point 1 y');
+            _validateCoordinate(x2, 'control point 2 x');
+            _validateCoordinate(y2Flipped, 'control point 2 y');
+            _validateCoordinate(x3, 'end point x');
+            _validateCoordinate(y3Flipped, 'end point y');
+
+            // Convert absolute control points to relative handles
+            final handleOut = {
+              'x': x1 - _currentPoint.x,
+              'y': y1Flipped - _currentPoint.y,
+            };
+            final handleIn = {
+              'x': x2 - x3,
+              'y': y2Flipped - y3Flipped,
+            };
+
+            // Set handleOut on previous anchor (if not first anchor)
+            if (anchorIndex > 0) {
+              events.add({
+                'eventId': _generateEventId(),
+                'timestamp': baseTime + _timestampCounter++,
+                'eventType': 'ModifyAnchorEvent',
+                'eventSequence': _eventSequence++,
+                'pathId': currentPathId,
+                'anchorIndex': anchorIndex - 1,
+                'handleOut': handleOut,
+              });
+            }
+
+            // Add new anchor with handleIn
+            events.add({
+              'eventId': _generateEventId(),
+              'timestamp': baseTime + _timestampCounter++,
+              'eventType': 'AddAnchorEvent',
+              'eventSequence': _eventSequence++,
+              'pathId': currentPathId,
+              'position': {'x': x3, 'y': y3Flipped},
+              'anchorType': 'bezier',
+              'handleIn': handleIn,
+            });
+
+            _currentPoint = (x: x3, y: y3Flipped);
+            anchorIndex++;
+
+            _logger.d('curveto: ($x1, $y1) ($x2, $y2) ($x3, $y3)');
+            break;
+
+          case 'v': // Bezier variant (cp1 = current point)
+            if (currentPathId == null) {
+              operandStack.clear();
+              continue;
+            }
+
+            if (operandStack.length < 4) {
+              operandStack.clear();
+              continue;
+            }
+
+            final y3 = operandStack.removeLast();
+            final x3 = operandStack.removeLast();
+            final y2 = operandStack.removeLast();
+            final x2 = operandStack.removeLast();
+
+            final y2Flipped = _flipY(y2);
+            final y3Flipped = _flipY(y3);
+
+            // cp1 = current point, so handleOut is zero vector
+            final handleIn = {
+              'x': x2 - x3,
+              'y': y2Flipped - y3Flipped,
+            };
+
+            events.add({
+              'eventId': _generateEventId(),
+              'timestamp': baseTime + _timestampCounter++,
+              'eventType': 'AddAnchorEvent',
+              'eventSequence': _eventSequence++,
+              'pathId': currentPathId,
+              'position': {'x': x3, 'y': y3Flipped},
+              'anchorType': 'bezier',
+              'handleIn': handleIn,
+            });
+
+            _addWarning(
+              severity: 'info',
+              featureType: 'bezier-variant-v',
+              message: 'Bezier variant "v" operator converted to standard curve',
+              objectId: currentPathId,
+            );
+
+            _currentPoint = (x: x3, y: y3Flipped);
+            anchorIndex++;
+            break;
+
+          case 'y': // Bezier variant (cp2 = end point)
+            if (currentPathId == null) {
+              operandStack.clear();
+              continue;
+            }
+
+            if (operandStack.length < 4) {
+              operandStack.clear();
+              continue;
+            }
+
+            final y3 = operandStack.removeLast();
+            final x3 = operandStack.removeLast();
+            final y1 = operandStack.removeLast();
+            final x1 = operandStack.removeLast();
+
+            final y1Flipped = _flipY(y1);
+            final y3Flipped = _flipY(y3);
+
+            final handleOut = {
+              'x': x1 - _currentPoint.x,
+              'y': y1Flipped - _currentPoint.y,
+            };
+
+            // Set handleOut on previous anchor
+            if (anchorIndex > 0) {
+              events.add({
+                'eventId': _generateEventId(),
+                'timestamp': baseTime + _timestampCounter++,
+                'eventType': 'ModifyAnchorEvent',
+                'eventSequence': _eventSequence++,
+                'pathId': currentPathId,
+                'anchorIndex': anchorIndex - 1,
+                'handleOut': handleOut,
+              });
+            }
+
+            // cp2 = end point, so handleIn is zero vector
+            events.add({
+              'eventId': _generateEventId(),
+              'timestamp': baseTime + _timestampCounter++,
+              'eventType': 'AddAnchorEvent',
+              'eventSequence': _eventSequence++,
+              'pathId': currentPathId,
+              'position': {'x': x3, 'y': y3Flipped},
+              'anchorType': 'bezier',
+            });
+
+            _addWarning(
+              severity: 'info',
+              featureType: 'bezier-variant-y',
+              message: 'Bezier variant "y" operator converted to standard curve',
+              objectId: currentPathId,
+            );
+
+            _currentPoint = (x: x3, y: y3Flipped);
+            anchorIndex++;
+            break;
+
+          case 'h': // closepath
+            if (currentPathId == null) continue;
+
+            events.add({
+              'eventId': _generateEventId(),
+              'timestamp': baseTime + _timestampCounter++,
+              'eventType': 'FinishPathEvent',
+              'eventSequence': _eventSequence++,
+              'pathId': currentPathId,
+              'closed': true,
+            });
+
+            _logger.d('closepath: finishing path $currentPathId');
+
+            currentPathId = null;
+            _currentPoint = subpathStart; // PDF spec: current point becomes subpath start
+            break;
+
+          case 're': // rectangle
+            if (operandStack.length < 4) {
+              _addWarning(
+                severity: 'warning',
+                featureType: 'malformed-operator',
+                message: 'rectangle operator requires 4 operands',
+              );
+              operandStack.clear();
+              continue;
+            }
+
+            final height = operandStack.removeLast();
+            final width = operandStack.removeLast();
+            final y = operandStack.removeLast();
+            final x = operandStack.removeLast();
+
+            // Rectangle y is bottom-left corner in PDF, need to flip to top-left
+            final yTopLeft = _flipY(y + height);
+
+            _validateCoordinate(x, 'rectangle x');
+            _validateCoordinate(yTopLeft, 'rectangle y');
+            _validateCoordinate(width, 'rectangle width');
+            _validateCoordinate(height, 'rectangle height');
+
+            final shapeId = 'import_ai_${_uuid.v4()}';
+
+            events.add({
+              'eventId': _generateEventId(),
+              'timestamp': baseTime + _timestampCounter++,
+              'eventType': 'CreateShapeEvent',
+              'eventSequence': _eventSequence++,
+              'shapeId': shapeId,
+              'shapeType': 'rectangle',
+              'parameters': {
+                'x': x,
+                'y': yTopLeft,
+                'width': width,
+                'height': height,
+              },
+              'strokeColor': strokeColor,
+              'strokeWidth': strokeWidth,
+              'opacity': opacity,
+              if (fillColor != null) 'fillColor': fillColor,
+            });
+
+            _logger.d('rectangle: ($x, $y, $width, $height)');
+            break;
+
+          // Graphics state operators
+          case 'w': // line width
+            if (operandStack.isNotEmpty) {
+              strokeWidth = operandStack.removeLast();
+              _logger.d('stroke width: $strokeWidth');
+            }
+            break;
+
+          case 'RG': // RGB stroke color
+            if (operandStack.length >= 3) {
+              final b = (operandStack.removeLast() * 255).toInt().clamp(0, 255);
+              final g = (operandStack.removeLast() * 255).toInt().clamp(0, 255);
+              final r = (operandStack.removeLast() * 255).toInt().clamp(0, 255);
+              strokeColor = '#${r.toRadixString(16).padLeft(2, '0')}${g.toRadixString(16).padLeft(2, '0')}${b.toRadixString(16).padLeft(2, '0')}';
+              _logger.d('stroke color: $strokeColor');
+            }
+            break;
+
+          case 'rg': // RGB fill color
+            if (operandStack.length >= 3) {
+              final b = (operandStack.removeLast() * 255).toInt().clamp(0, 255);
+              final g = (operandStack.removeLast() * 255).toInt().clamp(0, 255);
+              final r = (operandStack.removeLast() * 255).toInt().clamp(0, 255);
+              fillColor = '#${r.toRadixString(16).padLeft(2, '0')}${g.toRadixString(16).padLeft(2, '0')}${b.toRadixString(16).padLeft(2, '0')}';
+              _logger.d('fill color: $fillColor');
+            }
+            break;
+
+          case 'K': // CMYK stroke color
+          case 'k': // CMYK fill color
+            if (operandStack.length >= 4) {
+              final k = operandStack.removeLast();
+              final y = operandStack.removeLast();
+              final m = operandStack.removeLast();
+              final c = operandStack.removeLast();
+
+              // Convert CMYK to RGB
+              final r = (255 * (1 - c) * (1 - k)).toInt().clamp(0, 255);
+              final g = (255 * (1 - m) * (1 - k)).toInt().clamp(0, 255);
+              final b = (255 * (1 - y) * (1 - k)).toInt().clamp(0, 255);
+
+              final rgbHex = '#${r.toRadixString(16).padLeft(2, '0')}${g.toRadixString(16).padLeft(2, '0')}${b.toRadixString(16).padLeft(2, '0')}';
+
+              if (operator == 'K') {
+                strokeColor = rgbHex;
+              } else {
+                fillColor = rgbHex;
+              }
+
+              _addWarning(
+                severity: 'info',
+                featureType: 'cmyk-color',
+                message: 'CMYK color CMYK($c, $m, $y, $k) converted to RGB $rgbHex',
+              );
+            }
+            break;
+
+          // Rendering operators (safe to ignore for geometry)
+          case 'S': // Stroke
+          case 's': // Close and stroke
+          case 'f': // Fill
+          case 'F': // Fill (alternate)
+          case 'f*': // Fill even-odd
+          case 'B': // Fill and stroke
+          case 'B*': // Fill and stroke even-odd
+          case 'b': // Close, fill, and stroke
+          case 'b*': // Close, fill, and stroke even-odd
+          case 'n': // No-op (for clipping paths)
+            _logger.d('rendering operator: $operator');
+            break;
+
+          default:
+            _logger.d('Unsupported PDF operator: $operator');
+            _addWarning(
+              severity: 'info',
+              featureType: 'unsupported-operator',
+              message: 'Unsupported PDF operator: $operator',
+            );
+            operandStack.clear();
+        }
+      } catch (e, stackTrace) {
+        _logger.e(
+          'Error processing operator: $operator',
+          error: e,
+          stackTrace: stackTrace,
+        );
+        _addWarning(
+          severity: 'warning',
+          featureType: 'operator-error',
+          message: 'Error processing operator "$operator": $e',
+        );
+        operandStack.clear();
+      }
+    }
+
+    // If there's an unclosed path, finish it
+    if (currentPathId != null) {
+      _logger.w('Path $currentPathId was not explicitly closed, finishing');
+      events.add({
         'eventId': _generateEventId(),
         'timestamp': baseTime + _timestampCounter++,
         'eventType': 'FinishPathEvent',
         'eventSequence': _eventSequence++,
-        'pathId': pathId,
-        'closed': true,
-      },
-    ];
+        'pathId': currentPathId,
+        'closed': false,
+      });
+    }
+
+    _logger.i('Generated ${events.length} events from PDF operators');
+
+    return events;
+  }
+
+  /// Tokenizes content stream into operators and operands.
+  List<String> _tokenize(String contentStream) {
+    // Split by whitespace and newlines
+    final tokens = contentStream
+        .split(RegExp(r'\s+'))
+        .where((token) => token.isNotEmpty)
+        .toList();
+
+    return tokens;
   }
 
   /// Extracts metadata from PDF bytes.
@@ -549,275 +1016,3 @@ class AIImporter {
   /// Generates a unique event ID.
   String _generateEventId() => 'import_ai_${_uuid.v4()}';
 }
-
-// NOTE: Future implementation outline for reference
-//
-// When adding a PDF parsing library, the implementation would follow this pattern:
-//
-// ```dart
-// Future<List<Map<String, dynamic>>> _parseOperators(
-//   List<PdfOperator> operators,
-// ) async {
-//   final events = <Map<String, dynamic>>[];
-//   String? currentPathId;
-//   int anchorIndex = 0;
-//
-//   for (final op in operators) {
-//     switch (op.name) {
-//       case 'm': // moveTo
-//         final x = op.operands[0];
-//         final y = _flipY(op.operands[1]);
-//         _validateCoordinate(x, 'x coordinate');
-//         _validateCoordinate(y, 'y coordinate');
-//
-//         currentPathId = 'import_ai_${_uuid.v4()}';
-//         anchorIndex = 0;
-//
-//         events.add({
-//           'eventId': _generateEventId(),
-//           'timestamp': _nextTimestamp(),
-//           'eventType': 'CreatePathEvent',
-//           'eventSequence': _eventSequence++,
-//           'pathId': currentPathId,
-//           'startAnchor': {'x': x, 'y': y},
-//           'strokeColor': '#000000',
-//           'strokeWidth': 1.0,
-//         });
-//
-//         _currentPoint = (x: x, y: y);
-//         break;
-//
-//       case 'l': // lineTo
-//         if (currentPathId == null) {
-//           _addWarning(
-//             severity: 'warning',
-//             featureType: 'malformed-path',
-//             message: 'lineto operator without preceding moveto',
-//           );
-//           continue;
-//         }
-//
-//         final x = op.operands[0];
-//         final y = _flipY(op.operands[1]);
-//         _validateCoordinate(x, 'x coordinate');
-//         _validateCoordinate(y, 'y coordinate');
-//
-//         events.add({
-//           'eventId': _generateEventId(),
-//           'timestamp': _nextTimestamp(),
-//           'eventType': 'AddAnchorEvent',
-//           'eventSequence': _eventSequence++,
-//           'pathId': currentPathId,
-//           'position': {'x': x, 'y': y},
-//           'anchorType': 'line',
-//         });
-//
-//         _currentPoint = (x: x, y: y);
-//         anchorIndex++;
-//         break;
-//
-//       case 'c': // curveTo (cubic Bezier)
-//         if (currentPathId == null) continue;
-//
-//         final x1 = op.operands[0];
-//         final y1 = _flipY(op.operands[1]);
-//         final x2 = op.operands[2];
-//         final y2 = _flipY(op.operands[3]);
-//         final x = op.operands[4];
-//         final y = _flipY(op.operands[5]);
-//
-//         _validateCoordinate(x1, 'control point 1 x');
-//         _validateCoordinate(y1, 'control point 1 y');
-//         _validateCoordinate(x2, 'control point 2 x');
-//         _validateCoordinate(y2, 'control point 2 y');
-//         _validateCoordinate(x, 'end point x');
-//         _validateCoordinate(y, 'end point y');
-//
-//         // Convert absolute control points to relative handles
-//         final handleOut = {
-//           'x': x1 - _currentPoint.x,
-//           'y': y1 - _currentPoint.y,
-//         };
-//         final handleIn = {
-//           'x': x2 - x,
-//           'y': y2 - y,
-//         };
-//
-//         // Set handleOut on previous anchor (if not first anchor)
-//         if (anchorIndex > 0) {
-//           events.add({
-//             'eventId': _generateEventId(),
-//             'timestamp': _nextTimestamp(),
-//             'eventType': 'ModifyAnchorEvent',
-//             'eventSequence': _eventSequence++,
-//             'pathId': currentPathId,
-//             'anchorIndex': anchorIndex - 1,
-//             'handleOut': handleOut,
-//           });
-//         }
-//
-//         // Add new anchor with handleIn
-//         events.add({
-//           'eventId': _generateEventId(),
-//           'timestamp': _nextTimestamp(),
-//           'eventType': 'AddAnchorEvent',
-//           'eventSequence': _eventSequence++,
-//           'pathId': currentPathId,
-//           'position': {'x': x, 'y': y},
-//           'anchorType': 'bezier',
-//           'handleIn': handleIn,
-//         });
-//
-//         _currentPoint = (x: x, y: y);
-//         anchorIndex++;
-//         break;
-//
-//       case 'v': // Bezier variant (cp1 = current point)
-//         if (currentPathId == null) continue;
-//
-//         final x2 = op.operands[0];
-//         final y2 = _flipY(op.operands[1]);
-//         final x = op.operands[2];
-//         final y = _flipY(op.operands[3]);
-//
-//         // cp1 = current point, so handleOut is zero vector
-//         final handleIn = {
-//           'x': x2 - x,
-//           'y': y2 - y,
-//         };
-//
-//         events.add({
-//           'eventId': _generateEventId(),
-//           'timestamp': _nextTimestamp(),
-//           'eventType': 'AddAnchorEvent',
-//           'eventSequence': _eventSequence++,
-//           'pathId': currentPathId,
-//           'position': {'x': x, 'y': y},
-//           'anchorType': 'bezier',
-//           'handleIn': handleIn,
-//         });
-//
-//         _addWarning(
-//           severity: 'info',
-//           featureType: 'bezier-variant-v',
-//           message: 'Bezier variant "v" operator converted to standard curve',
-//           objectId: currentPathId,
-//         );
-//
-//         _currentPoint = (x: x, y: y);
-//         anchorIndex++;
-//         break;
-//
-//       case 'y': // Bezier variant (cp2 = end point)
-//         if (currentPathId == null) continue;
-//
-//         final x1 = op.operands[0];
-//         final y1 = _flipY(op.operands[1]);
-//         final x = op.operands[2];
-//         final y = _flipY(op.operands[3]);
-//
-//         final handleOut = {
-//           'x': x1 - _currentPoint.x,
-//           'y': y1 - _currentPoint.y,
-//         };
-//
-//         // Set handleOut on previous anchor
-//         if (anchorIndex > 0) {
-//           events.add({
-//             'eventId': _generateEventId(),
-//             'timestamp': _nextTimestamp(),
-//             'eventType': 'ModifyAnchorEvent',
-//             'eventSequence': _eventSequence++,
-//             'pathId': currentPathId,
-//             'anchorIndex': anchorIndex - 1,
-//             'handleOut': handleOut,
-//           });
-//         }
-//
-//         // cp2 = end point, so handleIn is zero vector
-//         events.add({
-//           'eventId': _generateEventId(),
-//           'timestamp': _nextTimestamp(),
-//           'eventType': 'AddAnchorEvent',
-//           'eventSequence': _eventSequence++,
-//           'pathId': currentPathId,
-//           'position': {'x': x, 'y': y},
-//           'anchorType': 'bezier',
-//         });
-//
-//         _addWarning(
-//           severity: 'info',
-//           featureType: 'bezier-variant-y',
-//           message: 'Bezier variant "y" operator converted to standard curve',
-//           objectId: currentPathId,
-//         );
-//
-//         _currentPoint = (x: x, y: y);
-//         anchorIndex++;
-//         break;
-//
-//       case 'h': // closePath
-//         if (currentPathId == null) continue;
-//
-//         events.add({
-//           'eventId': _generateEventId(),
-//           'timestamp': _nextTimestamp(),
-//           'eventType': 'FinishPathEvent',
-//           'eventSequence': _eventSequence++,
-//           'pathId': currentPathId,
-//           'closed': true,
-//         });
-//
-//         currentPathId = null;
-//         break;
-//
-//       case 're': // rectangle
-//         final x = op.operands[0];
-//         final y = _flipY(op.operands[1] + op.operands[3]); // Bottom-left flipped
-//         final width = op.operands[2];
-//         final height = op.operands[3];
-//
-//         _validateCoordinate(x, 'rectangle x');
-//         _validateCoordinate(y, 'rectangle y');
-//         _validateCoordinate(width, 'rectangle width');
-//         _validateCoordinate(height, 'rectangle height');
-//
-//         final shapeId = 'import_ai_${_uuid.v4()}';
-//
-//         events.add({
-//           'eventId': _generateEventId(),
-//           'timestamp': _nextTimestamp(),
-//           'eventType': 'CreateShapeEvent',
-//           'eventSequence': _eventSequence++,
-//           'shapeId': shapeId,
-//           'shapeType': 'rectangle',
-//           'parameters': {
-//             'x': x,
-//             'y': y,
-//             'width': width,
-//             'height': height,
-//           },
-//           'strokeColor': '#000000',
-//           'strokeWidth': 1.0,
-//         });
-//         break;
-//
-//       case 'S': // Stroke
-//       case 'f': // Fill
-//       case 'B': // Fill and stroke
-//         // Rendering commands - safe to ignore
-//         break;
-//
-//       default:
-//         _logger.d('Unsupported PDF operator: ${op.name}');
-//         _addWarning(
-//           severity: 'info',
-//           featureType: 'unsupported-operator',
-//           message: 'Unsupported PDF operator: ${op.name}',
-//         );
-//     }
-//   }
-//
-//   return events;
-// }
-// ```
