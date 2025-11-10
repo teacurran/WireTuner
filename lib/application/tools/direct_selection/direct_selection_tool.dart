@@ -1,4 +1,3 @@
-import 'dart:math' as math;
 import 'dart:ui' as ui;
 
 import 'package:flutter/rendering.dart';
@@ -136,7 +135,8 @@ class DirectSelectionTool implements ITool {
   final EventRecorder _eventRecorder;
   final PathRenderer _pathRenderer;
   final OperationGroupingService? _operationGroupingService;
-  final TelemetryService? _telemetryService;
+  // ignore: unused_field
+  final TelemetryService? _telemetryService; // Reserved for future telemetry instrumentation
   final Logger _logger = Logger();
   final Uuid _uuid = const Uuid();
 
@@ -159,7 +159,8 @@ class DirectSelectionTool implements ITool {
   _DragContext? _dragContext;
 
   /// Currently hovered anchor (for cursor and visual feedback).
-  HoveredAnchor? _hoveredAnchor;
+  // ignore: unused_field
+  HoveredAnchor? _hoveredAnchor; // Reserved for future overlay rendering
 
   /// Current cursor based on hover state.
   MouseCursor _currentCursor = SystemMouseCursors.precise;
@@ -718,9 +719,6 @@ class DirectSelectionTool implements ITool {
     _eventRecorder.recordEvent(event);
   }
 
-  /// Calculates the length of a vector.
-  double _vectorLength(Point vector) =>
-      math.sqrt(vector.x * vector.x + vector.y * vector.y);
 }
 
 /// Internal state for drag operations.

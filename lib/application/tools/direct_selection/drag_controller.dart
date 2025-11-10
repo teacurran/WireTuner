@@ -70,7 +70,8 @@ class DragController {
 
   /// Handles dragging the handleIn component.
   DragResult _dragHandleIn(AnchorPoint anchor, Point delta) {
-    // Calculate absolute handle position from drag
+    // Calculate absolute handle position from drag.
+    // Delta is relative to the starting absolute position (anchor.position + anchor.handleIn).
     final absoluteHandlePos = anchor.handleIn != null
         ? Point(
             x: anchor.position.x + anchor.handleIn!.x + delta.x,
@@ -133,7 +134,8 @@ class DragController {
 
   /// Handles dragging the handleOut component.
   DragResult _dragHandleOut(AnchorPoint anchor, Point delta) {
-    // Calculate absolute handle position from drag
+    // Calculate absolute handle position from drag.
+    // Delta is relative to the starting absolute position (anchor.position + anchor.handleOut).
     final absoluteHandlePos = anchor.handleOut != null
         ? Point(
             x: anchor.position.x + anchor.handleOut!.x + delta.x,

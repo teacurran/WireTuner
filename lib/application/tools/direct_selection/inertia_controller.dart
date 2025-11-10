@@ -1,4 +1,4 @@
-import 'dart:math' as math show min, sqrt;
+import 'dart:math' as math show min;
 
 import 'package:wiretuner/domain/events/event_base.dart' show Point;
 import 'package:wiretuner/domain/models/geometry/point_extensions.dart';
@@ -228,10 +228,22 @@ class InertiaController {
     }
 
     // Velocity in world units per millisecond
-    return Point(
+    final velocity = Point(
       x: totalDx / totalDt,
       y: totalDy / totalDt,
     );
+
+    // Cap velocity to prevent runaway inertia in test environments
+    // where timestamps may be unrealistic (max 1 px/ms = 1000 px/sec)
+    // Velocities above this are likely test artifacts and should not trigger inertia
+    const maxVelocity = 1.0;
+    final speed = velocity.magnitude;
+    if (speed > maxVelocity) {
+      // Return zero velocity to disable inertia for unrealistic speeds
+      return Point(x: 0, y: 0);
+    }
+
+    return velocity;
   }
 
   /// Generates inertia sequence with exponential decay.

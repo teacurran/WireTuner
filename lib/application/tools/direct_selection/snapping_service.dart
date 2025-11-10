@@ -99,7 +99,8 @@ class SnappingService {
   late final double _angleIncrementRadians;
 
   /// Last snapped grid position (for hysteresis tracking).
-  Point? _lastSnappedGrid;
+  // ignore: unused_field
+  Point? _lastSnappedGrid; // Reserved for future hysteresis implementation
 
   /// Whether currently snapped (for hysteresis).
   bool _isSnapped = false;

@@ -166,7 +166,7 @@ void main() {
         tool.onPointerUp(const PointerUpEvent(position: Offset(170, 120)));
 
         // Wait for async persistence
-        await Future.delayed(const Duration(milliseconds: 100));
+        await Future<void>.delayed(const Duration(milliseconds: 100));
 
         // Verify events were recorded
         expect(recorder.anchorEvents, isNotEmpty,
@@ -237,7 +237,7 @@ void main() {
         tool.onPointerMove(const PointerMoveEvent(position: Offset(170, 130)));
         tool.onPointerUp(const PointerUpEvent(position: Offset(170, 130)));
 
-        await Future.delayed(const Duration(milliseconds: 100));
+        await Future<void>.delayed(const Duration(milliseconds: 100));
 
         // Verify events recorded
         expect(recorder.anchorEvents, isNotEmpty);
@@ -307,7 +307,7 @@ void main() {
         tool.onPointerMove(const PointerMoveEvent(position: Offset(150, 250)));
         tool.onPointerUp(const PointerUpEvent(position: Offset(150, 250)));
 
-        await Future.delayed(const Duration(milliseconds: 100));
+        await Future<void>.delayed(const Duration(milliseconds: 100));
 
         expect(recorder.anchorEvents, isNotEmpty);
 
@@ -372,7 +372,7 @@ void main() {
         tool.onPointerMove(const PointerMoveEvent(position: Offset(160, 180)));
         tool.onPointerUp(const PointerUpEvent(position: Offset(160, 180)));
 
-        await Future.delayed(const Duration(milliseconds: 100));
+        await Future<void>.delayed(const Duration(milliseconds: 100));
 
         final finalEvent = recorder.anchorEvents.last;
 
@@ -437,7 +437,7 @@ void main() {
         tool.onPointerMove(const PointerMoveEvent(position: Offset(170, 120)));
         tool.onPointerUp(const PointerUpEvent(position: Offset(170, 120)));
 
-        await Future.delayed(const Duration(milliseconds: 100));
+        await Future<void>.delayed(const Duration(milliseconds: 100));
 
         expect(recorder.anchorEvents, isNotEmpty);
 
@@ -509,7 +509,7 @@ void main() {
         tool.onPointerMove(const PointerMoveEvent(position: Offset(50, 70)));
         tool.onPointerUp(const PointerUpEvent(position: Offset(50, 70)));
 
-        await Future.delayed(const Duration(milliseconds: 100));
+        await Future<void>.delayed(const Duration(milliseconds: 100));
 
         expect(recorder.anchorEvents, isNotEmpty);
 
@@ -584,7 +584,7 @@ void main() {
         tool.onPointerMove(const PointerMoveEvent(position: Offset(180, 140)));
         tool.onPointerUp(const PointerUpEvent(position: Offset(180, 140)));
 
-        await Future.delayed(const Duration(milliseconds: 100));
+        await Future<void>.delayed(const Duration(milliseconds: 100));
 
         expect(recorder.anchorEvents, isNotEmpty);
 
@@ -669,7 +669,7 @@ void main() {
         tool.onPointerMove(const PointerMoveEvent(position: Offset(130, 130)));
         tool.onPointerUp(const PointerUpEvent(position: Offset(130, 130)));
 
-        await Future.delayed(const Duration(milliseconds: 100));
+        await Future<void>.delayed(const Duration(milliseconds: 100));
 
         final finalEvent = recorder.anchorEvents.last;
 
@@ -740,14 +740,14 @@ void main() {
           tool.onPointerMove(
             PointerMoveEvent(position: Offset(150 + i * 0.5, 100 + i * 0.2)),
           );
-          await Future.delayed(const Duration(milliseconds: 5));
+          await Future<void>.delayed(const Duration(milliseconds: 5));
         }
 
         // Finish drag
         tool.onPointerUp(const PointerUpEvent(position: Offset(250, 140)));
 
         // Wait for async persistence
-        await Future.delayed(const Duration(milliseconds: 100));
+        await Future<void>.delayed(const Duration(milliseconds: 100));
 
         // Verify sampling rate
         final eventsPerSec = recorder.eventsPerSecond;
@@ -809,13 +809,13 @@ void main() {
 
         // First move - emitted immediately
         tool.onPointerMove(const PointerMoveEvent(position: Offset(160, 110)));
-        await Future.delayed(const Duration(milliseconds: 10));
+        await Future<void>.delayed(const Duration(milliseconds: 10));
 
         final eventsAfterFirst = recorder.anchorEvents.length;
 
         // Second move quickly (< 50ms) - will be buffered
         tool.onPointerMove(const PointerMoveEvent(position: Offset(170, 120)));
-        await Future.delayed(const Duration(milliseconds: 20));
+        await Future<void>.delayed(const Duration(milliseconds: 20));
 
         // Should still have same count (buffered)
         expect(recorder.anchorEvents.length, equals(eventsAfterFirst),
@@ -823,7 +823,7 @@ void main() {
 
         // Finish drag - flushes buffered event
         tool.onPointerUp(const PointerUpEvent(position: Offset(170, 120)));
-        await Future.delayed(const Duration(milliseconds: 100));
+        await Future<void>.delayed(const Duration(milliseconds: 100));
 
         // Verify flush was called
         expect(recorder.flushCount, equals(initialFlushes + 1),
@@ -888,12 +888,12 @@ void main() {
           tool.onPointerMove(
             PointerMoveEvent(position: Offset(150 + i * 10.0, 100 + i * 5.0)),
           );
-          await Future.delayed(const Duration(milliseconds: 60)); // > 50ms
+          await Future<void>.delayed(const Duration(milliseconds: 60)); // > 50ms
         }
 
         // Finish drag
         tool.onPointerUp(const PointerUpEvent(position: Offset(200, 125)));
-        await Future.delayed(const Duration(milliseconds: 100));
+        await Future<void>.delayed(const Duration(milliseconds: 100));
 
         // Verify complete workflow
         expect(recorder.anchorEvents.length, greaterThan(0),
@@ -973,7 +973,7 @@ void main() {
         tool.onPointerMove(const PointerMoveEvent(position: Offset(100, 100)));
         tool.onPointerUp(const PointerUpEvent(position: Offset(100, 100)));
 
-        await Future.delayed(const Duration(milliseconds: 100));
+        await Future<void>.delayed(const Duration(milliseconds: 100));
 
         expect(recorder.anchorEvents, isNotEmpty);
 
@@ -1038,7 +1038,7 @@ void main() {
         tool.onPointerMove(const PointerMoveEvent(position: Offset(160, 120)));
         tool.onPointerUp(const PointerUpEvent(position: Offset(160, 120)));
 
-        await Future.delayed(const Duration(milliseconds: 100));
+        await Future<void>.delayed(const Duration(milliseconds: 100));
 
         final finalEvent = recorder.anchorEvents.last;
 
