@@ -233,31 +233,24 @@ class _WireTunerCanvasState extends State<WireTunerCanvas> {
       child: Listener(
         // Handle scroll events for zoom
         onPointerSignal: _viewportState.onPointerSignal,
-        child: GestureDetector(
-          // Handle pan gestures for viewport movement
-          onPanStart: _viewportState.onPanStart,
-          onPanUpdate: _viewportState.onPanUpdate,
-          onPanEnd: _viewportState.onPanEnd,
-          // Background behavior for gesture detection
-          behavior: HitTestBehavior.opaque,
-          child: Stack(
-            children: [
-              // Bottom layer: Document content
-              CustomPaint(
-                painter: DocumentPainter(
-                  paths: widget.paths,
-                  viewportController: widget.viewportController,
-                  strokeWidth: 2.0,
-                  strokeColor: Colors.black87,
-                  renderPipeline: _renderPipeline,
-                ),
-                // Fill available space
-                size: Size.infinite,
+        child: Stack(
+          children: [
+            // Bottom layer: Document content
+            CustomPaint(
+              painter: DocumentPainter(
+                paths: widget.paths,
+                shapes: widget.shapes,
+                viewportController: widget.viewportController,
+                strokeWidth: 2.0,
+                strokeColor: Colors.black87,
+                renderPipeline: _renderPipeline,
               ),
-              // Overlay layer: All overlays in z-index order
-              OverlayLayer(registry: _overlayRegistry),
-            ],
-          ),
+              // Fill available space
+              size: Size.infinite,
+            ),
+            // Overlay layer: All overlays in z-index order
+            OverlayLayer(registry: _overlayRegistry),
+          ],
         ),
       ),
     );

@@ -205,6 +205,7 @@ abstract class ShapeToolBase implements ITool {
     final isShiftPressed = HardwareKeyboard.instance.isShiftPressed;
     final isAltPressed = HardwareKeyboard.instance.isAltPressed;
 
+    // Calculate bounding box in world coordinates
     final boundingBox = _calculateBoundingBox(
       _dragStartPos!,
       _currentDragPos!,
@@ -212,7 +213,18 @@ abstract class ShapeToolBase implements ITool {
       isAltPressed,
     );
 
-    renderShapePreview(canvas, boundingBox, isShiftPressed, isAltPressed);
+    // Convert bounding box corners from world to screen coordinates
+    final topLeft = _viewportController.worldToScreen(
+      Point(x: boundingBox.left, y: boundingBox.top),
+    );
+    final bottomRight = _viewportController.worldToScreen(
+      Point(x: boundingBox.right, y: boundingBox.bottom),
+    );
+
+    // Create screen-space bounding box
+    final screenBoundingBox = Rect.fromPoints(topLeft, bottomRight);
+
+    renderShapePreview(canvas, screenBoundingBox, isShiftPressed, isAltPressed);
   }
 
   // Private helper methods

@@ -7,10 +7,12 @@
 - **Dependencies**: T015, T017
 
 ## Overview
-Render all anchor points on paths at all times with type-specific visual indicators: red circles for smooth/curve points, black squares for corner points, and orange triangles for tangent points.
+Render all anchor points on paths with type-specific visual indicators: red circles for smooth/curve points, black squares for corner points, and orange triangles for tangent points. Anchor points are displayed by default on all paths, with an option to toggle visibility via the View menu.
 
 ## Objectives
-- Always-visible anchor points (not just when selected)
+- Display anchor points by default on all paths (not just when selected)
+- Toggle visibility via View menu: View → Show/Hide Anchor Points
+- Keyboard shortcut: Cmd+Shift+A (macOS) / Ctrl+Shift+A (Windows)
 - Type-specific visualization based on handle configuration
 - Scale-independent rendering (same visual size at all zoom levels)
 - Transparent but clickable for future selection/dragging
@@ -210,16 +212,33 @@ class AnchorPointOverlayPainter extends CustomPainter {
 }
 ```
 
+### View Menu Toggle
+
+Add visibility toggle to application preferences and document state:
+
+```dart
+/// In document model or application preferences
+class ViewSettings {
+  final bool showAnchorPoints; // Default: true
+
+  const ViewSettings({
+    this.showAnchorPoints = true, // Visible by default
+  });
+}
+```
+
 ### Integration with WireTunerCanvas
 
-Update `wiretuner_canvas.dart` to register the anchor point overlay:
+Update `wiretuner_canvas.dart` to register the anchor point overlay conditionally:
 
 ```dart
 void _registerOverlays(Map<String, domain.Path> pathsMap) {
   // ... existing overlays ...
 
-  // Register anchor point overlay (z-index 115)
-  if (pathsMap.isNotEmpty) {
+  // Register anchor point overlay (z-index 115) if visibility enabled
+  final showAnchorPoints = widget.viewSettings?.showAnchorPoints ?? true;
+
+  if (pathsMap.isNotEmpty && showAnchorPoints) {
     _overlayRegistry.register(
       CanvasOverlayEntry.painter(
         id: 'anchor-points',
@@ -237,14 +256,58 @@ void _registerOverlays(Map<String, domain.Path> pathsMap) {
 }
 ```
 
+### View Menu Integration
+
+Add menu item in application menu bar:
+
+```dart
+// In main menu bar construction
+MenuBar(
+  children: [
+    // ... File, Edit menus ...
+    SubmenuButton(
+      menuChildren: [
+        MenuItemButton(
+          shortcut: const SingleActivator(
+            LogicalKeyboardKey.keyA,
+            shift: true,
+            meta: true, // Cmd on macOS
+          ),
+          onPressed: _toggleAnchorPointVisibility,
+          child: Text(
+            _viewSettings.showAnchorPoints
+              ? 'Hide Anchor Points'
+              : 'Show Anchor Points'
+          ),
+        ),
+        // ... other view menu items ...
+      ],
+      child: const Text('View'),
+    ),
+  ],
+)
+
+void _toggleAnchorPointVisibility() {
+  setState(() {
+    _viewSettings = _viewSettings.copyWith(
+      showAnchorPoints: !_viewSettings.showAnchorPoints,
+    );
+  });
+}
+```
+
 ## Success Criteria
-- [ ] All anchor points visible on all paths at all times
+- [ ] Anchor points visible by default on all paths
+- [ ] View menu contains "Show/Hide Anchor Points" toggle
+- [ ] Keyboard shortcut Cmd+Shift+A (macOS) / Ctrl+Shift+A (Windows) toggles visibility
+- [ ] Visibility preference persisted in application settings
 - [ ] Smooth anchors render as red circles (5px)
 - [ ] Corner anchors render as black squares (7x7px)
 - [ ] Tangent anchors render as orange triangles (7px)
 - [ ] Anchors maintain constant screen size regardless of zoom level
 - [ ] No performance degradation with 100+ anchors on screen
-- [ ] Anchors are clickable (hit test passes through transparent areas)
+- [ ] Anchors are clickable when visible (hit test passes through transparent areas)
+- [ ] When hidden, overlay is unregistered (no rendering or hit testing overhead)
 
 ## Testing
 - [ ] Unit test: `_determineVisualType()` returns correct type for each handle configuration

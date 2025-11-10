@@ -120,12 +120,12 @@ class DocumentEventApplier {
 
     switch (event.shapeType) {
       case events.ShapeType.rectangle:
-        final x = event.parameters['x'] ?? 0.0;
-        final y = event.parameters['y'] ?? 0.0;
+        final centerX = event.parameters['centerX'] ?? 0.0;
+        final centerY = event.parameters['centerY'] ?? 0.0;
         final width = event.parameters['width'] ?? 100.0;
         final height = event.parameters['height'] ?? 100.0;
         shape = Shape.rectangle(
-          center: events.Point(x: x + width / 2, y: y + height / 2),
+          center: events.Point(x: centerX, y: centerY),
           width: width,
           height: height,
         );

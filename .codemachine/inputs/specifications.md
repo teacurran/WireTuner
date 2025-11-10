@@ -508,7 +508,13 @@ To begin implementation:
 
 ### T040: Anchor Point Overlay Rendering
 
-**Objective**: Render all anchor points on paths at all times with type-specific visual indicators.
+**Objective**: Render all anchor points on paths with type-specific visual indicators. Anchor points are displayed by default on all paths, with an option to toggle visibility via View menu.
+
+**Display Behavior**:
+- **Default**: Anchor points visible on all paths (always on by default)
+- **Toggle**: View → Show/Hide Anchor Points (Cmd+Shift+A / Ctrl+Shift+A)
+- **Persistence**: Visibility preference saved per-document and in application settings
+- **Performance**: When hidden, overlay is unregistered (no rendering overhead)
 
 **Visual Specifications**:
 - **Smooth/Curve Anchors**: Red circles (5px radius)

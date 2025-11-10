@@ -7,7 +7,7 @@
 - **Dependencies**: T040
 
 ## Overview
-Enable clicking and selecting anchor points via transparent fill areas. Implement hit testing to detect when user clicks near an anchor point.
+Enable clicking and selecting anchor points via transparent fill areas. Implement hit testing to detect when user clicks near an anchor point. Hit testing only active when anchor points are visible (View → Show Anchor Points enabled).
 
 ## Objectives
 - Detect clicks on anchor points with appropriate hit radius
@@ -149,14 +149,18 @@ Update `direct_selection_tool.dart`:
 bool onPointerDown(PointerDownEvent event) {
   final screenPos = event.localPosition;
 
-  // First, try to hit test anchors
-  final anchorHit = AnchorHitTester.hitTestAnchor(
-    screenPosition: screenPos,
-    paths: _getPathsMap(),
-    viewportController: _viewportController,
-  );
+  // Only hit test anchors if they're visible
+  final showAnchorPoints = _viewSettings?.showAnchorPoints ?? true;
 
-  if (anchorHit != null) {
+  if (showAnchorPoints) {
+    // First, try to hit test anchors
+    final anchorHit = AnchorHitTester.hitTestAnchor(
+      screenPosition: screenPos,
+      paths: _getPathsMap(),
+      viewportController: _viewportController,
+    );
+
+    if (anchorHit != null) {
     // Anchor hit - update selection
     final isShiftPressed = HardwareKeyboard.instance.isShiftPressed;
 
@@ -172,7 +176,11 @@ bool onPointerDown(PointerDownEvent event) {
     return true;
   }
 
-  // No anchor hit - fall back to object selection
+      return true;
+    }
+  }
+
+  // No anchor hit (or anchors hidden) - fall back to object selection
   return _handleObjectSelection(event);
 }
 
@@ -246,11 +254,12 @@ class Selection {
 ```
 
 ## Success Criteria
-- [ ] Clicking on anchor (within 8px) selects it
+- [ ] Clicking on anchor (within 8px) selects it when anchors are visible
+- [ ] Hit testing disabled when View → Show Anchor Points is off
 - [ ] Closest anchor within radius is selected (if multiple overlapping)
 - [ ] Shift + click adds anchor to selection
 - [ ] Click outside deselects all anchors (unless Shift held)
-- [ ] Anchor selection takes priority over path selection
+- [ ] Anchor selection takes priority over path selection when visible
 - [ ] Selection state includes anchor metadata (pathId, index)
 
 ## Testing

@@ -1,9 +1,11 @@
+import 'dart:math' show cos, sin;
 import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
 import 'package:wiretuner/domain/models/geometry/point_extensions.dart';
 import 'package:wiretuner/domain/models/path.dart' as domain;
 import 'package:wiretuner/domain/models/segment.dart';
+import 'package:wiretuner/domain/models/shape.dart';
 import 'package:wiretuner/presentation/canvas/paint_styles.dart';
 import 'package:wiretuner/presentation/canvas/render_pipeline.dart';
 import 'package:wiretuner/presentation/canvas/viewport/viewport_controller.dart';
@@ -53,12 +55,14 @@ class DocumentPainter extends CustomPainter {
   /// Creates a document painter with the specified paths and viewport.
   ///
   /// The [paths] list should contain the paths to render.
+  /// The [shapes] map should contain shape objects by ID.
   /// The [viewportController] provides the pan/zoom transformation state.
   /// The [strokeWidth] and [strokeColor] are placeholder style properties.
   /// The [renderPipeline] is an optional advanced rendering pipeline; if not
   /// provided, the painter uses the legacy direct rendering approach.
   DocumentPainter({
     required this.paths,
+    required this.shapes,
     required this.viewportController,
     this.strokeWidth = 1.0,
     this.strokeColor = Colors.black,
@@ -70,6 +74,9 @@ class DocumentPainter extends CustomPainter {
   /// These are domain [Path] objects that will be converted to
   /// dart:ui paths for rendering.
   final List<domain.Path> paths;
+
+  /// The map of shapes to render by ID.
+  final Map<String, Shape> shapes;
 
   /// The viewport controller providing transformation state.
   ///
@@ -154,13 +161,118 @@ class DocumentPainter extends CustomPainter {
       canvas.drawPath(uiPath, paint);
     }
 
+    // Render each shape
+    for (final shape in shapes.values) {
+      final uiPath = _convertShapeToUiPath(shape);
+      canvas.drawPath(uiPath, paint);
+    }
+
     canvas.restore();
+  }
+
+  /// Converts a parametric Shape to a dart:ui Path for rendering.
+  ui.Path _convertShapeToUiPath(Shape shape) {
+    return shape.when(
+      rectangle: (center, width, height, cornerRadius) {
+        final path = ui.Path();
+        final rect = Rect.fromCenter(
+          center: Offset(center.x, center.y),
+          width: width,
+          height: height,
+        );
+        if (cornerRadius > 0) {
+          path.addRRect(RRect.fromRectAndRadius(
+            rect,
+            Radius.circular(cornerRadius),
+          ));
+        } else {
+          path.addRect(rect);
+        }
+        return path;
+      },
+      ellipse: (center, width, height) {
+        final path = ui.Path();
+        final rect = Rect.fromCenter(
+          center: Offset(center.x, center.y),
+          width: width,
+          height: height,
+        );
+        path.addOval(rect);
+        return path;
+      },
+      polygon: (center, radius, sides) {
+        final path = ui.Path();
+        _addPolygonToPath(path, center, radius, sides);
+        return path;
+      },
+      star: (center, outerRadius, innerRadius, pointCount) {
+        final path = ui.Path();
+        _addStarToPath(path, center, outerRadius, innerRadius, pointCount);
+        return path;
+      },
+    );
+  }
+
+  /// Adds a polygon to the given path.
+  void _addPolygonToPath(ui.Path path, Point center, double radius, int sides) {
+    if (sides < 3) return;
+
+    final angleStep = 2 * 3.141592653589793 / sides;
+    final startAngle = -3.141592653589793 / 2; // Start at top
+
+    // Move to first vertex
+    final firstX = center.x + radius * cos(startAngle);
+    final firstY = center.y + radius * sin(startAngle);
+    path.moveTo(firstX, firstY);
+
+    // Draw lines to remaining vertices
+    for (var i = 1; i < sides; i++) {
+      final angle = startAngle + angleStep * i;
+      final x = center.x + radius * cos(angle);
+      final y = center.y + radius * sin(angle);
+      path.lineTo(x, y);
+    }
+
+    path.close();
+  }
+
+  /// Adds a star to the given path.
+  void _addStarToPath(
+    ui.Path path,
+    Point center,
+    double outerRadius,
+    double innerRadius,
+    int pointCount,
+  ) {
+    if (pointCount < 2) return;
+
+    final angleStep = 3.141592653589793 / pointCount; // π / pointCount
+    final startAngle = -3.141592653589793 / 2; // Start at top
+
+    // Move to first outer vertex
+    final firstX = center.x + outerRadius * cos(startAngle);
+    final firstY = center.y + outerRadius * sin(startAngle);
+    path.moveTo(firstX, firstY);
+
+    // Alternate between outer and inner vertices
+    for (var i = 0; i < pointCount * 2; i++) {
+      final angle = startAngle + angleStep * (i + 1);
+      final radius = (i % 2 == 0) ? innerRadius : outerRadius;
+      final x = center.x + radius * cos(angle);
+      final y = center.y + radius * sin(angle);
+      path.lineTo(x, y);
+    }
+
+    path.close();
   }
 
   @override
   bool shouldRepaint(covariant DocumentPainter oldDelegate) {
     // Repaint if paths reference changed
     if (paths != oldDelegate.paths) return true;
+
+    // Repaint if shapes reference changed
+    if (shapes != oldDelegate.shapes) return true;
 
     // Repaint if viewport controller changed
     // The controller is also passed to super(repaint:) which handles

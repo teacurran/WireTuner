@@ -311,12 +311,13 @@ class _ViewportBindingState extends State<ViewportBinding> {
                           // Note: GestureDetector does not support both onPan* and onScale*
                           // simultaneously. Scale is a superset of pan.
                           onScaleStart: (details) {
+                            // Only handle pan gestures when pan mode is active
+                            if (!_isPanModeActive) return;
+
                             // Update cursor when pan mode is active and dragging
-                            if (_isPanModeActive) {
-                              setState(() {
-                                _panModeCursor = SystemMouseCursors.grabbing;
-                              });
-                            }
+                            setState(() {
+                              _panModeCursor = SystemMouseCursors.grabbing;
+                            });
                             // Convert ScaleStartDetails to pan-like handling
                             _state.onPanStart(
                               DragStartDetails(
@@ -325,6 +326,9 @@ class _ViewportBindingState extends State<ViewportBinding> {
                             );
                           },
                           onScaleUpdate: (details) {
+                            // Only handle gestures when pan mode is active
+                            if (!_isPanModeActive) return;
+
                             // Handle both pan and zoom through scale gesture
                             if (details.scale != 1.0) {
                               // Zoom gesture
@@ -340,12 +344,13 @@ class _ViewportBindingState extends State<ViewportBinding> {
                             }
                           },
                           onScaleEnd: (details) {
+                            // Only handle pan gestures when pan mode is active
+                            if (!_isPanModeActive) return;
+
                             // Reset cursor when pan mode is active and drag ends
-                            if (_isPanModeActive) {
-                              setState(() {
-                                _panModeCursor = SystemMouseCursors.grab;
-                              });
-                            }
+                            setState(() {
+                              _panModeCursor = SystemMouseCursors.grab;
+                            });
                             // End both pan and zoom
                             _state.onPanEnd(
                               DragEndDetails(

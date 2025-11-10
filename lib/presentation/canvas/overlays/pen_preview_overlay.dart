@@ -146,11 +146,15 @@ class PenPreviewOverlayPainter extends CustomPainter {
     final anchorPos = state.dragStartPosition!;
     final dragPos = state.currentDragPosition!;
 
+    // Convert world coordinates to screen coordinates
+    final anchorOffset = viewportController.worldToScreen(anchorPos);
+    final dragOffset = viewportController.worldToScreen(dragPos);
+
     // Paint for handle lines
     final handlePaint = ui.Paint()
       ..color = PenPreviewConstants.handleColor
       ..style = ui.PaintingStyle.stroke
-      ..strokeWidth = PenPreviewConstants.strokeWidth / zoomLevel
+      ..strokeWidth = PenPreviewConstants.strokeWidth
       ..strokeCap = ui.StrokeCap.round;
 
     // Paint for handle control points
@@ -166,10 +170,7 @@ class PenPreviewOverlayPainter extends CustomPainter {
     final anchorStrokePaint = ui.Paint()
       ..color = PenPreviewConstants.anchorStrokeColor
       ..style = ui.PaintingStyle.stroke
-      ..strokeWidth = PenPreviewConstants.strokeWidth / zoomLevel;
-
-    final anchorOffset = ui.Offset(anchorPos.x, anchorPos.y);
-    final dragOffset = ui.Offset(dragPos.x, dragPos.y);
+      ..strokeWidth = PenPreviewConstants.strokeWidth;
 
     // Draw handleOut line from anchor to drag position
     canvas.drawLine(anchorOffset, dragOffset, handlePaint);
@@ -177,16 +178,17 @@ class PenPreviewOverlayPainter extends CustomPainter {
     // Draw handleOut control point
     canvas.drawCircle(
       dragOffset,
-      PenPreviewConstants.handleRadius / zoomLevel,
+      PenPreviewConstants.handleRadius,
       handlePointPaint,
     );
 
     // If Alt not pressed (smooth anchor mode), draw mirrored handleIn
     if (!state.isAltPressed) {
-      // Calculate mirrored position: anchor - (drag - anchor) = anchor - handleOut
-      final mirrorX = anchorPos.x - (dragPos.x - anchorPos.x);
-      final mirrorY = anchorPos.y - (dragPos.y - anchorPos.y);
-      final mirrorOffset = ui.Offset(mirrorX, mirrorY);
+      // Calculate mirrored position in screen space
+      final mirrorOffset = ui.Offset(
+        anchorOffset.dx - (dragOffset.dx - anchorOffset.dx),
+        anchorOffset.dy - (dragOffset.dy - anchorOffset.dy),
+      );
 
       // Draw handleIn line
       canvas.drawLine(anchorOffset, mirrorOffset, handlePaint);
@@ -194,7 +196,7 @@ class PenPreviewOverlayPainter extends CustomPainter {
       // Draw handleIn control point
       canvas.drawCircle(
         mirrorOffset,
-        PenPreviewConstants.handleRadius / zoomLevel,
+        PenPreviewConstants.handleRadius,
         handlePointPaint,
       );
     }
@@ -202,12 +204,12 @@ class PenPreviewOverlayPainter extends CustomPainter {
     // Draw anchor point (on top of handles)
     canvas.drawCircle(
       anchorOffset,
-      PenPreviewConstants.anchorRadius / zoomLevel,
+      PenPreviewConstants.anchorRadius,
       anchorPaint,
     );
     canvas.drawCircle(
       anchorOffset,
-      PenPreviewConstants.anchorRadius / zoomLevel,
+      PenPreviewConstants.anchorRadius,
       anchorStrokePaint,
     );
   }
@@ -256,16 +258,17 @@ class PenPreviewOverlayPainter extends CustomPainter {
     // Draw handleOut control point
     canvas.drawCircle(
       dragOffset,
-      PenPreviewConstants.handleRadius / zoomLevel,
+      PenPreviewConstants.handleRadius,
       handlePointPaint,
     );
 
     // If Alt not pressed (smooth anchor mode), draw mirrored handleIn
     if (!state.isAltPressed) {
-      // Calculate mirrored position: anchor - (drag - anchor) = anchor - handleOut
-      final mirrorX = anchorPos.x - (dragPos.x - anchorPos.x);
-      final mirrorY = anchorPos.y - (dragPos.y - anchorPos.y);
-      final mirrorOffset = ui.Offset(mirrorX, mirrorY);
+      // Calculate mirrored position in screen space
+      final mirrorOffset = ui.Offset(
+        anchorOffset.dx - (dragOffset.dx - anchorOffset.dx),
+        anchorOffset.dy - (dragOffset.dy - anchorOffset.dy),
+      );
 
       // Draw handleIn line
       canvas.drawLine(anchorOffset, mirrorOffset, handlePaint);
@@ -273,7 +276,7 @@ class PenPreviewOverlayPainter extends CustomPainter {
       // Draw handleIn control point
       canvas.drawCircle(
         mirrorOffset,
-        PenPreviewConstants.handleRadius / zoomLevel,
+        PenPreviewConstants.handleRadius,
         handlePointPaint,
       );
     }
@@ -281,12 +284,12 @@ class PenPreviewOverlayPainter extends CustomPainter {
     // Draw anchor point (on top of handles)
     canvas.drawCircle(
       anchorOffset,
-      PenPreviewConstants.anchorRadius / zoomLevel,
+      PenPreviewConstants.anchorRadius,
       anchorPaint,
     );
     canvas.drawCircle(
       anchorOffset,
-      PenPreviewConstants.anchorRadius / zoomLevel,
+      PenPreviewConstants.anchorRadius,
       anchorStrokePaint,
     );
   }

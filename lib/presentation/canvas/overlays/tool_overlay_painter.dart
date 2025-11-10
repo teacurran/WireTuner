@@ -25,13 +25,7 @@ class ToolOverlayPainter extends CustomPainter {
   void paint(Canvas canvas, Size size) {
     // Delegate to the active tool's renderOverlay method
     if (toolManager.activeTool != null) {
-      // Apply viewport transformation to convert world coordinates to screen
-      canvas.save();
-      canvas.transform(viewportController.worldToScreenMatrix.storage);
-
       toolManager.renderOverlay(canvas, size);
-
-      canvas.restore();
     }
   }
 

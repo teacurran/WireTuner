@@ -304,7 +304,14 @@ class ToolManager extends ChangeNotifier {
       return false;
     }
 
-    return _activeTool!.onPointerMove(event);
+    final handled = _activeTool!.onPointerMove(event);
+
+    // Notify listeners to trigger overlay repaint during drag
+    if (handled) {
+      notifyListeners();
+    }
+
+    return handled;
   }
 
   /// Routes a pointer up event to the active tool.

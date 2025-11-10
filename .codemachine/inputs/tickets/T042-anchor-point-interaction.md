@@ -7,7 +7,7 @@
 - **Dependencies**: T041
 
 ## Overview
-Provide visual feedback for anchor point interaction states: hover, selection, and dragging. Enhances user experience by making anchor point manipulation more intuitive.
+Provide visual feedback for anchor point interaction states: hover, selection, and dragging. Enhances user experience by making anchor point manipulation more intuitive. Interactive states only apply when anchor points are visible (View → Show Anchor Points enabled).
 
 ## Objectives
 - Show hover state when mouse over anchor
