@@ -3,7 +3,6 @@ import 'dart:io';
 
 import 'package:logger/logger.dart';
 import 'package:wiretuner/domain/document/document.dart';
-import 'package:wiretuner/domain/models/anchor_point.dart';
 import 'package:wiretuner/domain/models/geometry/point_extensions.dart';
 import 'package:wiretuner/domain/models/geometry/rectangle.dart';
 import 'package:wiretuner/domain/models/path.dart';
@@ -146,9 +145,12 @@ class SvgExporter {
 
     // Collect all gradients and clip paths needed (for future enhancement)
     // This would scan all objects and extract gradient/clipping definitions
-    final hasDefsContent = false; // Placeholder for future gradient detection
+    // Note: Currently disabled until VectorObject supports gradient definitions
+    // ignore: dead_code
+    const hasDefsContent = false; // Placeholder for future gradient detection
 
     // Write defs section if needed
+    // ignore: dead_code
     if (hasDefsContent) {
       writer.startDefs();
       // Future: Write gradients and clip paths here
@@ -246,7 +248,7 @@ class SvgExporter {
     // Start with 'M' (move to first anchor)
     final firstAnchor = path.anchors[0];
     buffer.write(
-        'M ${_fmt(firstAnchor.position.x)} ${_fmt(firstAnchor.position.y)}');
+        'M ${_fmt(firstAnchor.position.x)} ${_fmt(firstAnchor.position.y)}',);
 
     // Process each segment
     for (final segment in path.segments) {
@@ -272,7 +274,7 @@ class SvgExporter {
         buffer.write(' C ${_fmt(cp1.x)} ${_fmt(cp1.y)},');
         buffer.write(' ${_fmt(cp2.x)} ${_fmt(cp2.y)},');
         buffer.write(
-            ' ${_fmt(endAnchor.position.x)} ${_fmt(endAnchor.position.y)}');
+            ' ${_fmt(endAnchor.position.x)} ${_fmt(endAnchor.position.y)}',);
       }
     }
 
