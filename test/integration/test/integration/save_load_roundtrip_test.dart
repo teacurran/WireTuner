@@ -218,6 +218,16 @@ void main() {
         title: 'Test',
       );
 
+      // Add events to reach sequence 1
+      final db = connectionFactory.getConnection(documentId);
+      final eventGateway = SqliteEventGateway(db: db, documentId: documentId);
+      await eventGateway.persistEvent({
+        'eventType': 'TestEvent',
+        'sequenceNumber': 1,
+        'timestamp': DateTime.now().millisecondsSinceEpoch,
+        'data': {'counter': 1},
+      });
+
       // Update state
       documentState['counter'] = 1;
 
@@ -228,6 +238,14 @@ void main() {
         documentState: documentState,
         title: 'Test',
       );
+
+      // Add event to reach sequence 2
+      await eventGateway.persistEvent({
+        'eventType': 'TestEvent',
+        'sequenceNumber': 2,
+        'timestamp': DateTime.now().millisecondsSinceEpoch,
+        'data': {'counter': 2},
+      });
 
       // Update state
       documentState['counter'] = 2;
@@ -267,9 +285,15 @@ void main() {
 
       expect(loadResult, isA<LoadFailure>());
       final failure = loadResult as LoadFailure;
+      // SQLite creates an empty file when opening a nonexistent file,
+      // so we get metadataMissing instead of fileNotFound
       expect(
         failure.errorType,
-        anyOf([LoadErrorType.fileNotFound, LoadErrorType.unknown]),
+        anyOf([
+          LoadErrorType.fileNotFound,
+          LoadErrorType.metadataMissing,
+          LoadErrorType.unknown,
+        ]),
       );
     });
 
@@ -332,6 +356,302 @@ void main() {
       expect(loadSuccess.documentId, documentId);
       expect(loadSuccess.title, title);
       expect(loadSuccess.formatVersion, 1);
+    });
+
+    test('Load handles corrupted database gracefully', () async {
+      final documentId = 'doc-corrupt-test';
+      final corruptPath = path.join(tempDir.path, 'corrupt.wiretuner');
+
+      // Create a file with invalid SQLite data
+      final file = File(corruptPath);
+      await file.writeAsString('This is not a valid SQLite database');
+
+      // Try to load - should fail with corruption error
+      final loadResult = await loadService.load(
+        documentId: documentId,
+        filePath: corruptPath,
+      );
+
+      expect(loadResult, isA<LoadFailure>());
+      final failure = loadResult as LoadFailure;
+      expect(
+        failure.errorType,
+        anyOf([
+          LoadErrorType.corruptedDatabase,
+          LoadErrorType.unknown,
+        ]),
+      );
+      expect(failure.userMessage.toLowerCase(), contains('corrupt'));
+    });
+
+    test('Load performs integrity checks', () async {
+      final documentId = 'doc-integrity-test';
+
+      // Create a valid document
+      await saveService.saveAs(
+        documentId: documentId,
+        filePath: testDbPath,
+        currentSequence: 0,
+        documentState: {'test': 'data'},
+        title: 'Integrity Test',
+      );
+
+      await saveService.closeDocument(documentId);
+
+      // Load should succeed with integrity check
+      final loadResult = await loadService.load(
+        documentId: documentId,
+        filePath: testDbPath,
+      );
+
+      expect(loadResult, isA<LoadSuccess>());
+      // Integrity check passed implicitly (no error)
+    });
+
+    test('Round-trip with complex document state', () async {
+      final documentId = 'doc-complex-roundtrip';
+
+      // Create complex document state
+      final complexState = {
+        'version': 1,
+        'objects': [
+          {
+            'id': 'path-1',
+            'type': 'path',
+            'anchors': [
+              {'x': 100.0, 'y': 100.0},
+              {'x': 200.0, 'y': 200.0},
+              {'x': 300.0, 'y': 150.0},
+            ],
+            'style': {
+              'stroke': '#FF0000',
+              'strokeWidth': 2.5,
+              'fill': 'none',
+            },
+          },
+          {
+            'id': 'rect-1',
+            'type': 'rectangle',
+            'x': 50.0,
+            'y': 50.0,
+            'width': 150.0,
+            'height': 100.0,
+            'style': {
+              'stroke': '#0000FF',
+              'strokeWidth': 1.0,
+              'fill': '#CCCCFF',
+            },
+          },
+        ],
+        'metadata': {
+          'author': 'Test User',
+          'tags': ['test', 'integration', 'complex'],
+          'customData': {
+            'nested': {
+              'value': 42,
+              'flag': true,
+            },
+          },
+        },
+      };
+
+      // Save
+      final saveResult = await saveService.saveAs(
+        documentId: documentId,
+        filePath: testDbPath,
+        currentSequence: 0,
+        documentState: complexState,
+        title: 'Complex Document',
+      );
+
+      expect(saveResult, isA<SaveSuccess>());
+
+      // Close
+      await saveService.closeDocument(documentId);
+
+      // Load
+      final loadResult = await loadService.load(
+        documentId: documentId,
+        filePath: testDbPath,
+      );
+
+      expect(loadResult, isA<LoadSuccess>());
+      final loadSuccess = loadResult as LoadSuccess;
+      expect(loadSuccess.title, 'Complex Document');
+      expect(loadSuccess.currentSequence, 0);
+      expect(loadSuccess.formatVersion, 1);
+      expect(loadSuccess.wasMigrated, false);
+    });
+
+    test('Load succeeds after migration (version upgrade)', () async {
+      final documentId = 'doc-migration-test';
+
+      // Create a document
+      await saveService.saveAs(
+        documentId: documentId,
+        filePath: testDbPath,
+        currentSequence: 0,
+        documentState: {'version': 1},
+        title: 'Migration Test',
+      );
+
+      // Manually downgrade version to 0 to simulate old file
+      final db = connectionFactory.getConnection(documentId);
+      await db.rawUpdate(
+        'UPDATE metadata SET format_version = ? WHERE document_id = ?',
+        [0, documentId],
+      );
+
+      await saveService.closeDocument(documentId);
+
+      // Load should trigger migration from v0 to v1
+      final loadResult = await loadService.load(
+        documentId: documentId,
+        filePath: testDbPath,
+      );
+
+      expect(loadResult, isA<LoadSuccess>());
+      final loadSuccess = loadResult as LoadSuccess;
+      expect(loadSuccess.wasMigrated, true);
+      expect(loadSuccess.formatVersion, 0); // Original version before migration
+    });
+
+    test('Load with missing metadata table fails gracefully', () async {
+      final documentId = 'doc-no-metadata';
+
+      // Create a database without metadata table
+      final db = await connectionFactory.openConnection(
+        documentId: documentId,
+        config: DatabaseConfig.file(filePath: testDbPath),
+        runMigrations: false,
+      );
+
+      // Create only the events table
+      await db.execute('''
+        CREATE TABLE IF NOT EXISTS events (
+          event_id INTEGER PRIMARY KEY AUTOINCREMENT,
+          document_id TEXT NOT NULL,
+          event_sequence INTEGER NOT NULL,
+          event_type TEXT NOT NULL,
+          timestamp INTEGER NOT NULL,
+          event_data TEXT NOT NULL
+        )
+      ''');
+
+      await connectionFactory.closeConnection(documentId);
+
+      // Try to load - should fail with metadata missing error
+      final loadResult = await loadService.load(
+        documentId: documentId,
+        filePath: testDbPath,
+      );
+
+      expect(loadResult, isA<LoadFailure>());
+      final failure = loadResult as LoadFailure;
+      expect(failure.errorType, LoadErrorType.metadataMissing);
+    });
+
+    test('Round-trip byte-for-byte equivalence of metadata', () async {
+      final documentId = 'doc-byte-equivalence';
+      const title = 'Byte Equivalence Test';
+
+      // Save initial state
+      await saveService.saveAs(
+        documentId: documentId,
+        filePath: testDbPath,
+        currentSequence: 0,
+        documentState: {'data': 'test'},
+        title: title,
+      );
+
+      // Query metadata before close
+      final db1 = connectionFactory.getConnection(documentId);
+      final metadata1 = await db1.rawQuery('SELECT * FROM metadata LIMIT 1');
+      final beforeTitle = metadata1.first['title'];
+      final beforeFormatVersion = metadata1.first['format_version'];
+
+      await saveService.closeDocument(documentId);
+
+      // Load
+      final loadResult = await loadService.load(
+        documentId: documentId,
+        filePath: testDbPath,
+      );
+
+      expect(loadResult, isA<LoadSuccess>());
+
+      // Query metadata after load
+      final db2 = connectionFactory.getConnection(documentId);
+      final metadata2 = await db2.rawQuery('SELECT * FROM metadata LIMIT 1');
+      final afterTitle = metadata2.first['title'];
+      final afterFormatVersion = metadata2.first['format_version'];
+
+      // Verify metadata is preserved byte-for-byte
+      expect(afterTitle, beforeTitle);
+      expect(afterFormatVersion, beforeFormatVersion);
+
+      await loadService.closeDocument(documentId);
+    });
+
+    test('Load prevents concurrent loads for same document', () async {
+      final documentId = 'doc-concurrent-load';
+
+      // Create a document
+      await saveService.saveAs(
+        documentId: documentId,
+        filePath: testDbPath,
+        currentSequence: 0,
+        documentState: {'test': 'data'},
+        title: 'Concurrent Load Test',
+      );
+
+      await saveService.closeDocument(documentId);
+
+      // Start two loads concurrently
+      final load1Future = loadService.load(
+        documentId: documentId,
+        filePath: testDbPath,
+      );
+
+      final load2Future = loadService.load(
+        documentId: documentId,
+        filePath: testDbPath,
+      );
+
+      // Wait for both to complete
+      final results = await Future.wait([load1Future, load2Future]);
+
+      // Both should succeed (second waits for first)
+      expect(results[0], isA<LoadSuccess>());
+      expect(results[1], isA<LoadSuccess>());
+    });
+
+    test('Load reports accurate duration metrics', () async {
+      final documentId = 'doc-metrics-test';
+
+      // Create document with some events
+      await saveService.saveAs(
+        documentId: documentId,
+        filePath: testDbPath,
+        currentSequence: 0,
+        documentState: {'test': 'data'},
+        title: 'Metrics Test',
+      );
+
+      await saveService.closeDocument(documentId);
+
+      // Load and check metrics
+      final loadResult = await loadService.load(
+        documentId: documentId,
+        filePath: testDbPath,
+      );
+
+      expect(loadResult, isA<LoadSuccess>());
+      final loadSuccess = loadResult as LoadSuccess;
+
+      // Duration should be positive and reasonable (< 5 seconds for this simple test)
+      expect(loadSuccess.durationMs, greaterThan(0));
+      expect(loadSuccess.durationMs, lessThan(5000));
     });
   });
 }

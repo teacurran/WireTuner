@@ -39,6 +39,7 @@ void main() {
     late Directory tempDir;
     late ConnectionFactory connectionFactory;
     late SaveService saveService;
+    late LoadService loadService;
     late DocumentProvider documentProvider;
     late DocumentService documentService;
     late EventStoreGateway eventGateway;
@@ -80,9 +81,20 @@ void main() {
         logger: logger,
       );
 
+      final mockEventReplayer = _MockEventReplayer();
+      loadService = LoadService(
+        connectionFactory: connectionFactory,
+        snapshotManager: snapshotManager,
+        eventStoreGatewayFactory: (db, documentId) =>
+            SqliteEventGateway(db: db, documentId: documentId),
+        eventReplayer: mockEventReplayer,
+        logger: logger,
+      );
+
       documentService = DocumentService(
         documentProvider: documentProvider,
         saveService: saveService,
+        loadService: loadService,
         eventGateway: eventGateway,
         snapshotManager: snapshotManager,
         logger: logger,
@@ -277,9 +289,19 @@ void main() {
       // Now increment sequence without saving
       dirtyEventGateway.currentSeq = 10;
 
+      final dirtyLoadService = LoadService(
+        connectionFactory: connectionFactory,
+        snapshotManager: snapshotManager,
+        eventStoreGatewayFactory: (db, documentId) =>
+            SqliteEventGateway(db: db, documentId: documentId),
+        eventReplayer: _MockEventReplayer(),
+        logger: logger,
+      );
+
       final dirtyDocService = DocumentService(
         documentProvider: documentProvider,
         saveService: dirtySaveService,
+        loadService: dirtyLoadService,
         eventGateway: dirtyEventGateway,
         snapshotManager: snapshotManager,
         logger: logger,
@@ -475,6 +497,22 @@ class _SequenceTrackingEventGateway extends _MockEventGateway {
   Future<int> getLatestSequenceNumber() async {
     return currentSeq;
   }
+}
+
+/// Mock event replayer for testing.
+class _MockEventReplayer implements EventReplayer {
+  @override
+  Future<void> replay({int fromSequence = 0, int? toSequence}) async {
+    // No-op
+  }
+
+  @override
+  Future<void> replayFromSnapshot({int? maxSequence}) async {
+    // No-op
+  }
+
+  @override
+  bool get isReplaying => false;
 }
 
 /// Mock operation grouping service for testing.
