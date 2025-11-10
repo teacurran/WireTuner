@@ -113,8 +113,8 @@ class ThumbnailGenerator {
       for (final layer in document.layers) {
         for (final obj in layer.objects) {
           obj.when(
-            path: (id, path) => allPaths.add(path),
-            shape: (id, shape) {
+            path: (id, path, _) => allPaths.add(path),
+            shape: (id, shape, _) {
               // Skip shapes for now or convert to path if needed
             },
           );
@@ -124,6 +124,7 @@ class ThumbnailGenerator {
       // Render document using DocumentPainter
       final painter = DocumentPainter(
         paths: allPaths,
+        shapes: const {}, // No shapes in thumbnails for now
         viewportController: viewportController,
         strokeWidth: 1.0, // Thinner strokes for thumbnails
         strokeColor: Colors.black87,
@@ -156,8 +157,8 @@ class ThumbnailGenerator {
     for (final layer in document.layers) {
       for (final obj in layer.objects) {
         obj.when(
-          path: (id, path) => allPaths.add(path),
-          shape: (id, shape) {
+          path: (id, path, _) => allPaths.add(path),
+          shape: (id, shape, _) {
             // Skip shapes for now
           },
         );
@@ -209,8 +210,8 @@ class ThumbnailGenerator {
     for (final layer in document.layers) {
       for (final obj in layer.objects) {
         obj.when(
-          path: (id, path) => allPaths.add(path),
-          shape: (id, shape) {
+          path: (id, path, _) => allPaths.add(path),
+          shape: (id, shape, _) {
             // Skip shapes for now
           },
         );

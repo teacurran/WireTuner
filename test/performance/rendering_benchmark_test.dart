@@ -148,6 +148,7 @@ void main() {
 
       final painter = DocumentPainter(
         paths: paths,
+        shapes: const {},
         viewportController: viewportController,
       );
 
@@ -276,6 +277,7 @@ void main() {
 
       final painter = DocumentPainter(
         paths: paths,
+        shapes: const {},
         viewportController: viewportController,
       );
 

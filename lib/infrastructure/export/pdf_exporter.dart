@@ -199,10 +199,10 @@ class PdfExporter {
     double pageHeight,
   ) {
     object.when(
-      path: (id, path) {
+      path: (id, path, _) {
         _drawPath(graphics, path, pageHeight);
       },
-      shape: (id, shape) {
+      shape: (id, shape, _) {
         // Convert shape to path first
         final path = shape.toPath();
         _drawPath(graphics, path, pageHeight);

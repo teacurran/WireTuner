@@ -209,13 +209,13 @@ class DirectSelectionTool implements ITool {
 
       // Extract path or shape from VectorObject
       final hit = obj.when(
-        path: (id, path) => _hitTester.hitTestAnchors(
+        path: (id, path, _) => _hitTester.hitTestAnchors(
           screenPoint: event.localPosition,
           objectId: objectId,
           path: path,
           shape: null,
         ),
-        shape: (id, shape) => _hitTester.hitTestAnchors(
+        shape: (id, shape, _) => _hitTester.hitTestAnchors(
           screenPoint: event.localPosition,
           objectId: objectId,
           path: null,
@@ -327,8 +327,8 @@ class DirectSelectionTool implements ITool {
     }
 
     final domainPath = obj.when(
-      path: (id, path) => path,
-      shape: (id, shape) => shape.toPath(),
+      path: (id, path, _) => path,
+      shape: (id, shape, _) => shape.toPath(),
     );
 
     if (anchorIndex >= domainPath.anchors.length) {
@@ -610,13 +610,13 @@ class DirectSelectionTool implements ITool {
       if (obj == null) continue;
 
       final hit = obj.when(
-        path: (id, path) => _hitTester.hitTestAnchors(
+        path: (id, path, _) => _hitTester.hitTestAnchors(
           screenPoint: screenPos,
           objectId: objectId,
           path: path,
           shape: null,
         ),
-        shape: (id, shape) => _hitTester.hitTestAnchors(
+        shape: (id, shape, _) => _hitTester.hitTestAnchors(
           screenPoint: screenPos,
           objectId: objectId,
           path: null,

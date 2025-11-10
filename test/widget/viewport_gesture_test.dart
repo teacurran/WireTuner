@@ -548,6 +548,7 @@ void main() {
               child: CustomPaint(
                 painter: DocumentPainter(
                   paths: paths,
+                  shapes: const {},
                   viewportController: controller,
                 ),
               ),

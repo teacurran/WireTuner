@@ -189,11 +189,11 @@ class SvgExporter {
   /// elements. Shapes are first converted to paths using their toPath() method.
   void _writeObject(SvgWriter writer, VectorObject object) {
     object.when(
-      path: (id, path) {
+      path: (id, path, _) {
         final pathData = pathToSvgPathData(path);
         writer.writePath(id: id, pathData: pathData);
       },
-      shape: (id, shape) {
+      shape: (id, shape, _) {
         // Convert shape to path first
         final path = shape.toPath();
         final pathData = pathToSvgPathData(path);

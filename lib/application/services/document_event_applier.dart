@@ -7,6 +7,7 @@ import 'package:wiretuner/domain/models/anchor_point.dart' as models;
 import 'package:wiretuner/domain/models/path.dart' as domain;
 import 'package:wiretuner/domain/models/segment.dart';
 import 'package:wiretuner/domain/models/shape.dart';
+import 'package:wiretuner/domain/models/transform.dart';
 import 'package:wiretuner/presentation/state/document_provider.dart';
 
 /// Applies events to the document by updating the DocumentProvider.
@@ -177,8 +178,54 @@ class DocumentEventApplier {
 
   /// Applies a MoveObjectEvent by translating objects.
   void _applyMoveObject(MoveObjectEvent event) {
-    // TODO: Implement object movement
-    // This requires transform support in the domain model
+    final layers = _documentProvider.document.layers;
+    final updatedLayers = <Layer>[];
+
+    // Create translation transform from delta
+    final translation = Transform.translate(event.delta.x, event.delta.y);
+
+    for (final layer in layers) {
+      final updatedObjects = <VectorObject>[];
+
+      for (final obj in layer.objects) {
+        if (event.objectIds.contains(obj.id)) {
+          // Apply translation to this object
+          final currentTransform = obj.when(
+            path: (_, __, transform) => transform,
+            shape: (_, __, transform) => transform,
+          );
+
+          // Compose: current transform then translation
+          // If no existing transform, just use translation
+          final newTransform = currentTransform != null
+              ? currentTransform.compose(translation)
+              : translation;
+
+          // Update object with new transform
+          final updatedObj = obj.when(
+            path: (id, path, _) => VectorObject.path(
+              id: id,
+              path: path,
+              transform: newTransform,
+            ),
+            shape: (id, shape, _) => VectorObject.shape(
+              id: id,
+              shape: shape,
+              transform: newTransform,
+            ),
+          );
+
+          updatedObjects.add(updatedObj);
+        } else {
+          // Keep object unchanged
+          updatedObjects.add(obj);
+        }
+      }
+
+      updatedLayers.add(layer.copyWith(objects: updatedObjects));
+    }
+
+    _documentProvider.updateLayers(updatedLayers);
   }
 
   /// Applies a DeleteObjectEvent by removing objects from the document.
@@ -205,19 +252,20 @@ class DocumentEventApplier {
       final layer = layers[i];
       final objIndex = layer.objects.indexWhere(
         (obj) => obj.when(
-          path: (id, _) => id == pathId,
-          shape: (_, __) => false,
+          path: (id, _, __) => id == pathId,
+          shape: (_, __, ___) => false,
         ),
       );
 
       if (objIndex != -1) {
         final pathObj = layer.objects[objIndex];
         pathObj.when(
-          path: (id, path) {
+          path: (id, path, transform) {
             final updatedPath = update(path);
             final updatedPathObj = VectorObject.path(
               id: id,
               path: updatedPath,
+              transform: transform,
             );
 
             final updatedObjects = [...layer.objects];
@@ -228,7 +276,7 @@ class DocumentEventApplier {
             updatedLayers[i] = updatedLayer;
             _documentProvider.updateLayers(updatedLayers);
           },
-          shape: (_, __) {},
+          shape: (_, __, ___) {},
         );
         return;
       }

@@ -31,6 +31,7 @@ void main() {
 
       final painter = DocumentPainter(
         paths: paths,
+        shapes: const {},
         viewportController: viewportController,
       );
 
@@ -65,6 +66,7 @@ void main() {
       // Arrange: Empty path list
       final painter = DocumentPainter(
         paths: const [],
+        shapes: const {},
         viewportController: viewportController,
       );
 
@@ -95,6 +97,7 @@ void main() {
 
       final painter = DocumentPainter(
         paths: paths,
+        shapes: const {},
         viewportController: viewportController,
       );
 
@@ -136,6 +139,7 @@ void main() {
 
       final painter = DocumentPainter(
         paths: paths,
+        shapes: const {},
         viewportController: viewportController,
       );
 
@@ -174,6 +178,7 @@ void main() {
 
       final painter = DocumentPainter(
         paths: paths,
+        shapes: const {},
         viewportController: viewportController,
       );
 
@@ -212,6 +217,7 @@ void main() {
 
       final painter = DocumentPainter(
         paths: paths,
+        shapes: const {},
         viewportController: viewportController,
       );
 
@@ -248,10 +254,12 @@ void main() {
 
       final painter1 = DocumentPainter(
         paths: paths1,
+        shapes: const {},
         viewportController: viewportController,
       );
       final painter2 = DocumentPainter(
         paths: paths2,
+        shapes: const {},
         viewportController: viewportController,
       );
 
@@ -273,10 +281,12 @@ void main() {
 
       final painter1 = DocumentPainter(
         paths: paths,
+        shapes: const {},
         viewportController: viewportController,
       );
       final painter2 = DocumentPainter(
         paths: paths,
+        shapes: const {},
         viewportController: viewportController,
       );
 
@@ -301,10 +311,12 @@ void main() {
 
       final painter1 = DocumentPainter(
         paths: paths,
+        shapes: const {},
         viewportController: controller1,
       );
       final painter2 = DocumentPainter(
         paths: paths,
+        shapes: const {},
         viewportController: controller2,
       );
 
@@ -330,11 +342,13 @@ void main() {
 
       final painter1 = DocumentPainter(
         paths: paths,
+        shapes: const {},
         viewportController: viewportController,
         strokeWidth: 1.0,
       );
       final painter2 = DocumentPainter(
         paths: paths,
+        shapes: const {},
         viewportController: viewportController,
         strokeWidth: 2.0,
       );
@@ -357,11 +371,13 @@ void main() {
 
       final painter1 = DocumentPainter(
         paths: paths,
+        shapes: const {},
         viewportController: viewportController,
         strokeColor: Colors.black,
       );
       final painter2 = DocumentPainter(
         paths: paths,
+        shapes: const {},
         viewportController: viewportController,
         strokeColor: Colors.red,
       );
@@ -384,6 +400,7 @@ void main() {
 
       final painter = DocumentPainter(
         paths: paths,
+        shapes: const {},
         viewportController: viewportController,
       );
 
@@ -417,6 +434,7 @@ void main() {
 
       final painter = DocumentPainter(
         paths: paths,
+        shapes: const {},
         viewportController: viewportController,
       );
 

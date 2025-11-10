@@ -1,9 +1,11 @@
 import 'package:json_annotation/json_annotation.dart';
+import 'package:vector_math/vector_math.dart';
 import 'package:wiretuner/domain/events/event_base.dart';
 import 'package:wiretuner/domain/models/anchor_point.dart' as ap;
 import 'package:wiretuner/domain/models/path.dart';
 import 'package:wiretuner/domain/models/segment.dart';
 import 'package:wiretuner/domain/models/shape.dart';
+import 'package:wiretuner/domain/models/transform.dart';
 
 /// JSON converter for Point objects.
 ///
@@ -115,4 +117,25 @@ class ShapeConverter implements JsonConverter<Shape, Map<String, dynamic>> {
 
   @override
   Map<String, dynamic> toJson(Shape object) => object.toJson();
+}
+
+/// JSON converter for Transform objects.
+///
+/// Converts Transform to/from JSON representation by serializing the
+/// underlying Matrix4 as a list of 16 doubles.
+class TransformConverter
+    implements JsonConverter<Transform, Map<String, dynamic>> {
+  const TransformConverter();
+
+  @override
+  Transform fromJson(Map<String, dynamic> json) {
+    final storage = (json['matrix'] as List).cast<double>();
+    final matrix = Matrix4.fromList(storage);
+    return Transform(matrix);
+  }
+
+  @override
+  Map<String, dynamic> toJson(Transform object) => {
+        'matrix': object.matrix.storage.toList(),
+      };
 }

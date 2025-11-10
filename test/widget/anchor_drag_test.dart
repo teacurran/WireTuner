@@ -284,8 +284,8 @@ void main() {
     test('verifies no mutations outside event pipeline', () {
       // Get original anchor state
       final originalPath = document.layers.first.objects.first.when(
-        path: (id, path) => path,
-        shape: (id, shape) => shape.toPath(),
+        path: (id, path, _) => path,
+        shape: (id, shape, _) => shape.toPath(),
       );
       final originalAnchor = originalPath.anchors[1];
       final originalPosition = originalAnchor.position;
@@ -297,8 +297,8 @@ void main() {
 
       // Verify document not mutated (would only change after event replay)
       final currentPath = document.layers.first.objects.first.when(
-        path: (id, path) => path,
-        shape: (id, shape) => shape.toPath(),
+        path: (id, path, _) => path,
+        shape: (id, shape, _) => shape.toPath(),
       );
       final currentAnchor = currentPath.anchors[1];
 

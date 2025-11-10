@@ -2,6 +2,7 @@ import 'dart:math' show cos, sin;
 import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
+import 'package:wiretuner/domain/events/event_base.dart';
 import 'package:wiretuner/domain/models/geometry/point_extensions.dart';
 import 'package:wiretuner/domain/models/path.dart' as domain;
 import 'package:wiretuner/domain/models/segment.dart';
@@ -172,45 +173,44 @@ class DocumentPainter extends CustomPainter {
 
   /// Converts a parametric Shape to a dart:ui Path for rendering.
   ui.Path _convertShapeToUiPath(Shape shape) {
-    return shape.when(
-      rectangle: (center, width, height, cornerRadius) {
-        final path = ui.Path();
+    final path = ui.Path();
+
+    switch (shape.kind) {
+      case ShapeKind.rectangle:
         final rect = Rect.fromCenter(
-          center: Offset(center.x, center.y),
-          width: width,
-          height: height,
+          center: Offset(shape.center.x, shape.center.y),
+          width: shape.width!,
+          height: shape.height!,
         );
-        if (cornerRadius > 0) {
+        if (shape.cornerRadius > 0) {
           path.addRRect(RRect.fromRectAndRadius(
             rect,
-            Radius.circular(cornerRadius),
+            Radius.circular(shape.cornerRadius),
           ));
         } else {
           path.addRect(rect);
         }
-        return path;
-      },
-      ellipse: (center, width, height) {
-        final path = ui.Path();
+        break;
+
+      case ShapeKind.ellipse:
         final rect = Rect.fromCenter(
-          center: Offset(center.x, center.y),
-          width: width,
-          height: height,
+          center: Offset(shape.center.x, shape.center.y),
+          width: shape.width!,
+          height: shape.height!,
         );
         path.addOval(rect);
-        return path;
-      },
-      polygon: (center, radius, sides) {
-        final path = ui.Path();
-        _addPolygonToPath(path, center, radius, sides);
-        return path;
-      },
-      star: (center, outerRadius, innerRadius, pointCount) {
-        final path = ui.Path();
-        _addStarToPath(path, center, outerRadius, innerRadius, pointCount);
-        return path;
-      },
-    );
+        break;
+
+      case ShapeKind.polygon:
+        _addPolygonToPath(path, shape.center, shape.radius!, shape.sides);
+        break;
+
+      case ShapeKind.star:
+        _addStarToPath(path, shape.center, shape.radius!, shape.innerRadius!, shape.sides);
+        break;
+    }
+
+    return path;
   }
 
   /// Adds a polygon to the given path.

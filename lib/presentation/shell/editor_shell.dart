@@ -148,8 +148,8 @@ class _CanvasAdapter extends StatelessWidget {
     for (final layer in document.layers) {
       for (final obj in layer.objects) {
         obj.when(
-          path: (id, path) => paths.add(path),
-          shape: (id, shape) => shapes[id] = shape,
+          path: (id, path, _) => paths.add(path),
+          shape: (id, shape, _) => shapes[id] = shape,
         );
       }
     }

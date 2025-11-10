@@ -5,6 +5,7 @@ import 'package:wiretuner/domain/events/event_base.dart';
 import 'package:wiretuner/domain/models/geometry/rectangle.dart';
 import 'package:wiretuner/domain/models/path.dart';
 import 'package:wiretuner/domain/models/shape.dart';
+import 'package:wiretuner/domain/models/transform.dart';
 
 part 'document.freezed.dart';
 part 'document.g.dart';
@@ -54,8 +55,8 @@ const int kDocumentSchemaVersion = 1;
 /// Pattern match on object type:
 /// ```dart
 /// final bounds = obj.when(
-///   path: (id, path) => path.bounds(),
-///   shape: (id, shape) => shape.toPath().bounds(),
+///   path: (id, path, transform) => path.bounds(),
+///   shape: (id, shape, transform) => shape.toPath().bounds(),
 /// );
 /// ```
 @freezed
@@ -63,11 +64,13 @@ class VectorObject with _$VectorObject {
   const factory VectorObject.path({
     required String id,
     @PathConverter() required Path path,
+    @TransformConverter() Transform? transform,
   }) = PathObject;
 
   const factory VectorObject.shape({
     required String id,
     @ShapeConverter() required Shape shape,
+    @TransformConverter() Transform? transform,
   }) = ShapeObject;
 
   /// Private constructor for accessing methods on Freezed class.
@@ -80,8 +83,8 @@ class VectorObject with _$VectorObject {
   /// Returns the ID of this vector object.
   @override
   String get id => when(
-        path: (id, _) => id,
-        shape: (id, _) => id,
+        path: (id, _, __) => id,
+        shape: (id, _, __) => id,
       );
 
   /// Returns the bounding rectangle for this object.
@@ -89,8 +92,8 @@ class VectorObject with _$VectorObject {
   /// For paths, returns the path's control point bounds.
   /// For shapes, converts to path first then calculates bounds.
   Rectangle getBounds() => when(
-        path: (_, path) => path.bounds(),
-        shape: (_, shape) => shape.toPath().bounds(),
+        path: (_, path, __) => path.bounds(),
+        shape: (_, shape, __) => shape.toPath().bounds(),
       );
 
   /// Performs a hit test at the given point.
