@@ -99,7 +99,7 @@ open coverage/html/index.html
 ```
 
 **CI Enforcement:**
-The CI pipeline runs `just coverage` and fails the build if coverage drops below thresholds for gated packages. See `.github/workflows/test.yml` for implementation details.
+The CI pipeline runs `just coverage` and fails the build if coverage drops below thresholds for gated packages. See `.github/workflows/ci.yml` for implementation details.
 
 ---
 
@@ -118,8 +118,8 @@ The CI pipeline runs `just coverage` and fails the build if coverage drops below
 
 **Examples:**
 - `test/unit/pen_tool_test.dart` – Tests pen tool state machine and path construction
-- `test/unit/geometry_test.dart` – Validates geometric calculations (intersections, transformations)
-- `test/unit/event_core_test.dart` – Tests event sourcing logic (replay, snapshots)
+- `test/unit/document_snapshot_test.dart` – Tests event sourcing logic (replay, snapshots)
+- `test/unit/event_schema_validation_test.dart` – Validates event schema and serialization
 
 **Guidelines:**
 
@@ -183,7 +183,7 @@ just coverage
 
 **Examples:**
 - `test/widget/pen_tool_straight_test.dart` – Tests pen tool UI interactions
-- `test/widget/canvas_rendering_test.dart` – Validates canvas paint operations
+- `test/widget/document_painter_test.dart` – Validates canvas paint operations
 - `test/widget/history_panel_test.dart` – Tests undo/redo UI
 
 **Guidelines:**
@@ -257,31 +257,31 @@ flutter test test/widget/pen_tool_straight_test.dart
 
 **Critical Scenarios:**
 
-1. **Save/Load Round-Trip** (`test/integration/save_load_roundtrip_test.dart`)
+1. **Save/Load Round-Trip** (`test/integration/test/integration/save_load_roundtrip_test.dart`)
    - Create document with various objects
    - Save to `.wiretuner` file
    - Load from disk
    - Verify all objects restored correctly
 
-2. **Pen Tool Workflow** (`test/integration/tool_pen_selection_test.dart`)
+2. **Pen Tool Workflow** (`test/integration/test/integration/tool_pen_selection_test.dart`)
    - Activate pen tool
    - Draw multiple paths
    - Switch to selection tool
    - Modify paths
    - Verify undo/redo works across tools
 
-3. **Undo/Redo** (`test/integration/undo_redo_test.dart`)
+3. **Undo/Redo** (covered in `test/integration/test/integration/tool_pen_selection_test.dart` and `test/integration/document_service_integration_test.dart`)
    - Perform series of operations (create, delete, transform)
    - Undo each operation
    - Redo operations
    - Verify document state matches at each step
 
-4. **Crash Recovery** (referenced in architecture, implementation in progress)
+4. **Crash Recovery** (`test/integration/test/integration/crash_recovery_test.dart`)
    - Simulate app crash mid-transaction
    - Restart app
    - Verify document recovered from event log
 
-5. **Export/Import** (`test/integration/svg_import_test.dart`, planned PDF tests)
+5. **Export/Import** (`test/integration/svg_importer_integration_test.dart`, `test/integration/svg_export_test.dart`, `test/integration/pdf_export_test.dart`)
    - Export document to SVG/PDF
    - Validate output structure
    - Import SVG from Adobe Illustrator
@@ -335,7 +335,7 @@ just test-integration
 flutter test integration_test/
 
 # Specific integration test
-flutter test test/integration/save_load_roundtrip_test.dart
+flutter test test/integration/test/integration/save_load_roundtrip_test.dart
 ```
 
 ---
@@ -467,8 +467,8 @@ Performance benchmarks run on workflow dispatch (not every PR) and store results
 **Checklists:**
 
 - **Platform Parity:** [docs/qa/platform_parity_checklist.md](../qa/platform_parity_checklist.md)
-- **History/Undo/Redo:** [docs/qa/history_qa_checklist.md](../qa/history_qa_checklist.md)
-- **Crash Recovery:** [docs/qa/recovery_qa_playbook.md](../qa/recovery_qa_playbook.md)
+- **History/Undo/Redo:** [docs/qa/history_checklist.md](../qa/history_checklist.md)
+- **Crash Recovery:** [docs/qa/recovery_playbook.md](../qa/recovery_playbook.md)
 - **Release Sign-Off:** [docs/qa/release_checklist.md](../qa/release_checklist.md)
 
 **Process:**
@@ -483,7 +483,7 @@ Performance benchmarks run on workflow dispatch (not every PR) and store results
 
 **GitHub Actions Workflows:**
 
-- **PR Validation** (`.github/workflows/test.yml`):
+- **PR Validation** (`.github/workflows/ci.yml`):
   - Runs on every push to PR branches
   - Matrix: macOS + Windows
   - Steps:
