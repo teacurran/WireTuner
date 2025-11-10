@@ -1,8 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:wiretuner/application/tools/framework/tool_manager.dart';
+import 'package:wiretuner/domain/document/document.dart';
+import 'package:wiretuner/domain/models/path.dart' as domain;
+import 'package:wiretuner/domain/models/shape.dart';
 import 'package:wiretuner/presentation/canvas/viewport/viewport_binding.dart';
 import 'package:wiretuner/presentation/canvas/viewport/viewport_controller.dart';
+import 'package:wiretuner/presentation/canvas/wiretuner_canvas.dart';
 import 'package:wiretuner/presentation/state/document_provider.dart';
 import 'package:wiretuner/presentation/shell/tool_toolbar.dart';
 import 'package:wiretuner/presentation/history/history_panel.dart';
@@ -62,6 +66,7 @@ class EditorShell extends StatelessWidget {
     // Access providers
     final documentProvider = context.watch<DocumentProvider>();
     final viewportController = context.watch<ViewportController>();
+    final toolManager = context.watch<ToolManager>();
 
     return Scaffold(
       backgroundColor: Colors.grey[200],
@@ -86,16 +91,20 @@ class EditorShell extends StatelessWidget {
                       },
                       // Enable debug mode to show shortcuts and FPS
                       debugMode: true,
-                      child: const Center(
-                        child: Text(
-                          'Canvas Area\n'
-                          'Try: Space bar to pan, +/- to zoom, Cmd/Ctrl+0 to reset\n'
-                          '(Vector drawing canvas will be implemented in future iterations)',
-                          textAlign: TextAlign.center,
-                          style: TextStyle(
-                            fontSize: 16,
-                            color: Colors.grey,
-                          ),
+                      child: Listener(
+                        // Route pointer events to active tool
+                        onPointerDown: (event) {
+                          toolManager.handlePointerDown(event);
+                        },
+                        onPointerMove: (event) {
+                          toolManager.handlePointerMove(event);
+                        },
+                        onPointerUp: (event) {
+                          toolManager.handlePointerUp(event);
+                        },
+                        child: _CanvasAdapter(
+                          document: documentProvider.document,
+                          viewportController: viewportController,
                         ),
                       ),
                     ),
@@ -112,6 +121,41 @@ class EditorShell extends StatelessWidget {
           const HistoryScrubber(),
         ],
       ),
+    );
+  }
+}
+
+/// Adapter widget that extracts paths and shapes from the document
+/// and passes them to WireTunerCanvas in the expected format.
+class _CanvasAdapter extends StatelessWidget {
+  const _CanvasAdapter({
+    required this.document,
+    required this.viewportController,
+  });
+
+  final Document document;
+  final ViewportController viewportController;
+
+  @override
+  Widget build(BuildContext context) {
+    // Extract paths and shapes from all layers
+    final paths = <domain.Path>[];
+    final shapes = <String, Shape>{};
+
+    for (final layer in document.layers) {
+      for (final obj in layer.objects) {
+        obj.when(
+          path: (id, path) => paths.add(path),
+          shape: (id, shape) => shapes[id] = shape,
+        );
+      }
+    }
+
+    return WireTunerCanvas(
+      paths: paths,
+      shapes: shapes,
+      selection: document.selection,
+      viewportController: viewportController,
     );
   }
 }
