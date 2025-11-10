@@ -282,7 +282,7 @@ Group related events into logical operations, with one undo action reversing an 
 These decisions have been reviewed and approved by the project stakeholder and serve as the canonical architectural foundation for WireTuner v0.1 development.
 
 
-**Total Tickets**: 39
+**Total Tickets**: 42
 **Milestone 0.1 Goal**: Working pen tool, shape creation (rect, ellipse, polygon, star), anchor/BCP manipulation, save/load
 
 ---
@@ -496,5 +496,83 @@ To begin implementation:
 
 ---
 
-*Last Updated: 2025-11-05*
-*Total Estimated Effort: ~42 days*
+## Phase 10: Anchor Point Visualization (3 tickets)
+
+| Ticket | Title | Priority | Effort | Dependencies |
+|--------|-------|----------|--------|--------------|
+| T040 | Anchor Point Overlay Rendering | Critical | 1d | T015, T017 |
+| T041 | Anchor Point Hit Testing | Critical | 0.5d | T040 |
+| T042 | Anchor Point Visual Interaction | High | 1d | T041 |
+
+**Phase Goal**: Always-visible anchor points with type-specific visualization, ready for selection and dragging
+
+### T040: Anchor Point Overlay Rendering
+
+**Objective**: Render all anchor points on paths at all times with type-specific visual indicators.
+
+**Visual Specifications**:
+- **Smooth/Curve Anchors**: Red circles (5px radius)
+  - Anchor type: `AnchorType.smooth`
+  - Visual: Filled red circle with black 1px stroke
+  - Both handleIn and handleOut present
+- **Corner Anchors**: Black squares (7x7px)
+  - Anchor type: `AnchorType.corner`
+  - Visual: Filled black square with white 1px stroke
+  - No handles or independent handles
+- **Tangent Anchors**: Orange triangles (7px equilateral)
+  - Transition between straight and curved segments
+  - Visual: Filled orange triangle with black 1px stroke
+  - One handle present (either handleIn or handleOut, not both)
+  - Inspired by FontForge's tangent point representation
+
+**Technical Requirements**:
+- Render in overlay layer (z-index 115, between selection:110 and snapping:120)
+- All shapes have transparent fill but remain clickable for hit testing
+- Size specified in screen pixels (not world coordinates)
+- Scale-independent rendering (same visual size at all zoom levels)
+- Use `HitTestBehavior.translucent` for clickable transparent areas
+
+**Implementation Approach**:
+- Create `AnchorPointOverlayPainter` extending `CustomPainter`
+- Register overlay in `OverlayRegistry` with id `'anchor-points'`
+- Iterate through all paths in document, render each anchor
+- Convert anchor positions from world to screen coordinates
+- Determine anchor type based on handle presence:
+  - Both handles or mirrored handles → Smooth (red circle)
+  - No handles → Corner (black square)
+  - Exactly one handle → Tangent (orange triangle)
+
+### T041: Anchor Point Hit Testing
+
+**Objective**: Enable clicking and selecting anchor points via transparent fill areas.
+
+**Technical Requirements**:
+- Hit test radius: 8px (slightly larger than visual size for easier clicking)
+- Return anchor metadata: `(pathId, anchorIndex, anchorType, position)`
+- Support multi-selection with Shift key modifier
+- Prioritize anchor points over path selection when clicking near anchors
+
+**Implementation Approach**:
+- Add `hitTestAnchor()` method to selection/direct selection tools
+- Check distance from pointer to each anchor in screen coordinates
+- Return closest anchor within hit test radius
+- Update selection state to include selected anchors
+
+### T042: Anchor Point Visual Interaction
+
+**Objective**: Provide visual feedback during anchor point interaction.
+
+**Visual States**:
+- **Hovered**: Increase size by 30%, add outer glow
+- **Selected**: Add blue outline (2px), keep original color
+- **Dragging**: Show live position with faded trail effect
+
+**Integration**:
+- Connects to existing T029 (Anchor Point Dragging) for drag operations
+- Updates T017 (Selection Visualization) to show anchor selection state
+- Provides foundation for T030 (BCP Handle Dragging)
+
+---
+
+*Last Updated: 2025-11-09*
+*Total Estimated Effort: ~44.5 days*
