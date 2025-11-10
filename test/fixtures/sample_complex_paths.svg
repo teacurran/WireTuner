@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" version="1.1" viewBox="0 0 300 300" width="300" height="300">
+  <!-- Complex path with multiple Bezier curves -->
+  <path d="M 50 150 C 50 80, 150 80, 150 150 S 250 220, 250 150"
+        stroke="black" stroke-width="2" fill="none"/>
+
+  <!-- Path with quadratic Bezier -->
+  <path d="M 30 30 Q 100 10, 170 30 T 250 30"
+        stroke="blue" stroke-width="1.5" fill="none"/>
+
+  <!-- Mixed commands path -->
+  <path d="M 50 200 L 80 220 H 120 V 240 L 150 220 Z"
+        stroke="red" fill="yellow" opacity="0.8"/>
+
+  <!-- Relative path commands -->
+  <path d="M 200 200 l 30 20 h 20 v 30 l -50 -20 z"
+        stroke="green" stroke-width="1" fill="lightgreen"/>
+</svg>
