@@ -264,7 +264,7 @@ class WindowManager {
     );
 
     // Create undo provider (bridges navigator to Flutter UI)
-    final undoProvider = UndoProvider(
+    final undoProvider = UndoProvider.withNavigator(
       navigator: undoNavigator,
       documentProvider: documentProvider,
     );

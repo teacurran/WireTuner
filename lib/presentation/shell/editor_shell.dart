@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:app_shell/app_shell.dart';
+import 'package:wiretuner/application/services/keyboard_shortcut_service.dart';
 import 'package:wiretuner/application/tools/framework/tool_manager.dart';
 import 'package:wiretuner/domain/document/document.dart';
 import 'package:wiretuner/domain/models/path.dart' as domain;
@@ -67,59 +69,70 @@ class EditorShell extends StatelessWidget {
     final documentProvider = context.watch<DocumentProvider>();
     final viewportController = context.watch<ViewportController>();
     final toolManager = context.watch<ToolManager>();
+    final undoProvider = context.watch<UndoProvider>();
 
-    return Scaffold(
-      backgroundColor: Colors.grey[200],
-      body: Column(
-        children: [
-          // Main content area
-          Expanded(
-            child: Row(
-              children: [
-                // Left sidebar: Tool toolbar
-                const ToolToolbar(),
+    // Wrap the scaffold with keyboard shortcuts for undo/redo
+    return Shortcuts(
+      shortcuts: KeyboardShortcutService.getShortcuts(),
+      child: Actions(
+        actions: KeyboardShortcutService.getActions(
+          onUndo: () => undoProvider.handleUndo(),
+          onRedo: () => undoProvider.handleRedo(),
+        ),
+        child: Scaffold(
+          backgroundColor: Colors.grey[200],
+          body: Column(
+            children: [
+              // Main content area
+              Expanded(
+                child: Row(
+                  children: [
+                    // Left sidebar: Tool toolbar
+                    const ToolToolbar(),
 
-                // Main canvas area with viewport binding
-                Expanded(
-                  child: Container(
-                    color: Colors.white,
-                    child: ViewportBinding(
-                      controller: viewportController,
-                      // Wire viewport changes to document provider
-                      onViewportChanged: (viewport) {
-                        documentProvider.updateViewport(viewport);
-                      },
-                      // Enable debug mode to show shortcuts and FPS
-                      debugMode: true,
-                      child: Listener(
-                        // Route pointer events to active tool
-                        onPointerDown: (event) {
-                          toolManager.handlePointerDown(event);
-                        },
-                        onPointerMove: (event) {
-                          toolManager.handlePointerMove(event);
-                        },
-                        onPointerUp: (event) {
-                          toolManager.handlePointerUp(event);
-                        },
-                        child: _CanvasAdapter(
-                          document: documentProvider.document,
-                          viewportController: viewportController,
+                    // Main canvas area with viewport binding
+                    Expanded(
+                      child: Container(
+                        color: Colors.white,
+                        child: ViewportBinding(
+                          controller: viewportController,
+                          // Wire viewport changes to document provider
+                          onViewportChanged: (viewport) {
+                            documentProvider.updateViewport(viewport);
+                          },
+                          // Enable debug mode to show shortcuts and FPS
+                          debugMode: true,
+                          child: Listener(
+                            // Route pointer events to active tool
+                            onPointerDown: (event) {
+                              toolManager.handlePointerDown(event);
+                            },
+                            onPointerMove: (event) {
+                              toolManager.handlePointerMove(event);
+                            },
+                            onPointerUp: (event) {
+                              toolManager.handlePointerUp(event);
+                            },
+                            child: _CanvasAdapter(
+                              document: documentProvider.document,
+                              viewportController: viewportController,
+                            ),
+                          ),
                         ),
                       ),
                     ),
-                  ),
+
+                    // Right sidebar: History panel (Task I4.T4)
+                    const HistoryPanel(),
+                  ],
                 ),
+              ),
 
-                // Right sidebar: History panel (Task I4.T4)
-                const HistoryPanel(),
-              ],
-            ),
+              // Bottom: History scrubber
+              const HistoryScrubber(),
+            ],
           ),
-
-          // Bottom: History scrubber
-          const HistoryScrubber(),
-        ],
+        ),
       ),
     );
   }

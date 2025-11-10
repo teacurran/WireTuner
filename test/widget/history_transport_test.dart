@@ -161,7 +161,7 @@ void main() {
       documentProvider = DocumentProvider(
         initialDocument: const Document(id: 'test-doc', title: 'Test'),
       );
-      undoProvider = UndoProvider(
+      undoProvider = UndoProvider.withNavigator(
         navigator: undoNavigator,
         documentProvider: documentProvider,
       );
