@@ -125,7 +125,9 @@ void main() {
       // Verify all 7 tool buttons are present by checking for their icons
       expect(find.byIcon(Icons.near_me), findsOneWidget); // Selection
       expect(
-          find.byIcon(Icons.control_point), findsOneWidget); // Direct Selection
+        find.byIcon(Icons.control_point),
+        findsOneWidget,
+      ); // Direct Selection
       expect(find.byIcon(Icons.edit), findsOneWidget); // Pen
       expect(find.byIcon(Icons.rectangle), findsOneWidget); // Rectangle
       expect(find.byIcon(Icons.circle_outlined), findsOneWidget); // Ellipse
