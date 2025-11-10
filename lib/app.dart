@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:logger/logger.dart';
 import 'package:event_core/event_core.dart';
 import 'package:app_shell/app_shell.dart';
+import 'package:wiretuner/application/services/document_event_applier.dart';
 import 'package:wiretuner/application/tools/direct_selection/direct_selection_tool.dart';
 import 'package:wiretuner/application/tools/framework/cursor_service.dart';
 import 'package:wiretuner/application/tools/framework/tool_manager.dart';
@@ -21,6 +22,7 @@ import 'package:wiretuner/presentation/canvas/viewport/viewport_controller.dart'
 import 'package:wiretuner/presentation/state/document_provider.dart';
 import 'package:wiretuner/presentation/shell/editor_shell.dart';
 import 'package:wiretuner/domain/events/event_base.dart';
+import 'dart:async';
 
 /// Root application widget for WireTuner.
 /// Configures Material Design 3 theme and application routing.
@@ -73,6 +75,10 @@ class _AppInitializerState extends State<_AppInitializer> {
   late final OperationGroupingService _operationGrouping;
   late final UndoNavigator _undoNavigator;
   late final UndoProvider _undoProvider;
+
+  // Event application
+  late final DocumentEventApplier _eventApplier;
+  late final StreamSubscription<EventBase> _eventSubscription;
 
   @override
   void initState() {
@@ -127,6 +133,12 @@ class _AppInitializerState extends State<_AppInitializer> {
     _toolManager = ToolManager(
       cursorService: _cursorService,
       eventRecorder: _eventRecorder,
+    );
+
+    // Create event applier and wire it to event recorder
+    _eventApplier = DocumentEventApplier(_documentProvider);
+    _eventSubscription = _eventRecorder.eventStream.listen(
+      _eventApplier.apply,
     );
 
     // Register all 7 tools
@@ -259,6 +271,7 @@ class _AppInitializerState extends State<_AppInitializer> {
   @override
   void dispose() {
     // Dispose services in reverse order of creation
+    _eventSubscription.cancel();
     _undoProvider.dispose();
     _undoNavigator.dispose();
     _operationGrouping.dispose();

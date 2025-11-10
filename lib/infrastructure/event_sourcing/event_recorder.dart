@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:logger/logger.dart';
 import '../../domain/events/event_base.dart';
@@ -81,12 +82,20 @@ class EventRecorder with ChangeNotifier {
   /// Count of events successfully persisted (for metrics/testing).
   int _persistedEventCount = 0;
 
+  /// Stream controller for broadcasting persisted events.
+  final _eventStreamController = StreamController<EventBase>.broadcast();
+
+  /// Stream of events that have been persisted.
+  /// Listeners can subscribe to apply events to the document state.
+  Stream<EventBase> get eventStream => _eventStreamController.stream;
+
   @override
   void dispose() {
     // Flush any remaining buffered events before disposal
     if (!_isPaused) {
       flush();
     }
+    _eventStreamController.close();
     super.dispose();
   }
 
@@ -241,6 +250,10 @@ class EventRecorder with ChangeNotifier {
 
       // Clear buffer timestamp after successful persistence
       _bufferedEventTimestamp = null;
+
+      // Broadcast event to listeners (for document state updates)
+      _logger.d('Broadcasting event to ${_eventStreamController.hasListener ? "active" : "NO"} listeners');
+      _eventStreamController.add(event);
 
       // Notify listeners (UI/Provider) about state change
       notifyListeners();

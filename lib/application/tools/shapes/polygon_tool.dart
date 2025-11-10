@@ -14,7 +14,7 @@ import 'package:wiretuner/domain/models/shape.dart' as shape_model;
 ///
 /// ## Polygon Parameters
 ///
-/// - **Sides**: Number of sides (default: 5, minimum: 3)
+/// - **Sides**: Number of sides (default: 6, minimum: 3, maximum: 20)
 /// - **Radius**: Distance from center to vertices
 /// - **Rotation**: Angle in radians (default: 0, pointing straight up)
 ///
