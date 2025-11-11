@@ -1,0 +1,789 @@
+"""
+WireTuner GraphQL Schema
+Defines metadata, document, artboard, settings, and presence APIs
+"""
+
+# =========================================
+# Custom Scalars
+# =========================================
+
+# RFC 4122 UUID scalar type
+scalar UUID
+
+# ISO 8601 DateTime scalar
+scalar DateTime
+
+# =========================================
+# Enums
+# =========================================
+
+"""
+Artboard preset templates
+"""
+enum ArtboardPresetEnum {
+  CUSTOM
+  IPHONE_14_PRO
+  DESKTOP_HD
+  A4_PORTRAIT
+  INSTAGRAM_SQUARE
+}
+
+"""
+Anchor visibility mode for the document
+"""
+enum AnchorVisibilityModeEnum {
+  ALWAYS
+  SELECTED
+  NEVER
+}
+
+"""
+Supported export formats
+"""
+enum ExportFormatEnum {
+  SVG
+  PDF
+  JSON
+}
+
+"""
+Export job status
+"""
+enum ExportJobStatusEnum {
+  QUEUED
+  PROCESSING
+  COMPLETE
+  FAILED
+}
+
+"""
+Platform identifier
+"""
+enum PlatformEnum {
+  MACOS
+  WINDOWS
+}
+
+"""
+Blend mode for layers (future-proof)
+"""
+enum BlendModeEnum {
+  NORMAL
+  MULTIPLY
+  SCREEN
+  OVERLAY
+}
+
+"""
+Anchor point type
+"""
+enum AnchorTypeEnum {
+  SMOOTH
+  CORNER
+  TANGENT
+}
+
+"""
+Anchor constraint mode
+"""
+enum AnchorConstraintEnum {
+  MIRRORED
+  INDEPENDENT
+}
+
+"""
+Vector object type
+"""
+enum VectorObjectTypeEnum {
+  PATH
+  SHAPE
+  TEXT
+  COMPOUND
+}
+
+"""
+Winding rule for paths
+"""
+enum WindingRuleEnum {
+  NON_ZERO
+  EVEN_ODD
+}
+
+"""
+Collaboration activity state
+"""
+enum ActivityStateEnum {
+  EDITING
+  REVIEWING
+  IDLING
+  OFFLINE
+}
+
+"""
+Settings value source
+"""
+enum SettingsSourceEnum {
+  USER
+  POLICY
+  DEFAULT
+}
+
+"""
+Telemetry event type
+"""
+enum TelemetryEventTypeEnum {
+  CRASH
+  PERFORMANCE
+  WARNING
+}
+
+# =========================================
+# Input Types
+# =========================================
+
+"""
+Rectangle bounds input
+"""
+input RectangleInput {
+  """X coordinate (100-100000 px)"""
+  x: Float!
+
+  """Y coordinate (100-100000 px)"""
+  y: Float!
+
+  """Width (100-100000 px)"""
+  width: Float!
+
+  """Height (100-100000 px)"""
+  height: Float!
+}
+
+"""
+RGBA color input (0.0-1.0 float or hex string)
+"""
+input RGBAInput {
+  """Red channel (0.0-1.0)"""
+  r: Float!
+
+  """Green channel (0.0-1.0)"""
+  g: Float!
+
+  """Blue channel (0.0-1.0)"""
+  b: Float!
+
+  """Alpha channel (0.0-1.0)"""
+  a: Float!
+}
+
+"""
+Viewport state for artboard view
+"""
+input ViewportInput {
+  """Zoom level"""
+  zoom: Float!
+
+  """Pan offset X"""
+  panOffsetX: Float!
+
+  """Pan offset Y"""
+  panOffsetY: Float!
+}
+
+"""
+Selection state input (reserved for future duplication flows)
+"""
+input SelectionInput {
+  """Selected object IDs"""
+  objectIds: [UUID!]!
+}
+
+"""
+Create artboard mutation input
+"""
+input CreateArtboardInput {
+  """Parent document ID"""
+  documentId: UUID!
+
+  """Artboard name (≤100 characters)"""
+  name: String!
+
+  """Artboard preset template"""
+  preset: ArtboardPresetEnum!
+
+  """Artboard bounds"""
+  bounds: RectangleInput!
+
+  """Background color"""
+  backgroundColor: RGBAInput!
+
+  """Optional viewport state"""
+  viewportState: ViewportInput
+
+  """Optional selection state"""
+  selectionState: SelectionInput
+
+  """Z-order position (optional, defaults to end)"""
+  zOrder: Int
+
+  """Client request correlation ID"""
+  clientRequestId: UUID
+
+  """Feature flags active on client"""
+  featureFlags: [String!]
+}
+
+"""
+Settings profile mutation input
+"""
+input SettingsProfileInput {
+  """Sampling interval in milliseconds"""
+  samplingIntervalMs: Int
+
+  """Grid snap distance in screen pixels"""
+  gridSnapScreenPx: Int
+
+  """Undo depth limit"""
+  undoDepth: Int
+
+  """Default anchor visibility mode"""
+  anchorVisibilityMode: AnchorVisibilityModeEnum
+
+  """Telemetry opt-in"""
+  telemetryEnabled: Boolean
+
+  """Nudge preset distance"""
+  nudgePreset: Float
+}
+
+# =========================================
+# Object Types
+# =========================================
+
+"""
+Warning message with remediation
+"""
+type Warning {
+  """Warning code"""
+  code: String!
+
+  """Human-readable message"""
+  message: String!
+
+  """Suggested remediation"""
+  remediation: String
+}
+
+"""
+Thumbnail generation status
+"""
+type ThumbnailStatus {
+  """Current state"""
+  state: String!
+
+  """Last update timestamp"""
+  lastUpdatedAt: DateTime!
+}
+
+"""
+User identity
+"""
+type User {
+  """User UUID"""
+  id: UUID!
+
+  """Email address"""
+  email: String!
+
+  """Display name"""
+  displayName: String!
+
+  """Avatar URL"""
+  avatarUrl: String
+
+  """User roles"""
+  roles: [String!]!
+
+  """Platform"""
+  platform: PlatformEnum!
+
+  """Account created timestamp"""
+  createdAt: DateTime!
+
+  """Last active timestamp"""
+  lastActiveAt: DateTime!
+
+  """Telemetry opt-in status"""
+  telemetryOptIn: Boolean!
+
+  """Feature flag overrides"""
+  featureFlagOverrides: [String!]!
+}
+
+"""
+Document metadata
+"""
+type DocumentMetadata {
+  """Anchor visibility mode"""
+  anchorVisibilityMode: AnchorVisibilityModeEnum!
+
+  """Sampling preset identifier"""
+  samplingPreset: String!
+
+  """Platform origin"""
+  platform: PlatformEnum!
+}
+
+"""
+Viewport state for artboard
+"""
+type ViewportState {
+  """Zoom level"""
+  zoom: Float!
+
+  """Pan offset X"""
+  panOffsetX: Float!
+
+  """Pan offset Y"""
+  panOffsetY: Float!
+}
+
+"""
+Selection state digest
+"""
+type SelectionStateDigest {
+  """Number of selected objects"""
+  count: Int!
+
+  """Selection bounding box"""
+  bounds: Rectangle
+}
+
+"""
+Rectangle bounds
+"""
+type Rectangle {
+  """X coordinate"""
+  x: Float!
+
+  """Y coordinate"""
+  y: Float!
+
+  """Width"""
+  width: Float!
+
+  """Height"""
+  height: Float!
+}
+
+"""
+RGBA color
+"""
+type RGBA {
+  """Red channel (0.0-1.0)"""
+  r: Float!
+
+  """Green channel (0.0-1.0)"""
+  g: Float!
+
+  """Blue channel (0.0-1.0)"""
+  b: Float!
+
+  """Alpha channel (0.0-1.0)"""
+  a: Float!
+}
+
+"""
+Artboard entity
+"""
+type Artboard {
+  """Artboard UUID"""
+  id: UUID!
+
+  """Parent document ID"""
+  documentId: UUID!
+
+  """Artboard name"""
+  name: String!
+
+  """Bounds rectangle"""
+  bounds: Rectangle!
+
+  """Background color"""
+  backgroundColor: RGBA!
+
+  """Z-order position"""
+  zOrder: Int!
+
+  """Preset template used"""
+  preset: ArtboardPresetEnum!
+
+  """Viewport state"""
+  viewportState: ViewportState
+
+  """Selection state digest"""
+  selectionStateDigest: SelectionStateDigest
+
+  """Thumbnail reference URL"""
+  thumbnailRef: String
+
+  """Layer IDs"""
+  layers: [UUID!]!
+}
+
+"""
+Artboard connection edge
+"""
+type ArtboardEdge {
+  """Cursor for pagination"""
+  cursor: String!
+
+  """Artboard node"""
+  node: Artboard!
+}
+
+"""
+Artboard connection
+"""
+type ArtboardConnection {
+  """Artboard edges"""
+  edges: [ArtboardEdge!]!
+
+  """Page info"""
+  pageInfo: PageInfo!
+
+  """Total count"""
+  totalCount: Int!
+}
+
+"""
+Page info for pagination
+"""
+type PageInfo {
+  """Has next page"""
+  hasNextPage: Boolean!
+
+  """Has previous page"""
+  hasPreviousPage: Boolean!
+
+  """Start cursor"""
+  startCursor: String
+
+  """End cursor"""
+  endCursor: String
+}
+
+"""
+Collaboration status
+"""
+type CollaborationStatus {
+  """Is collaboration active"""
+  active: Boolean!
+
+  """Participant user IDs"""
+  participants: [UUID!]!
+
+  """OT baseline sequence number"""
+  otBaselineSequence: Int!
+}
+
+"""
+Performance hints for optimization
+"""
+type PerformanceHints {
+  """Recommended snapshot threshold"""
+  recommendedSnapshotThreshold: Int!
+
+  """Recommended sampling interval (ms)"""
+  recommendedSamplingInterval: Int!
+}
+
+"""
+Document health diagnostics
+"""
+type DocumentHealth {
+  """SQLite integrity check status"""
+  sqliteIntegrity: String!
+
+  """Pending migrations count"""
+  pendingMigrations: Int!
+
+  """Disk usage in bytes"""
+  diskUsageBytes: Int!
+}
+
+"""
+Document entity
+"""
+type Document {
+  """Document UUID"""
+  id: UUID!
+
+  """Document name"""
+  name: String!
+
+  """Author user ID"""
+  author: User!
+
+  """File format version"""
+  fileFormatVersion: String!
+
+  """Document metadata"""
+  metadata: DocumentMetadata!
+
+  """Created timestamp"""
+  createdAt: DateTime!
+
+  """Modified timestamp"""
+  modifiedAt: DateTime!
+
+  """Artboard IDs"""
+  artboardIds: [UUID!]!
+
+  """Snapshot sequence number"""
+  snapshotSequence: Int!
+
+  """Event count"""
+  eventCount: Int!
+
+  """Undo depth limit"""
+  undoDepthLimit: Int!
+
+  """Artboards (paginated)"""
+  artboards(
+    """First N items"""
+    first: Int
+
+    """After cursor"""
+    after: String
+  ): ArtboardConnection!
+
+  """Collaboration status"""
+  collaborationStatus: CollaborationStatus!
+
+  """Performance hints"""
+  performanceHints: PerformanceHints!
+
+  """Health diagnostics"""
+  health: DocumentHealth!
+
+  """Active feature flags"""
+  featureFlags: [String!]!
+
+  """Last manual save timestamp"""
+  lastManualSaveAt: DateTime
+
+  """Last auto-save timestamp"""
+  lastAutoSaveAt: DateTime
+}
+
+"""
+Create artboard mutation response
+"""
+type CreateArtboardPayload {
+  """Created artboard"""
+  artboard: Artboard!
+
+  """Operation ID for undo tracking"""
+  operationId: UUID!
+
+  """Thumbnail status"""
+  thumbnailStatus: ThumbnailStatus!
+
+  """Warnings"""
+  warnings: [Warning!]!
+
+  """Snapshot sequence after mutation"""
+  snapshotSequence: Int!
+}
+
+"""
+Settings value with metadata
+"""
+type SettingValue {
+  """Effective value"""
+  effectiveValue: String!
+
+  """Value source"""
+  source: SettingsSourceEnum!
+
+  """Last updated timestamp"""
+  updatedAt: DateTime!
+}
+
+"""
+Settings profile
+"""
+type SettingsProfile {
+  """User ID"""
+  userId: UUID!
+
+  """Sampling interval setting"""
+  samplingInterval: SettingValue!
+
+  """Snapshot threshold setting"""
+  snapshotThreshold: SettingValue!
+
+  """Anchor visibility default"""
+  anchorVisibilityDefault: SettingValue!
+
+  """Telemetry enabled"""
+  telemetryEnabled: SettingValue!
+
+  """Grid snap enabled"""
+  gridSnapEnabled: SettingValue!
+
+  """Nudge distance overrides"""
+  nudgeDistanceOverrides: SettingValue!
+
+  """Pending admin overrides"""
+  pendingAdminOverrides: [String!]!
+}
+
+"""
+Cursor position with tool info
+"""
+type CursorPosition {
+  """Screen X coordinate"""
+  screenX: Float!
+
+  """Screen Y coordinate"""
+  screenY: Float!
+
+  """Active tool"""
+  tool: String!
+
+  """Stylus pressure (optional)"""
+  pressure: Float
+}
+
+"""
+Device information
+"""
+type DeviceInfo {
+  """Platform"""
+  platform: PlatformEnum!
+
+  """App version"""
+  appVersion: String!
+}
+
+"""
+Presence update payload
+"""
+type PresenceUpdate {
+  """User"""
+  user: User!
+
+  """Activity state"""
+  activity: ActivityStateEnum!
+
+  """Selected artboard IDs"""
+  selectedArtboardIds: [UUID!]!
+
+  """Selection bounds summary"""
+  selectionBounds: Rectangle
+
+  """Cursor position"""
+  cursor: CursorPosition
+
+  """Network latency (ms)"""
+  latencyMs: Int!
+
+  """Last event sequence applied"""
+  lastEventSequence: Int!
+
+  """Undo depth remaining"""
+  undoDepthRemaining: Int!
+
+  """Active feature flags"""
+  featureFlags: [String!]!
+
+  """Idle reason"""
+  idleReason: String
+
+  """Device info"""
+  deviceInfo: DeviceInfo!
+
+  """Protocol version"""
+  protocolVersion: String!
+}
+
+# =========================================
+# Root Types
+# =========================================
+
+"""
+Query root
+"""
+type Query {
+  """
+  Fetch document summary with optional artboards and snapshots
+  Must resolve in <100ms for docs ≤10K events
+  """
+  documentSummary(
+    """Document UUID"""
+    id: UUID!
+
+    """Include artboards"""
+    includeArtboards: Boolean = true
+
+    """Include snapshots"""
+    includeSnapshots: Boolean = false
+
+    """Artboard limit"""
+    artboardLimit: Int = 50
+  ): Document
+
+  """
+  Fetch user settings profile
+  """
+  settingsProfile(
+    """User UUID"""
+    userId: UUID!
+  ): SettingsProfile
+}
+
+"""
+Mutation root
+"""
+type Mutation {
+  """
+  Create a new artboard
+  Emits artboard.created event, schedules thumbnail job
+  """
+  createArtboard(
+    """Artboard creation input"""
+    input: CreateArtboardInput!
+  ): CreateArtboardPayload!
+
+  """
+  Update user settings profile
+  """
+  updateSettings(
+    """User UUID"""
+    userId: UUID!
+
+    """Settings input"""
+    input: SettingsProfileInput!
+  ): SettingsProfile!
+}
+
+"""
+Subscription root
+"""
+type Subscription {
+  """
+  Subscribe to document presence updates
+  Fallback for when WebSocket firewall policies prohibit raw connections
+  """
+  documentPresence(
+    """Document UUID"""
+    documentId: UUID!
+
+    """Optional artboard filter"""
+    artboardFilter: [UUID!]
+
+    """Cursor sampling interval (ms)"""
+    cursorSamplingMs: Int = 100
+  ): PresenceUpdate!
+}

@@ -1,11 +1,36 @@
 {
   "meta": {
-    "version": "1.0",
-    "generated": "2025-11-09",
+    "version": "1.1",
+    "generated": "2025-11-11",
     "project": "WireTuner",
     "description": "API and file format specification manifest for surgical content retrieval"
   },
   "locations": [
+    {
+      "key": "graphql-schema",
+      "file": "schema.graphql",
+      "description": "GraphQL SDL schema for document, artboard, settings, and presence APIs"
+    },
+    {
+      "key": "telemetry-api",
+      "file": "telemetry.yaml",
+      "description": "OpenAPI 3.1 specification for telemetry ingestion and export artifact endpoints"
+    },
+    {
+      "key": "example-queries",
+      "file": "examples/queries.graphql",
+      "description": "Sample GraphQL queries for documentSummary and settingsProfile"
+    },
+    {
+      "key": "example-mutations",
+      "file": "examples/mutations.graphql",
+      "description": "Sample GraphQL mutations for createArtboard and updateSettings"
+    },
+    {
+      "key": "example-subscriptions",
+      "file": "examples/subscriptions.graphql",
+      "description": "Sample GraphQL subscriptions for documentPresence"
+    },
     {
       "key": "file-format-spec",
       "file": "file_format_spec.md",

@@ -1,0 +1,178 @@
+# =========================================
+# WireTuner GraphQL Mutation Examples
+# =========================================
+
+# Mutation: Create Artboard
+# Creates a new artboard with preset dimensions and background color
+# Emits artboard.created event, schedules thumbnail job per contract
+mutation CreateArtboard {
+  createArtboard(
+    input: {
+      documentId: "a3bb189e-8bf9-4bc6-9c8e-d3d0c2b3e9f1"
+      name: "Main Screen"
+      preset: IPHONE_14_PRO
+      bounds: { x: 0, y: 0, width: 1179, height: 2556 }
+      backgroundColor: { r: 1.0, g: 1.0, b: 1.0, a: 1.0 }
+      viewportState: { zoom: 1.0, panOffsetX: 0, panOffsetY: 0 }
+      zOrder: 0
+      clientRequestId: "c1d2e3f4-5a6b-7c8d-9e0f-1a2b3c4d5e6f"
+      featureFlags: ["enable-gpu-acceleration", "new-rendering-pipeline"]
+    }
+  ) {
+    artboard {
+      id
+      documentId
+      name
+      bounds {
+        x
+        y
+        width
+        height
+      }
+      backgroundColor {
+        r
+        g
+        b
+        a
+      }
+      zOrder
+      preset
+      viewportState {
+        zoom
+        panOffsetX
+        panOffsetY
+      }
+      layers
+    }
+    operationId
+    thumbnailStatus {
+      state
+      lastUpdatedAt
+    }
+    warnings {
+      code
+      message
+      remediation
+    }
+    snapshotSequence
+  }
+}
+
+# Mutation: Create Custom Artboard
+# Creates artboard with custom dimensions (validates 100-100,000 px range)
+mutation CreateCustomArtboard {
+  createArtboard(
+    input: {
+      documentId: "a3bb189e-8bf9-4bc6-9c8e-d3d0c2b3e9f1"
+      name: "Dashboard View"
+      preset: CUSTOM
+      bounds: { x: 100, y: 100, width: 1920, height: 1080 }
+      backgroundColor: { r: 0.95, g: 0.95, b: 0.95, a: 1.0 }
+    }
+  ) {
+    artboard {
+      id
+      name
+      preset
+      bounds {
+        width
+        height
+      }
+    }
+    operationId
+    warnings {
+      code
+      message
+    }
+    snapshotSequence
+  }
+}
+
+# Mutation: Create Desktop HD Artboard
+mutation CreateDesktopHDArtboard {
+  createArtboard(
+    input: {
+      documentId: "a3bb189e-8bf9-4bc6-9c8e-d3d0c2b3e9f1"
+      name: "Desktop Mockup"
+      preset: DESKTOP_HD
+      bounds: { x: 0, y: 0, width: 1920, height: 1080 }
+      backgroundColor: { r: 0.0, g: 0.0, b: 0.0, a: 1.0 }
+      zOrder: 1
+    }
+  ) {
+    artboard {
+      id
+      name
+      preset
+    }
+    operationId
+    snapshotSequence
+  }
+}
+
+# Mutation: Update Settings Profile
+# Updates user settings with new values (sources become 'USER')
+mutation UpdateUserSettings {
+  updateSettings(
+    userId: "b7c8d9e0-1f2a-3b4c-5d6e-7f8a9b0c1d2e"
+    input: {
+      samplingIntervalMs: 50
+      anchorVisibilityMode: ALWAYS
+      telemetryEnabled: true
+      nudgePreset: 5.0
+    }
+  ) {
+    userId
+    samplingInterval {
+      effectiveValue
+      source
+      updatedAt
+    }
+    anchorVisibilityDefault {
+      effectiveValue
+      source
+      updatedAt
+    }
+    telemetryEnabled {
+      effectiveValue
+      source
+      updatedAt
+    }
+    nudgeDistanceOverrides {
+      effectiveValue
+      source
+      updatedAt
+    }
+    pendingAdminOverrides
+  }
+}
+
+# Mutation: Update Settings with Variables
+# Demonstrates parameterized mutations for flexible client usage
+mutation UpdateSettingsWithVariables(
+  $userId: UUID!
+  $samplingInterval: Int
+  $telemetryEnabled: Boolean
+) {
+  updateSettings(
+    userId: $userId
+    input: { samplingIntervalMs: $samplingInterval, telemetryEnabled: $telemetryEnabled }
+  ) {
+    userId
+    samplingInterval {
+      effectiveValue
+      source
+    }
+    telemetryEnabled {
+      effectiveValue
+      source
+    }
+  }
+}
+
+# Example variables for above mutation:
+# {
+#   "userId": "b7c8d9e0-1f2a-3b4c-5d6e-7f8a9b0c1d2e",
+#   "samplingInterval": 100,
+#   "telemetryEnabled": true
+# }

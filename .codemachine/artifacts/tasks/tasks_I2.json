@@ -32,7 +32,7 @@
       "I1.T3"
     ],
     "parallelizable": true,
-    "done": false
+    "done": true
   },
   {
     "task_id": "I2.T3",

@@ -1,0 +1,395 @@
+openapi: 3.1.0
+info:
+  title: WireTuner Telemetry API
+  version: 0.1.0
+  description: |
+    RESTful telemetry ingestion and export artifact endpoints for WireTuner.
+    Handles performance samples, crash reports, and export job downloads.
+  contact:
+    name: WireTuner Team
+  license:
+    name: Proprietary
+
+servers:
+  - url: https://api.wiretuner.io/v1
+    description: Production server
+  - url: https://staging-api.wiretuner.io/v1
+    description: Staging server
+  - url: http://localhost:3000/v1
+    description: Local development server
+
+security:
+  - bearerAuth: []
+
+paths:
+  /telemetry/perf-sample:
+    post:
+      summary: Ingest performance telemetry sample
+      description: |
+        Accepts performance metrics from desktop clients including FPS, frame time,
+        event replay rate, and cursor latency. Used to monitor application performance
+        and correlate with feature flag experiments.
+      operationId: ingestPerfSample
+      tags:
+        - Telemetry
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PerformanceSample'
+            examples:
+              normalSample:
+                summary: Normal performance sample
+                value:
+                  documentId: "a3bb189e-8bf9-4bc6-9c8e-d3d0c2b3e9f1"
+                  artboardId: "f47ac10b-58cc-4372-a567-0e02b2c3d479"
+                  fps: 60
+                  frameTimeMs: 16.67
+                  eventReplayRate: 1000
+                  samplingIntervalMs: 100
+                  snapshotDurationMs: 250
+                  cursorLatencyUs: 5000
+                  platform: "macos"
+                  flagsActive:
+                    - "enable-gpu-acceleration"
+                    - "new-rendering-pipeline"
+                  telemetryOptIn: true
+      responses:
+        '202':
+          description: Telemetry sample accepted for processing
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TelemetryAcceptedResponse'
+        '400':
+          description: Invalid request payload
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized - invalid or missing JWT token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '429':
+          description: Rate limit exceeded
+          headers:
+            X-RateLimit-Limit:
+              schema:
+                type: integer
+              description: Request limit per time window
+            X-RateLimit-Remaining:
+              schema:
+                type: integer
+              description: Remaining requests in current window
+            X-RateLimit-Reset:
+              schema:
+                type: integer
+              description: Unix timestamp when limit resets
+            Retry-After:
+              schema:
+                type: integer
+              description: Seconds to wait before retrying
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /telemetry/replay-inconsistency:
+    post:
+      summary: Report event replay inconsistency
+      description: |
+        Reports state hash mismatches detected during event replay, enabling
+        detection and diagnosis of non-deterministic replay bugs.
+      operationId: reportReplayInconsistency
+      tags:
+        - Telemetry
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReplayInconsistency'
+      responses:
+        '202':
+          description: Inconsistency report accepted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TelemetryAcceptedResponse'
+        '400':
+          description: Invalid request payload
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /exports/{jobId}:
+    get:
+      summary: Download export artifact
+      description: |
+        Retrieves export job metadata and signed download URL for PDF, SVG, or JSON artifacts.
+        Requires valid JWT and job ownership. URLs expire after 7 days.
+      operationId: getExportArtifact
+      tags:
+        - Exports
+      parameters:
+        - name: jobId
+          in: path
+          required: true
+          description: Export job UUID
+          schema:
+            type: string
+            format: uuid
+          example: "e7f8a9b0-1c2d-3e4f-5a6b-7c8d9e0f1a2b"
+      responses:
+        '200':
+          description: Export artifact metadata with download URL
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExportArtifact'
+        '404':
+          description: Export job not found or expired
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Forbidden - user does not own this export job
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: JWT token obtained from authentication flow
+
+  schemas:
+    PerformanceSample:
+      type: object
+      required:
+        - fps
+        - frameTimeMs
+        - eventReplayRate
+        - samplingIntervalMs
+        - platform
+        - telemetryOptIn
+      properties:
+        documentId:
+          type: string
+          format: uuid
+          description: Document UUID context (optional)
+        artboardId:
+          type: string
+          format: uuid
+          description: Artboard UUID context (optional)
+        fps:
+          type: number
+          format: float
+          minimum: 0
+          maximum: 240
+          description: Frames per second
+        frameTimeMs:
+          type: number
+          format: float
+          minimum: 0
+          description: Frame time in milliseconds
+        eventReplayRate:
+          type: integer
+          minimum: 0
+          description: Events replayed per second
+        samplingIntervalMs:
+          type: integer
+          minimum: 0
+          description: Sampling interval in milliseconds
+        snapshotDurationMs:
+          type: integer
+          minimum: 0
+          description: Snapshot creation duration in milliseconds
+        cursorLatencyUs:
+          type: integer
+          minimum: 0
+          description: Cursor latency in microseconds
+        platform:
+          type: string
+          enum:
+            - macos
+            - windows
+          description: Client platform
+        flagsActive:
+          type: array
+          items:
+            type: string
+          description: Active feature flags during sample
+        telemetryOptIn:
+          type: boolean
+          description: User telemetry consent status
+
+    ReplayInconsistency:
+      type: object
+      required:
+        - documentId
+        - snapshotSequence
+        - eventIds
+        - stateHashBefore
+        - stateHashAfter
+        - clientVersion
+        - platform
+      properties:
+        documentId:
+          type: string
+          format: uuid
+          description: Document UUID
+        snapshotSequence:
+          type: integer
+          description: Snapshot sequence number
+        eventIds:
+          type: array
+          items:
+            type: string
+            format: uuid
+          description: Event IDs involved in replay
+        stateHashBefore:
+          type: string
+          description: State hash before replay
+        stateHashAfter:
+          type: string
+          description: State hash after replay
+        clientVersion:
+          type: string
+          description: Client application version
+        platform:
+          type: string
+          enum:
+            - macos
+            - windows
+          description: Client platform
+
+    TelemetryAcceptedResponse:
+      type: object
+      required:
+        - correlationId
+        - status
+      properties:
+        correlationId:
+          type: string
+          format: uuid
+          description: Correlation ID for tracking this telemetry batch
+        status:
+          type: string
+          enum:
+            - accepted
+          description: Acceptance status
+
+    ExportArtifact:
+      type: object
+      required:
+        - id
+        - documentId
+        - format
+        - status
+        - createdAt
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Export job UUID
+        documentId:
+          type: string
+          format: uuid
+          description: Source document UUID
+        artboardScope:
+          type: array
+          items:
+            type: string
+            format: uuid
+          description: Artboard IDs included in export
+        format:
+          type: string
+          enum:
+            - SVG
+            - PDF
+            - JSON
+          description: Export format
+        status:
+          type: string
+          enum:
+            - queued
+            - processing
+            - complete
+            - failed
+          description: Job status
+        createdAt:
+          type: string
+          format: date-time
+          description: Job creation timestamp
+        completedAt:
+          type: string
+          format: date-time
+          description: Job completion timestamp
+        artifactUrl:
+          type: string
+          format: uri
+          description: Signed download URL (valid for 7 days)
+        sizeBytes:
+          type: integer
+          minimum: 0
+          description: Artifact size in bytes
+        checksum:
+          type: string
+          description: SHA-256 checksum of artifact
+        warningList:
+          type: array
+          items:
+            type: string
+          description: Warnings encountered during export
+        backendVersion:
+          type: string
+          description: Backend version that processed export
+
+    ErrorResponse:
+      type: object
+      required:
+        - error
+        - message
+      properties:
+        error:
+          type: string
+          description: Error code
+        message:
+          type: string
+          description: Human-readable error message
+        details:
+          type: object
+          additionalProperties: true
+          description: Additional error details
+        retryAfterMs:
+          type: integer
+          description: Milliseconds to wait before retry (for throttling)
+
+tags:
+  - name: Telemetry
+    description: Performance and diagnostic telemetry ingestion
+  - name: Exports
+    description: Export artifact downloads
