@@ -3,6 +3,8 @@ import 'package:file_selector/file_selector.dart';
 import 'package:wiretuner/domain/document/document.dart';
 import 'package:wiretuner/infrastructure/export/svg_exporter.dart';
 import 'package:wiretuner/infrastructure/export/json_exporter.dart';
+import 'package:wiretuner/infrastructure/export/pdf_exporter_async.dart';
+import 'package:wiretuner/modules/export/pdf_status_panel.dart';
 
 /// Export dialog for choosing format and scope of document export.
 ///
@@ -130,7 +132,6 @@ class _ExportDialogState extends State<ExportDialog> {
               value: ExportFormat.pdf,
               label: Text('PDF'),
               icon: Icon(Icons.picture_as_pdf_outlined),
-              enabled: false, // Future iteration
             ),
           ],
           selected: {_selectedFormat},
@@ -332,7 +333,15 @@ class _ExportDialogState extends State<ExportDialog> {
         break;
 
       case ExportFormat.pdf:
-        warnings.add('PDF export is not yet implemented.');
+        warnings.add(
+          'PDF export is asynchronous. The export will continue in the background.',
+        );
+        if (_selectedScope == ExportScope.allArtboards &&
+            widget.document.artboards.length > 1) {
+          warnings.add(
+            'Multiple artboards will be combined into a single PDF file.',
+          );
+        }
         break;
     }
 
@@ -393,7 +402,7 @@ class _ExportDialogState extends State<ExportDialog> {
         return await _exportJson(savePath);
 
       case ExportFormat.pdf:
-        throw UnimplementedError('PDF export not yet implemented');
+        return await _exportPdf(savePath);
     }
   }
 
@@ -481,11 +490,67 @@ class _ExportDialogState extends State<ExportDialog> {
     return '$dir/${baseFileName}_${sanitizedName}_${index + 1}$extension';
   }
 
+  Future<ExportResult> _exportPdf(String filePath) async {
+    // Create PDF exporter with Redis configuration
+    // TODO: Read Redis host/port from environment/config
+    final exporter = PdfExporterAsync(
+      redisHost: 'localhost',
+      redisPort: 6379,
+    );
+
+    try {
+      // Enqueue PDF export job
+      final jobId = await exporter.exportToFile(
+        widget.document,
+        filePath,
+        artboardIds: _selectedScope == ExportScope.allArtboards
+            ? null
+            : _selectedArtboardIds.toList(),
+      );
+
+      // Show status panel (non-blocking)
+      if (mounted) {
+        showDialog(
+          context: context,
+          barrierDismissible: false,
+          builder: (context) => PdfStatusPanel(
+            jobId: jobId,
+            exporter: exporter,
+            onComplete: () {
+              _showSuccess('PDF export completed successfully');
+            },
+            onError: (error) {
+              _showError('PDF export failed: $error');
+            },
+          ),
+        );
+      }
+
+      return ExportResult(
+        format: ExportFormat.pdf,
+        filePaths: [filePath],
+      );
+    } catch (e) {
+      rethrow;
+    } finally {
+      exporter.dispose();
+    }
+  }
+
   void _showError(String message) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(message),
         backgroundColor: Colors.red,
+      ),
+    );
+  }
+
+  void _showSuccess(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: Colors.green,
       ),
     );
   }

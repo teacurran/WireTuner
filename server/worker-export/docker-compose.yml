@@ -1,0 +1,57 @@
+version: '3.8'
+
+services:
+  # Redis for job queue
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+    networks:
+      - wiretuner-network
+
+  # PDF export worker
+  worker-export:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    depends_on:
+      redis:
+        condition: service_healthy
+    environment:
+      - RUST_LOG=info
+      - REDIS_URL=redis://redis:6379
+      - WORKER_CONCURRENCY=4
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://jaeger:4317
+      - OTEL_SERVICE_NAME=pdf-export-worker
+    volumes:
+      - export-data:/exports
+    restart: unless-stopped
+    networks:
+      - wiretuner-network
+
+  # Optional: Jaeger for telemetry
+  jaeger:
+    image: jaegertracing/all-in-one:1.52
+    ports:
+      - "16686:16686"  # UI
+      - "4317:4317"    # OTLP gRPC
+      - "4318:4318"    # OTLP HTTP
+    environment:
+      - COLLECTOR_OTLP_ENABLED=true
+    networks:
+      - wiretuner-network
+
+volumes:
+  redis-data:
+  export-data:
+
+networks:
+  wiretuner-network:
+    driver: bridge

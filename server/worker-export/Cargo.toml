@@ -1,0 +1,54 @@
+[package]
+name = "worker-export"
+version = "0.1.0"
+edition = "2021"
+authors = ["WireTuner Team"]
+description = "Background worker for PDF/AI export via resvg"
+
+[dependencies]
+# SVG to PDF conversion with TRUE vector fidelity
+svg2pdf = "0.11"
+usvg = { version = "0.42", features = ["text"] }
+resvg = "0.42"
+
+# Redis client for job queue
+redis = { version = "0.24", features = ["tokio-comp", "connection-manager"] }
+
+# Async runtime
+tokio = { version = "1.35", features = ["full"] }
+tokio-util = "0.7"
+
+# Serialization
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+
+# Error handling
+anyhow = "1.0"
+thiserror = "1.0"
+
+# Logging
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter", "json"] }
+
+# OpenTelemetry for structured telemetry
+opentelemetry = "0.21"
+opentelemetry_sdk = { version = "0.21", features = ["rt-tokio"] }
+opentelemetry-otlp = { version = "0.14", features = ["tonic", "metrics", "logs"] }
+
+# UUID generation
+uuid = { version = "1.6", features = ["v4", "serde"] }
+
+# Time utilities
+chrono = { version = "0.4", features = ["serde"] }
+
+# File I/O
+tempfile = "3.8"
+
+[dev-dependencies]
+mockall = "0.12"
+pretty_assertions = "1.4"
+
+[profile.release]
+opt-level = 3
+lto = true
+codegen-units = 1
