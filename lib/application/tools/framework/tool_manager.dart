@@ -5,6 +5,7 @@ import 'package:logger/logger.dart';
 import 'package:wiretuner/infrastructure/event_sourcing/event_recorder.dart';
 import 'cursor_service.dart';
 import 'tool_interface.dart';
+import 'tool_registry.dart';
 import 'dart:ui';
 
 /// Manages the lifecycle and state of all tools in the application.
@@ -406,11 +407,48 @@ class ToolManager extends ChangeNotifier {
   ///
   /// Related: [ToolRegistry.getDefinitionByShortcut], Section 2 (Tool System)
   bool handleToolHotkey(KeyEvent event) {
-    // TODO(I3.T1): Implement hotkey mapping with ToolRegistry
-    // This placeholder allows the API to be defined now and implemented later.
+    // Only handle key down events for tool switching
+    if (event is! KeyDownEvent) {
+      return false;
+    }
 
-    _logger.d('Tool hotkey handling not yet implemented: ${event.logicalKey}');
-    return false;
+    // Skip if modifier keys are pressed (Ctrl, Alt, Meta)
+    // Tool shortcuts are single-key only (e.g., 'P', 'V', 'A')
+    if (HardwareKeyboard.instance.isControlPressed ||
+        HardwareKeyboard.instance.isAltPressed ||
+        HardwareKeyboard.instance.isMetaPressed) {
+      return false;
+    }
+
+    // Extract character from logical key
+    // LogicalKeyboardKey provides keyLabel for printable characters
+    final keyLabel = event.logicalKey.keyLabel;
+    if (keyLabel.isEmpty || keyLabel.length > 1) {
+      // Not a single character key
+      return false;
+    }
+
+    // Try to find tool definition by shortcut
+    try {
+      final registry = ToolRegistry.instance;
+      final definition = registry.getDefinitionByShortcut(keyLabel)!;
+
+      // Activate the tool
+      final success = activateTool(definition.toolId);
+      if (success) {
+        _logger.i(
+            'Tool hotkey activated: ${definition.toolId} (shortcut: $keyLabel)');
+        return true;
+      } else {
+        _logger.w(
+            'Failed to activate tool via hotkey: ${definition.toolId} (shortcut: $keyLabel)');
+        return false;
+      }
+    } on StateError {
+      // No tool found for this shortcut
+      _logger.d('No tool registered for shortcut: $keyLabel');
+      return false;
+    }
   }
 
   /// Renders the active tool's overlay.
