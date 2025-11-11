@@ -2,10 +2,10 @@
 
 <!-- anchor: event-catalog-reference -->
 
-**Version:** 1.0
-**Date:** 2025-11-10
+**Version:** 2.0
+**Date:** 2025-11-11
 **Status:** Active
-**Related Documents:** [Event Schema Reference](./event_schema.md) | [ADR 003](../adr/003-event-sourcing-architecture.md)
+**Related Documents:** [Event Schema Reference](./event_schema.md) | [ADR 003](../adr/003-event-sourcing-architecture.md) | [Task I2.T1](../../.codemachine/artifacts/plan/02_Iteration_I2.md#task-i2-t1)
 
 ---
 
@@ -29,6 +29,7 @@ This document provides a comprehensive catalog of all event types supported by W
 ## Table of Contents
 
 - [Universal Event Envelope Reference](#universal-event-envelope-reference)
+- [Event Store Schema Columns](#event-store-schema-columns)
 - [Path Creation Events](#path-creation-events)
 - [Path Modification Events](#path-modification-events)
 - [Shape Creation Events](#shape-creation-events)
@@ -66,6 +67,78 @@ All events in this catalog inherit the following required metadata fields from t
 | `userId` | string (UUID) | User who created this event | [event_schema.md:282](./event_schema.md#collaboration-ready-fields) |
 | `sessionId` | string (UUID) | Editing session identifier | [event_schema.md:283](./event_schema.md#collaboration-ready-fields) |
 | `deviceId` | string | Device identifier | [event_schema.md:284](./event_schema.md#collaboration-ready-fields) |
+
+---
+
+## Event Store Schema Columns
+
+<!-- anchor: event-store-schema-columns -->
+
+This section documents the finalized SQLite schema columns for the `events` table as implemented in Task I2.T1. These columns extend the universal event envelope with persistence-specific metadata required for replay, auto-save, and collaboration features.
+
+### Events Table Schema (v2)
+
+The `events` table stores all event records with the following columns:
+
+| Column Name | SQLite Type | Description | Corresponds To |
+|-------------|-------------|-------------|----------------|
+| `event_id` | TEXT PRIMARY KEY | Unique event identifier (TEXT format, e.g., "evt_123") | EventBase.eventId |
+| `document_id` | TEXT NOT NULL | Foreign key to documents table | EventBase.documentId |
+| `sequence` | INTEGER NOT NULL UNIQUE | Zero-based sequential index for replay ordering | EventBase.eventSequence |
+| `artboard_id` | TEXT | Optional foreign key to artboards table (NULL if document-level event) | Artboard scoping for FR-ARTBOARD-001 |
+| `timestamp` | TEXT NOT NULL | ISO 8601 timestamp (e.g., "2025-11-11T10:30:00.000Z") | EventBase.timestamp (converted from Unix milliseconds) |
+| `user_id` | TEXT NOT NULL | User who created this event (defaults to "local-user" for single-player) | EventBase.userId |
+| `event_type` | TEXT NOT NULL | Event type discriminator (e.g., "CreatePathEvent") | EventBase.eventType |
+| `event_data` | TEXT NOT NULL | JSON-serialized event payload containing all event-specific fields | EventBase.toJson() |
+| `sampled_path` | TEXT | Optional JSON array of sampled points for high-frequency events (50ms sampling) | Supports FR-PATH-002 (anchor sampling) |
+| `operation_id` | TEXT | Optional grouping ID for undo/redo operations | EventBase.undoGroupId |
+
+### Cross-References to Functional Requirements
+
+- **FR-014 (Auto-save):** The `sequence` column ensures deterministic replay order for auto-saved event batches. EventStoreServiceAdapter batches events and flushes periodically (5s timeout or 50 events) to minimize WAL growth while maintaining crash resistance.
+
+- **FR-015 (Manual Save):** Manual save operations call `EventStoreServiceAdapter.flushBatch()` immediately, followed by `performIntegrityCheck()` to ensure WAL is checkpointed and database integrity is verified before user confirmation.
+
+- **FR-ARTBOARD-001 (Artboard Scoping):** The `artboard_id` column enables per-artboard event filtering for NavigatorService thumbnail updates and artboard-specific replay operations.
+
+- **FR-PATH-002 (Anchor Sampling):** The `sampled_path` column stores JSON arrays of sampled anchor points during continuous drag operations, reducing event count while preserving smooth playback during replay.
+
+### WAL Integrity and Auto-Save Integration
+
+The EventStoreServiceAdapter implements the following behaviors to satisfy FR-014/FR-015:
+
+1. **Auto-save Batching:** Events are accumulated in memory and flushed to SQLite every 5 seconds OR when 50 events are pending (whichever comes first). This reduces WAL write frequency while maintaining <5s data loss window.
+
+2. **WAL Checkpoint on Manual Save:** When user triggers manual save (Cmd+S), the system:
+   - Calls `flushBatch()` to commit pending events
+   - Runs `PRAGMA wal_checkpoint(TRUNCATE)` to merge WAL into main DB file
+   - Runs `PRAGMA integrity_check` to verify database health
+   - Updates UI save indicator only after integrity check passes
+
+3. **Crash Recovery:** On application startup after crash:
+   - SQLite automatically replays WAL transactions (ACID guarantee)
+   - Application calls `performIntegrityCheck()` to verify recovery success
+   - ReplayService validates document state hash against last known snapshot
+   - User is notified if recovery required manual intervention
+
+4. **Event Count Tracking:** The `documents.event_count` column is incremented after each event batch commit, enabling:
+   - SnapshotManager to trigger snapshot creation at 1000-event intervals
+   - TelemetryService to report per-document editing activity
+   - SyncAPI to detect documents requiring cloud backup
+
+### Migration Notes
+
+The schema evolved from v1 (simple `metadata`/`events`/`snapshots`) to v2 (full blueprint schema with `documents`/`artboards`/`layers`/`events`/`snapshots`/`export_jobs`) via `SchemaMigrationManager` (see `lib/infrastructure/persistence/migrations.dart`).
+
+Key migration changes:
+- `metadata` table renamed to `documents` with additional columns
+- `events.event_id` changed from INTEGER AUTOINCREMENT to TEXT PRIMARY KEY
+- `events.event_sequence` renamed to `events.sequence` for consistency
+- `events.event_payload` renamed to `events.event_data`
+- Added `artboard_id`, `sampled_path`, `operation_id` columns
+- Timestamp format changed from INTEGER (Unix milliseconds) to TEXT (ISO 8601)
+
+Existing v1 databases are migrated automatically on first open after upgrade.
 
 ---
 
