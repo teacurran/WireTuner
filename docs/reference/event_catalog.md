@@ -99,7 +99,7 @@ The `events` table stores all event records with the following columns:
 
 - **FR-015 (Manual Save):** Manual save operations call `EventStoreServiceAdapter.flushBatch()` immediately, followed by `performIntegrityCheck()` to ensure WAL is checkpointed and database integrity is verified before user confirmation.
 
-- **FR-ARTBOARD-001 (Artboard Scoping):** The `artboard_id` column enables per-artboard event filtering for NavigatorService thumbnail updates and artboard-specific replay operations.
+- **FR-ARTBOARD-001 (Artboard Scoping):** The `artboard_id` column enables per-artboard event filtering for NavigatorService thumbnail updates and artboard-specific replay operations. As of schema v2.0.0, `artboard_id` is **required** for all artboard-scoped events (CreateLayerEvent, path/shape/selection events, etc.) and NULL only for document-level events (CreateDocumentEvent, ModifyDocumentMetadataEvent).
 
 - **FR-PATH-002 (Anchor Sampling):** The `sampled_path` column stores JSON arrays of sampled anchor points during continuous drag operations, reducing event count while preserving smooth playback during replay.
 
@@ -128,15 +128,30 @@ The EventStoreServiceAdapter implements the following behaviors to satisfy FR-01
 
 ### Migration Notes
 
-The schema evolved from v1 (simple `metadata`/`events`/`snapshots`) to v2 (full blueprint schema with `documents`/`artboards`/`layers`/`events`/`snapshots`/`export_jobs`) via `SchemaMigrationManager` (see `lib/infrastructure/persistence/migrations.dart`).
+The schema evolved across three versions via `SchemaMigrationManager` (see `lib/infrastructure/persistence/migrations.dart`):
 
-Key migration changes:
+**v1 → v2 Migration** (Database Schema):
 - `metadata` table renamed to `documents` with additional columns
 - `events.event_id` changed from INTEGER AUTOINCREMENT to TEXT PRIMARY KEY
 - `events.event_sequence` renamed to `events.sequence` for consistency
 - `events.event_payload` renamed to `events.event_data`
-- Added `artboard_id`, `sampled_path`, `operation_id` columns
+- Added `artboard_id`, `sampled_path`, `operation_id` columns to events table
 - Timestamp format changed from INTEGER (Unix milliseconds) to TEXT (ISO 8601)
+- Created `artboards`, `layers`, and `export_jobs` tables
+
+**v2 → v3 Migration** (Multi-Artboard Support):
+- Added `artboard_count` column to `documents` table for Navigator performance
+- Created default artboards for any documents without existing artboards
+- Snapshot deserialization now handles legacy v1 snapshots (layers at document root)
+- Legacy snapshots auto-migrated by creating default artboard during load
+- Document schema version bumped from 1 to 2 (kDocumentSchemaVersion)
+
+**Artboard Scoping Rules (v2.0.0+)**:
+- All layer-scoped events (CreateLayerEvent, DeleteLayerEvent, etc.) MUST carry `artboard_id`
+- All object events (CreatePathEvent, AddAnchorEvent, SelectObjectsEvent, etc.) MUST carry `artboard_id`
+- All viewport events (ViewportPanEvent, ViewportZoomEvent) MUST carry `artboard_id`
+- Document-level events (CreateDocumentEvent, ModifyDocumentMetadataEvent) have NULL `artboard_id`
+- Events without `artboard_id` for artboard-scoped operations are rejected by EventStoreServiceAdapter
 
 Existing v1 databases are migrated automatically on first open after upgrade.
 

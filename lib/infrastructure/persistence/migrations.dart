@@ -13,7 +13,7 @@ class SchemaMigrationManager {
   static final Logger _logger = Logger();
 
   /// Current schema version after all migrations.
-  static const int targetSchemaVersion = 2;
+  static const int targetSchemaVersion = 3;
 
   /// Applies all pending migrations to bring database to target schema version.
   ///
@@ -26,7 +26,8 @@ class SchemaMigrationManager {
   /// Throws [Exception] if any migration fails.
   static Future<void> migrate(Database db, int currentVersion) async {
     _logger.i(
-        'Starting schema migration from version $currentVersion to $targetSchemaVersion');
+      'Starting schema migration from version $currentVersion to $targetSchemaVersion',
+    );
 
     if (currentVersion >= targetSchemaVersion) {
       _logger.i('Schema is already at target version $targetSchemaVersion');
@@ -52,6 +53,9 @@ class SchemaMigrationManager {
     switch (toVersion) {
       case 2:
         await _migrateToV2(txn);
+        break;
+      case 3:
+        await _migrateToV3(txn);
         break;
       default:
         throw Exception('Unknown migration version: $toVersion');
@@ -248,6 +252,90 @@ class SchemaMigrationManager {
     _logger.d('V2 migration completed: Blueprint schema active');
   }
 
+  /// Migration from v2 (blueprint schema) to v3 (multi-artboard snapshots).
+  ///
+  /// This migration handles the transition from single-artboard documents
+  /// (where Document contains layers directly) to multi-artboard documents
+  /// (where Document contains artboards, each with their own layers).
+  ///
+  /// The database schema (artboards/layers tables) already exists from v2,
+  /// but v2 snapshots stored Document.layers/selection/viewport directly.
+  /// This migration doesn't modify database structure, but adds logic to
+  /// SnapshotSerializer for handling legacy v1 snapshot format during loads.
+  ///
+  /// Migration strategy:
+  /// 1. No database schema changes (artboards table already exists)
+  /// 2. Legacy snapshots are migrated lazily during load:
+  ///    - If snapshot has schemaVersion=1 or contains 'layers' field
+  ///    - Create default artboard with id 'default-artboard'
+  ///    - Move layers/selection/viewport into the default artboard
+  ///    - Update schemaVersion to 2
+  /// 3. Document version constant bumped to 2 (kDocumentSchemaVersion)
+  /// 4. Events table already supports artboard_id (added in v2)
+  ///
+  /// This migration is intentionally lightweight because the heavy lifting
+  /// happens in snapshot deserialization (Document.fromJson), allowing
+  /// graceful handling of mixed v1/v2 documents during transition.
+  static Future<void> _migrateToV3(Transaction txn) async {
+    _logger.d('Migrating to v3: Multi-artboard document schema');
+
+    // Step 1: Add document-level metadata column for tracking artboard count
+    // This helps with Navigator panel performance
+    await txn.execute('''
+      ALTER TABLE documents
+      ADD COLUMN artboard_count INTEGER NOT NULL DEFAULT 0
+    ''');
+
+    // Step 2: Populate artboard_count from existing artboards table
+    await txn.execute('''
+      UPDATE documents
+      SET artboard_count = (
+        SELECT COUNT(*)
+        FROM artboards
+        WHERE artboards.document_id = documents.id
+      )
+    ''');
+
+    // Step 3: Create index for efficient artboard enumeration
+    await txn.execute('''
+      CREATE INDEX IF NOT EXISTS idx_documents_artboard_count
+      ON documents(artboard_count)
+    ''');
+
+    // Step 4: Add default artboard for any documents without artboards
+    // This handles the case where v2 documents were created but never
+    // populated artboards (e.g., during development/testing)
+    await txn.execute('''
+      INSERT INTO artboards (id, document_id, name, bounds_x, bounds_y, bounds_width, bounds_height, background_color, z_order)
+      SELECT
+        'default-artboard-' || documents.id,
+        documents.id,
+        'Artboard 1',
+        0,
+        0,
+        800,
+        600,
+        '#FFFFFF',
+        0
+      FROM documents
+      WHERE NOT EXISTS (
+        SELECT 1 FROM artboards WHERE artboards.document_id = documents.id
+      )
+    ''');
+
+    // Step 5: Refresh artboard_count after creating default artboards
+    await txn.execute('''
+      UPDATE documents
+      SET artboard_count = (
+        SELECT COUNT(*)
+        FROM artboards
+        WHERE artboards.document_id = documents.id
+      )
+    ''');
+
+    _logger.d('V3 migration completed: Multi-artboard support active');
+  }
+
   /// Verifies schema integrity after migration.
   ///
   /// Checks that all required tables, columns, and indexes exist.
@@ -274,14 +362,16 @@ class SchemaMigrationManager {
 
       if (indexes.length < 4) {
         _logger.w(
-            'Schema verification failed: Expected at least 4 indexes, found ${indexes.length}');
+          'Schema verification failed: Expected at least 4 indexes, found ${indexes.length}',
+        );
         return false;
       }
 
       // Verify events table has required columns
       final eventsColumns = await db.rawQuery('PRAGMA table_info(events)');
-      final columnNames = eventsColumns.map((c) => c['name'] as String).toSet();
-      final requiredColumns = {
+      final eventColumnNames =
+          eventsColumns.map((c) => c['name'] as String).toSet();
+      final requiredEventColumns = {
         'event_id',
         'document_id',
         'sequence',
@@ -291,12 +381,24 @@ class SchemaMigrationManager {
         'event_type',
         'event_data',
         'sampled_path',
-        'operation_id'
+        'operation_id',
       };
 
-      if (!requiredColumns.every((col) => columnNames.contains(col))) {
+      if (!requiredEventColumns.every((col) => eventColumnNames.contains(col))) {
         _logger.w(
-            'Schema verification failed: events table missing required columns');
+          'Schema verification failed: events table missing required columns',
+        );
+        return false;
+      }
+
+      // Verify documents table has artboard_count column (v3)
+      final documentsColumns = await db.rawQuery('PRAGMA table_info(documents)');
+      final docColumnNames =
+          documentsColumns.map((c) => c['name'] as String).toSet();
+      if (!docColumnNames.contains('artboard_count')) {
+        _logger.w(
+          'Schema verification failed: documents table missing artboard_count column',
+        );
         return false;
       }
 

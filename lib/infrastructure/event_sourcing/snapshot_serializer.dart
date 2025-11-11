@@ -117,11 +117,19 @@ class SnapshotSerializer {
   /// 2. Decompress if needed
   /// 3. Decode UTF-8 bytes to string
   /// 4. Parse JSON string to Map
-  /// 5. Hydrate Document via fromJson()
+  /// 5. Migrate legacy schema if needed (v1 → v2)
+  /// 6. Hydrate Document via fromJson()
   ///
   /// This method returns a typed [Document] instance by using the Document's
   /// fromJson factory. The Document model handles schema versioning and
   /// migrations internally.
+  ///
+  /// **Legacy Schema Migration (v1 → v2)**:
+  /// If the snapshot contains schema version 1 or has 'layers' at document root:
+  /// - Creates a default artboard with id 'default-artboard-{documentId}'
+  /// - Moves layers/selection/viewport into the default artboard
+  /// - Updates schemaVersion to 2
+  /// - Removes deprecated fields from document root
   ///
   /// Throws [FormatException] if data is corrupted or invalid.
   ///
@@ -155,26 +163,117 @@ class SnapshotSerializer {
       // Step 4: String → JSON Map
       final jsonMap = jsonDecode(jsonString) as Map<String, dynamic>;
 
-      // Step 5: Hydrate Document from JSON
-      final document = Document.fromJson(jsonMap);
+      // Step 5: Migrate legacy v1 schema if needed
+      final migratedJson = _migrateLegacySchema(jsonMap);
+
+      // Step 6: Hydrate Document from JSON
+      final document = Document.fromJson(migratedJson);
       _logger.d('Deserialized document: ${document.id}');
       return document;
     } on FormatException catch (e) {
-      _logger.e('Failed to deserialize snapshot: Invalid JSON format',
-          error: e);
+      _logger.e(
+        'Failed to deserialize snapshot: Invalid JSON format',
+        error: e,
+      );
       throw FormatException(
         'Snapshot deserialization failed: Invalid JSON format. '
         'Data may be corrupted or not a valid snapshot. '
         'Original error: ${e.message}',
       );
     } catch (e, stackTrace) {
-      _logger.e('Failed to deserialize snapshot',
-          error: e, stackTrace: stackTrace);
+      _logger.e(
+        'Failed to deserialize snapshot',
+        error: e,
+        stackTrace: stackTrace,
+      );
       throw Exception(
         'Snapshot deserialization failed: $e. '
         'This may indicate a schema version mismatch or corrupted data.',
       );
     }
+  }
+
+  /// Migrates legacy schema v1 snapshots to v2 (multi-artboard).
+  ///
+  /// Detects v1 snapshots by:
+  /// - schemaVersion == 1 OR
+  /// - 'layers' field exists at document root AND no 'artboards' field (v1 structure)
+  ///
+  /// Migration process:
+  /// 1. Extract layers, selection, viewport from document root
+  /// 2. Create default artboard with those fields
+  /// 3. Remove deprecated fields from document
+  /// 4. Update schemaVersion to 2
+  Map<String, dynamic> _migrateLegacySchema(Map<String, dynamic> json) {
+    final schemaVersion = json['schemaVersion'] as int? ?? 1;
+    final hasLegacyLayers = json.containsKey('layers');
+    final hasArtboards = json.containsKey('artboards');
+
+    // Check if migration is needed
+    // V2 documents have artboards OR schemaVersion == 2 without legacy layers
+    if (hasArtboards || (schemaVersion == 2 && !hasLegacyLayers)) {
+      // Already v2 schema, no migration needed
+      return json;
+    }
+
+    // Migrate v1 documents: schemaVersion == 1 OR has layers without artboards
+    if (schemaVersion == 1 || (hasLegacyLayers && !hasArtboards)) {
+      _logger.i(
+        'Migrating legacy v1 snapshot to v2 for document: ${json['id']}',
+      );
+
+      // Extract legacy fields
+      final layers = json['layers'] as List? ?? [];
+
+      // Handle selection with proper type casting for anchorIndices
+      final legacySelection = json['selection'] as Map<String, dynamic>?;
+      final selection = legacySelection != null
+          ? <String, dynamic>{
+              'objectIds': legacySelection['objectIds'] ?? <dynamic>[],
+              'anchorIndices': (legacySelection['anchorIndices'] as Map? ?? <dynamic, dynamic>{})
+                  .map<String, dynamic>((key, value) =>
+                      MapEntry(key.toString(), value)),
+            }
+          : <String, dynamic>{'objectIds': <dynamic>[], 'anchorIndices': <String, dynamic>{}};
+
+      final viewport = json['viewport'] as Map<String, dynamic>? ?? <String, dynamic>{
+            'pan': <String, dynamic>{'x': 0, 'y': 0},
+            'zoom': 1.0,
+            'canvasSize': <String, dynamic>{'width': 800, 'height': 600},
+          };
+      final documentId = json['id'] as String;
+
+      // Create default artboard with legacy state
+      final defaultArtboard = {
+        'id': 'default-artboard-$documentId',
+        'name': 'Artboard 1',
+        'bounds': {'x': 0, 'y': 0, 'width': 800, 'height': 600},
+        'backgroundColor': '#FFFFFF',
+        'preset': null,
+        'layers': layers,
+        'selection': selection,
+        'viewport': viewport,
+      };
+
+      // Build migrated document
+      final migratedJson = Map<String, dynamic>.from(json);
+      migratedJson['schemaVersion'] = 2;
+      migratedJson['artboards'] = [defaultArtboard];
+
+      // Remove deprecated v1 fields
+      migratedJson.remove('layers');
+      migratedJson.remove('selection');
+      migratedJson.remove('viewport');
+
+      _logger.i('Successfully migrated v1 → v2 snapshot for ${json['id']}');
+      return migratedJson;
+    }
+
+    // Unknown schema version
+    throw Exception(
+      'Unsupported schema version: $schemaVersion. '
+      'This snapshot may be from a newer version of WireTuner.',
+    );
   }
 
   /// Helper to extract document ID for logging.
@@ -196,6 +295,11 @@ class SnapshotSerializer {
       return document;
     }
     // Assume document has toJson() method (standard for freezed classes)
+    if (document is Document) {
+      return document.toJson();
+    }
+    // Fallback for other types (should not happen in normal use)
+    // ignore: avoid_dynamic_calls
     return (document as dynamic).toJson() as Map<String, dynamic>;
   }
 }

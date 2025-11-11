@@ -19,7 +19,8 @@ part 'document.g.dart';
 ///
 /// Version history:
 /// - 1: Initial document model (I2.T4)
-const int kDocumentSchemaVersion = 1;
+/// - 2: Multi-artboard support with per-artboard state isolation (I4.T1)
+const int kDocumentSchemaVersion = 2;
 
 /// Represents an immutable vector object that can be stored in a layer.
 ///
@@ -292,94 +293,86 @@ class Size with _$Size {
   factory Size.fromJson(Map<String, dynamic> json) => _$SizeFromJson(json);
 }
 
-/// Represents the root document aggregate.
+/// Represents an artboard within a document.
 ///
-/// Document is the root entity in the domain model and contains all layers,
-/// vector objects, selection state, and viewport state. It serves as the
-/// aggregate root for event sourcing and snapshot persistence.
+/// An artboard is an independent canvas area with its own layers, viewport,
+/// and selection state. Each artboard can be opened in its own window and
+/// maintains complete state isolation from other artboards.
 ///
-/// ## Design Rationale
+/// ## Design Rationale (ADR-005)
 ///
-/// The document uses Freezed for immutability and includes:
-/// - Schema version for future migrations
-/// - Ordered layers for rendering and organization
-/// - Selection state for tracking user selections
-/// - Viewport state for view transformations
-/// - Query helpers for hit testing and viewport culling
+/// Multi-artboard support enables:
+/// - Responsive design boards (mobile/tablet/desktop layouts)
+/// - Icon grids and asset collections
+/// - Device templates with per-screen isolation
+/// - Window-per-artboard architecture
 ///
-/// ## Snapshot Serialization
-///
-/// Documents are serialized to JSON snapshots that preserve:
-/// - Schema version for migration support
-/// - Layer ordering (deterministic array serialization)
-/// - Object IDs and properties (stable across serialization)
-/// - Selection state (object IDs and anchor indices)
+/// Each artboard encapsulates:
+/// - Layer stack (ordered list of layers)
+/// - Selection state (selected objects and anchors)
 /// - Viewport state (pan, zoom, canvas size)
+/// - Visual bounds (position and size on infinite canvas)
 ///
 /// ## Examples
 ///
-/// Create a document:
+/// Create an artboard:
 /// ```dart
-/// final doc = Document(
-///   id: 'doc-1',
-///   title: 'My Drawing',
+/// final artboard = Artboard(
+///   id: 'artboard-1',
+///   name: 'iPhone 14',
+///   bounds: Rectangle(x: 0, y: 0, width: 390, height: 844),
 ///   layers: [layer1, layer2],
 /// );
 /// ```
-///
-/// Query objects:
-/// ```dart
-/// final obj = doc.getObjectById('path-1');
-/// final allObjs = doc.getAllObjects();
-/// ```
-///
-/// Serialize to JSON:
-/// ```dart
-/// final json = doc.toJson();
-/// final restored = Document.fromJson(json);
-/// assert(doc == restored); // Deep equality
-/// ```
 @freezed
-class Document with _$Document {
-  const factory Document({
-    /// Unique identifier for this document.
+class Artboard with _$Artboard {
+  const factory Artboard({
+    /// Unique identifier for this artboard.
     required String id,
 
-    /// Document title shown in the UI and file system.
-    @Default('Untitled') String title,
+    /// Display name shown in the Navigator panel.
+    @Default('Artboard') String name,
 
-    /// Schema version for serialization migrations.
+    /// Position and dimensions on the infinite canvas.
     ///
-    /// This version is stored in snapshots and used to perform schema
-    /// migrations when loading documents saved with older versions.
-    @Default(kDocumentSchemaVersion) int schemaVersion,
+    /// The bounds define where this artboard appears and its size.
+    /// Multiple artboards can be arranged spatially on the canvas.
+    @RectangleConverter() required Rectangle bounds,
 
-    /// Ordered list of layers in this document.
+    /// Background color for the artboard.
+    ///
+    /// Displayed when no objects cover the artboard area.
+    @Default('#FFFFFF') String backgroundColor,
+
+    /// Optional preset identifier (e.g., "iPhone14", "A4", "1080p").
+    ///
+    /// Used to populate bounds from device/format templates.
+    String? preset,
+
+    /// Ordered list of layers in this artboard.
     ///
     /// Layers are rendered bottom-to-top (first layer is bottom-most).
     @Default([]) List<Layer> layers,
 
-    /// Current selection state.
+    /// Current selection state for this artboard.
     ///
     /// Tracks which objects and anchor points are selected.
+    /// Selection is isolated per artboard.
     @Default(Selection()) Selection selection,
 
-    /// Current viewport state.
+    /// Current viewport state for this artboard.
     ///
-    /// Controls pan, zoom, and screen-to-world coordinate transformations.
+    /// Controls pan, zoom, and coordinate transformations.
+    /// Each artboard window maintains independent viewport state.
     @Default(Viewport()) Viewport viewport,
-  }) = _Document;
+  }) = _Artboard;
 
   /// Private constructor for accessing methods on Freezed class.
-  const Document._();
+  const Artboard._();
 
-  /// Creates a Document from JSON.
-  ///
-  /// This factory handles deserialization from snapshot storage.
-  /// Schema versioning and migrations are handled transparently.
-  /// The schemaVersion field in JSON is preserved during round-trips.
-  factory Document.fromJson(Map<String, dynamic> json) =>
-      _$DocumentFromJson(json);
+  /// Creates an Artboard from JSON.
+  factory Artboard.fromJson(Map<String, dynamic> json) =>
+      _$ArtboardFromJson(json);
 
   /// Returns all vector objects from all layers in rendering order.
   ///
@@ -445,13 +438,221 @@ class Document with _$Document {
   List<VectorObject> getSelectedObjects() =>
       getAllObjects().where((obj) => selection.contains(obj.id)).toList();
 
+  /// Returns true if the artboard is empty (no layers or no objects).
+  bool get isEmpty =>
+      layers.isEmpty || layers.every((layer) => layer.objects.isEmpty);
+}
+
+/// Represents the root document aggregate.
+///
+/// Document is the root entity in the domain model and contains all artboards,
+/// which in turn contain layers, vector objects, selection state, and viewport
+/// state. It serves as the aggregate root for event sourcing and snapshot
+/// persistence.
+///
+/// ## Design Rationale
+///
+/// The document uses Freezed for immutability and includes:
+/// - Schema version for future migrations
+/// - Ordered list of artboards for multi-canvas support
+/// - Per-artboard state isolation (layers, selection, viewport)
+/// - Query helpers that delegate to artboards
+///
+/// ## Multi-Artboard Architecture (v2.0.0)
+///
+/// Starting in schema version 2:
+/// - Documents contain artboards instead of direct layer access
+/// - Each artboard has its own layers, selection, and viewport
+/// - Legacy single-artboard documents are migrated to a default artboard
+/// - Selection and viewport state are scoped per artboard
+///
+/// ## Snapshot Serialization
+///
+/// Documents are serialized to JSON snapshots that preserve:
+/// - Schema version for migration support
+/// - Artboard list with ordering (deterministic array serialization)
+/// - Per-artboard layer stacks and state
+/// - Object IDs and properties (stable across serialization)
+/// - Per-artboard selection and viewport state
+///
+/// ## Examples
+///
+/// Create a multi-artboard document:
+/// ```dart
+/// final doc = Document(
+///   id: 'doc-1',
+///   title: 'Responsive Design',
+///   artboards: [mobileArtboard, tabletArtboard, desktopArtboard],
+/// );
+/// ```
+///
+/// Query objects across artboards:
+/// ```dart
+/// final obj = doc.getObjectById('path-1');
+/// final allObjs = doc.getAllObjects();
+/// final artboard = doc.getArtboardById('artboard-1');
+/// ```
+///
+/// Serialize to JSON:
+/// ```dart
+/// final json = doc.toJson();
+/// final restored = Document.fromJson(json);
+/// assert(doc == restored); // Deep equality
+/// ```
+@freezed
+class Document with _$Document {
+  const factory Document({
+    /// Unique identifier for this document.
+    required String id,
+
+    /// Document title shown in the UI and file system.
+    @Default('Untitled') String title,
+
+    /// Schema version for serialization migrations.
+    ///
+    /// This version is stored in snapshots and used to perform schema
+    /// migrations when loading documents saved with older versions.
+    @Default(kDocumentSchemaVersion) int schemaVersion,
+
+    /// Ordered list of artboards in this document.
+    ///
+    /// Each artboard is an independent canvas with its own layers,
+    /// selection, and viewport state. Artboards are arranged spatially
+    /// on an infinite canvas.
+    @Default([]) List<Artboard> artboards,
+
+    /// DEPRECATED: Legacy layers field for backward compatibility.
+    ///
+    /// This field exists only to support migration from schema v1 to v2.
+    /// New code should use artboards instead. Will be removed in v3.
+    @Deprecated('Use artboards instead. Exists for v1->v2 migration only.')
+    @Default([])
+    List<Layer>? layers,
+
+    /// DEPRECATED: Legacy selection field for backward compatibility.
+    ///
+    /// This field exists only to support migration from schema v1 to v2.
+    /// Selection state is now stored per-artboard. Will be removed in v3.
+    @Deprecated('Use artboard.selection instead. Exists for v1->v2 migration only.')
+    Selection? selection,
+
+    /// DEPRECATED: Legacy viewport field for backward compatibility.
+    ///
+    /// This field exists only to support migration from schema v1 to v2.
+    /// Viewport state is now stored per-artboard. Will be removed in v3.
+    @Deprecated('Use artboard.viewport instead. Exists for v1->v2 migration only.')
+    Viewport? viewport,
+  }) = _Document;
+
+  /// Private constructor for accessing methods on Freezed class.
+  const Document._();
+
+  /// Creates a Document from JSON.
+  ///
+  /// This factory handles deserialization from snapshot storage.
+  /// Schema versioning and migrations are handled transparently.
+  /// The schemaVersion field in JSON is preserved during round-trips.
+  ///
+  /// For v1 documents (legacy schema), this will create a default artboard
+  /// from the layers/selection/viewport fields during migration.
+  factory Document.fromJson(Map<String, dynamic> json) =>
+      _$DocumentFromJson(json);
+
+  /// Finds an artboard by ID.
+  ///
+  /// Returns null if no artboard with the given ID exists.
+  Artboard? getArtboardById(String artboardId) {
+    try {
+      return artboards.firstWhere((ab) => ab.id == artboardId);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  /// Returns all vector objects from all artboards and layers.
+  ///
+  /// Objects are returned in artboard order, then layer order within each
+  /// artboard. This is useful for document-wide operations.
+  List<VectorObject> getAllObjects() =>
+      artboards.expand((artboard) => artboard.getAllObjects()).toList();
+
+  /// Finds an object by ID across all artboards and layers.
+  ///
+  /// Returns null if no object with the given ID exists in any artboard.
+  VectorObject? getObjectById(String objectId) {
+    for (final artboard in artboards) {
+      final obj = artboard.getObjectById(objectId);
+      if (obj != null) return obj;
+    }
+    return null;
+  }
+
+  /// Finds the artboard containing the given object ID.
+  ///
+  /// Returns null if the object is not found in any artboard.
+  Artboard? getArtboardContainingObject(String objectId) {
+    for (final artboard in artboards) {
+      if (artboard.getObjectById(objectId) != null) {
+        return artboard;
+      }
+    }
+    return null;
+  }
+
+  /// Finds the layer containing the given object ID.
+  ///
+  /// Returns null if the object is not found in any layer.
+  /// Searches across all artboards.
+  Layer? getLayerContainingObject(String objectId) {
+    for (final artboard in artboards) {
+      final layer = artboard.getLayerContainingObject(objectId);
+      if (layer != null) return layer;
+    }
+    return null;
+  }
+
+  /// Returns objects at the given point for a specific artboard.
+  ///
+  /// Objects are returned in reverse rendering order (top-most first).
+  /// This is useful for hit testing during selection within an artboard window.
+  List<VectorObject> objectsAtPoint(Point point, String artboardId) {
+    final artboard = getArtboardById(artboardId);
+    if (artboard == null) return [];
+    return artboard.objectsAtPoint(point);
+  }
+
+  /// Returns objects within the given bounds for a specific artboard.
+  ///
+  /// This is useful for marquee selection and viewport culling.
+  List<VectorObject> objectsInBounds(Rectangle bounds, String artboardId) {
+    final artboard = getArtboardById(artboardId);
+    if (artboard == null) return [];
+    return artboard.objectsInBounds(bounds);
+  }
+
+  /// Returns all selected objects across all artboards.
+  ///
+  /// Objects are returned in artboard order, then rendering order within
+  /// each artboard. This is useful for multi-artboard copy/paste operations.
+  List<VectorObject> getSelectedObjects() =>
+      artboards.expand((ab) => ab.getSelectedObjects()).toList();
+
+  /// Returns selected objects for a specific artboard.
+  ///
+  /// Returns empty list if artboard doesn't exist.
+  List<VectorObject> getSelectedObjectsForArtboard(String artboardId) {
+    final artboard = getArtboardById(artboardId);
+    if (artboard == null) return [];
+    return artboard.getSelectedObjects();
+  }
+
   /// Returns true if the document has any unsaved changes.
   ///
   /// Note: This is a placeholder. In future iterations, this will be
   /// determined by comparing against the last saved snapshot.
   bool get hasUnsavedChanges => true;
 
-  /// Returns true if the document is empty (no layers or no objects).
+  /// Returns true if the document is empty (no artboards or all artboards empty).
   bool get isEmpty =>
-      layers.isEmpty || layers.every((layer) => layer.objects.isEmpty);
+      artboards.isEmpty || artboards.every((artboard) => artboard.isEmpty);
 }
