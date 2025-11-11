@@ -179,6 +179,14 @@ class NavigatorService {
     });
   }
 
+  /// Track thumbnail refresh age (time since last refresh).
+  void trackThumbnailRefreshAge(String artboardId, Duration age) {
+    _emitTelemetry('thumbnail.refresh.age', {
+      'artboardId': artboardId,
+      'ageMs': age.inMilliseconds,
+    });
+  }
+
   /// Track virtualization performance metrics.
   void trackVirtualizationMetrics({
     required int totalArtboards,

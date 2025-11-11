@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:typed_data';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
+import '../thumbnail_service.dart';
 
 /// Represents a single artboard in the Navigator grid.
 ///
@@ -231,11 +232,20 @@ class NavigatorProvider extends ChangeNotifier {
   /// Viewport snapshots per artboard (for restoration).
   final Map<String, ViewportSnapshot> _viewportStates = {};
 
-  /// Thumbnail refresh timers keyed by artboard ID.
-  final Map<String, Timer> _thumbnailTimers = {};
+  /// Thumbnail service (optional, injected via constructor).
+  ThumbnailService? _thumbnailService;
 
-  /// Thumbnail refresh interval (10 seconds per requirements).
-  static const Duration _thumbnailRefreshInterval = Duration(seconds: 10);
+  /// Last refresh timestamp per artboard (for status display).
+  /// Made package-private for thumbnail service callback access.
+  final Map<String, DateTime> lastRefreshTime = {};
+
+  /// Creates a NavigatorProvider.
+  ///
+  /// [thumbnailService]: Optional thumbnail service for background refresh.
+  ///                     If null, thumbnail refresh features are disabled.
+  NavigatorProvider({ThumbnailService? thumbnailService}) {
+    _thumbnailService = thumbnailService;
+  }
 
   // Getters
 
@@ -282,6 +292,16 @@ class NavigatorProvider extends ChangeNotifier {
   /// Get viewport state for an artboard.
   ViewportSnapshot? getViewportState(String artboardId) => _viewportStates[artboardId];
 
+  /// Get last refresh time for an artboard.
+  DateTime? getLastRefreshTime(String artboardId) => lastRefreshTime[artboardId];
+
+  /// Get time since last refresh for an artboard.
+  Duration? getTimeSinceRefresh(String artboardId) {
+    final lastRefresh = lastRefreshTime[artboardId];
+    if (lastRefresh == null) return null;
+    return DateTime.now().difference(lastRefresh);
+  }
+
   // Mutations
 
   /// Open a new document tab.
@@ -326,8 +346,11 @@ class NavigatorProvider extends ChangeNotifier {
       _artboards.remove(artboardId);
       _selectedArtboards.remove(artboardId);
       _viewportStates.remove(artboardId);
-      _thumbnailTimers[artboardId]?.cancel();
-      _thumbnailTimers.remove(artboardId);
+      lastRefreshTime.remove(artboardId);
+
+      // Mark artboard as invisible in thumbnail service
+      _thumbnailService?.updateVisibility(artboardId, visible: false);
+      _thumbnailService?.invalidateCache(artboardId);
     }
 
     // Switch active document if needed
@@ -367,6 +390,19 @@ class NavigatorProvider extends ChangeNotifier {
       thumbnail: thumbnail,
       isVisible: isVisible,
     );
+
+    // Update thumbnail service if visibility or dirty state changed
+    if (_thumbnailService != null) {
+      if (isDirty != null && isDirty) {
+        _thumbnailService!.markDirty(
+          artboardId,
+          visible: isVisible ?? current.isVisible,
+        );
+      }
+      if (isVisible != null) {
+        _thumbnailService!.updateVisibility(artboardId, visible: isVisible);
+      }
+    }
 
     notifyListeners();
   }
@@ -431,54 +467,54 @@ class NavigatorProvider extends ChangeNotifier {
     // For now, we store in memory
   }
 
-  /// Start thumbnail auto-refresh for visible artboards.
+  /// Trigger immediate thumbnail refresh (e.g., on save or manual refresh).
   ///
-  /// Per acceptance criteria: "thumbnail refresh respects 10s interval or save trigger."
-  void startThumbnailRefresh(String artboardId, Future<Uint8List> Function() generator) {
-    // Cancel existing timer
-    _thumbnailTimers[artboardId]?.cancel();
+  /// [trigger]: Type of refresh trigger (manual, save, idle).
+  /// Returns true if refresh was scheduled, false if cooldown is active.
+  bool refreshThumbnailNow(String artboardId, {required RefreshTrigger trigger}) {
+    if (_thumbnailService == null) {
+      debugPrint('[NavigatorProvider] Thumbnail service not available');
+      return false;
+    }
 
-    // Create periodic timer
-    _thumbnailTimers[artboardId] = Timer.periodic(_thumbnailRefreshInterval, (timer) async {
-      final card = _artboards[artboardId];
-      if (card == null || !card.isVisible) {
-        timer.cancel();
-        return;
-      }
+    final refreshed = _thumbnailService!.refreshNow(artboardId, trigger: trigger);
 
-      try {
-        final thumbnail = await generator();
-        updateArtboard(artboardId: artboardId, thumbnail: thumbnail);
-      } catch (e) {
-        // Log error but don't crash
-        debugPrint('Thumbnail refresh failed for $artboardId: $e');
-      }
-    });
+    if (refreshed) {
+      // Note: _lastRefreshTime is updated by the service when thumbnail is ready
+      notifyListeners(); // Update UI to show refresh in progress
+    }
+
+    return refreshed;
   }
 
-  /// Trigger immediate thumbnail refresh (e.g., on save).
-  void refreshThumbnailNow(String artboardId, Future<Uint8List> Function() generator) async {
-    try {
-      final thumbnail = await generator();
-      updateArtboard(artboardId: artboardId, thumbnail: thumbnail);
-    } catch (e) {
-      debugPrint('Immediate thumbnail refresh failed for $artboardId: $e');
+  /// Trigger save-based refresh for all dirty artboards in a document.
+  void refreshOnSave(String documentId) {
+    if (_thumbnailService == null) return;
+
+    final tab = _openDocuments.where((t) => t.documentId == documentId).firstOrNull;
+    if (tab == null) return;
+
+    for (final artboardId in tab.artboardIds) {
+      final card = _artboards[artboardId];
+      if (card != null && card.isDirty) {
+        refreshThumbnailNow(artboardId, trigger: RefreshTrigger.save);
+      }
     }
   }
 
-  /// Stop thumbnail refresh for an artboard.
-  void stopThumbnailRefresh(String artboardId) {
-    _thumbnailTimers[artboardId]?.cancel();
-    _thumbnailTimers.remove(artboardId);
+  /// Gets cached thumbnail from service.
+  Uint8List? getCachedThumbnail(String artboardId) {
+    return _thumbnailService?.getCached(artboardId);
+  }
+
+  /// Invalidates cached thumbnail for an artboard.
+  void invalidateThumbnailCache(String artboardId) {
+    _thumbnailService?.invalidateCache(artboardId);
   }
 
   @override
   void dispose() {
-    // Cancel all thumbnail timers
-    for (final timer in _thumbnailTimers.values) {
-      timer.cancel();
-    }
-    _thumbnailTimers.clear();
+    // Thumbnail service is disposed externally (owned by NavigatorWindow)
     super.dispose();
   }
 }

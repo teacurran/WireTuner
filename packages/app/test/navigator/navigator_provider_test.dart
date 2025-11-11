@@ -2,6 +2,7 @@ import 'dart:typed_data';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:app/modules/navigator/state/navigator_provider.dart';
+import 'package:app/modules/navigator/thumbnail_service.dart';
 
 void main() {
   group('NavigatorProvider', () {
@@ -250,7 +251,10 @@ void main() {
     });
 
     group('Thumbnail Refresh', () {
-      test('thumbnail timers are cleaned up on dispose', () {
+      test('refreshes thumbnail immediately when requested', () async {
+        // Note: Actual thumbnail generation now handled by ThumbnailService
+        // This test verifies provider's refreshNow method delegates correctly
+
         // Create a separate provider for this test to avoid double-dispose
         final testProvider = NavigatorProvider();
         final tab = DocumentTab(
@@ -261,18 +265,39 @@ void main() {
         );
         testProvider.openDocument(tab);
 
-        // Start thumbnail refresh
-        var callCount = 0;
-        testProvider.startThumbnailRefresh('art1', () async {
-          callCount++;
-          return Uint8List(4);
-        });
+        // Without thumbnail service, refreshNow should return false
+        final refreshed = testProvider.refreshThumbnailNow(
+          'art1',
+          trigger: RefreshTrigger.manual,
+        );
+        expect(refreshed, false);
 
-        // Dispose should cancel timers
+        // Dispose should not crash
         testProvider.dispose();
+      });
 
-        // Timer should not fire after disposal
-        // (In real scenario, we'd wait and verify callCount doesn't increase)
+      test('tracks last refresh time per artboard', () {
+        final testProvider = NavigatorProvider();
+        final tab = DocumentTab(
+          documentId: 'doc1',
+          name: 'Test Document',
+          path: '/path/to/doc.wire',
+          artboardIds: ['art1'],
+        );
+        testProvider.openDocument(tab);
+
+        // Initially no refresh time
+        expect(testProvider.getLastRefreshTime('art1'), isNull);
+        expect(testProvider.getTimeSinceRefresh('art1'), isNull);
+
+        // Manually set refresh time (simulating successful refresh)
+        testProvider.lastRefreshTime['art1'] = DateTime.now();
+
+        // Now should have refresh time
+        expect(testProvider.getLastRefreshTime('art1'), isNotNull);
+        expect(testProvider.getTimeSinceRefresh('art1'), isNotNull);
+
+        testProvider.dispose();
       });
     });
   });

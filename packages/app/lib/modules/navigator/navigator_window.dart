@@ -1,10 +1,15 @@
+import 'dart:typed_data';
+import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
+import 'package:core/thumbnail/thumbnail_worker.dart';
 import 'state/navigator_provider.dart';
 import 'state/navigator_service.dart';
+import 'thumbnail_service.dart';
 import 'widgets/navigator_tabs.dart';
 import 'widgets/artboard_grid.dart';
+import 'package:wiretuner/presentation/history/thumbnail_generator.dart';
 
 /// Main Navigator window widget.
 ///
@@ -51,20 +56,60 @@ class NavigatorWindow extends StatefulWidget {
 class _NavigatorWindowState extends State<NavigatorWindow> {
   late NavigatorProvider _navigatorProvider;
   late NavigatorService _navigatorService;
+  late ThumbnailService _thumbnailService;
+  late ThumbnailGenerator _thumbnailGenerator;
   final FocusNode _focusNode = FocusNode();
 
   @override
   void initState() {
     super.initState();
 
-    _navigatorService = NavigatorService(
-      telemetryCallback: (metric, data) {
-        // TODO: Wire to TelemetryService in future iteration
-        debugPrint('Telemetry: $metric $data');
-      },
+    // Initialize thumbnail generator (reuses existing history thumbnail generator)
+    _thumbnailGenerator = ThumbnailGenerator(
+      cacheSize: 100, // Larger cache for Navigator (vs 50 for history)
+      thumbnailWidth: 256,
+      thumbnailHeight: 256,
     );
 
-    _navigatorProvider = NavigatorProvider();
+    // Initialize telemetry callback
+    void telemetryCallback(String metric, Map<String, dynamic> data) {
+      // TODO: Wire to TelemetryService in future iteration
+      debugPrint('Telemetry: $metric $data');
+    }
+
+    // Initialize thumbnail service
+    _thumbnailService = ThumbnailService(
+      generator: (request) async {
+        // TODO: In production, this would deserialize documentData and render actual content
+        // For now, use the existing thumbnail generator with a mock document
+        // This will be replaced in future iterations with proper document rendering
+        return _generatePlaceholder(request);
+      },
+      onThumbnailReady: (artboardId, imageData, age) {
+        // Update provider with generated thumbnail and mark refresh time
+        _navigatorProvider.updateArtboard(
+          artboardId: artboardId,
+          thumbnail: imageData,
+        );
+
+        // Track refresh time in provider for UI display
+        _navigatorProvider.lastRefreshTime[artboardId] = DateTime.now();
+      },
+      onTelemetry: telemetryCallback,
+    );
+
+    // Initialize navigator service
+    _navigatorService = NavigatorService(
+      telemetryCallback: telemetryCallback,
+    );
+
+    // Initialize navigator provider with thumbnail service
+    _navigatorProvider = NavigatorProvider(
+      thumbnailService: _thumbnailService,
+    );
+
+    // Start thumbnail service
+    _thumbnailService.start();
 
     // Listen to action events and handle them
     _navigatorService.actionStream.listen(_handleArtboardAction);
@@ -77,10 +122,29 @@ class _NavigatorWindowState extends State<NavigatorWindow> {
 
   @override
   void dispose() {
+    _focusNode.dispose();
     _navigatorService.dispose();
     _navigatorProvider.dispose();
-    _focusNode.dispose();
+    _thumbnailService.dispose();
+    _thumbnailGenerator.dispose();
     super.dispose();
+  }
+
+  /// Generates a placeholder thumbnail (temporary implementation).
+  ///
+  /// TODO: Replace with actual document rendering using RenderingPipeline.
+  Future<Uint8List?> _generatePlaceholder(ThumbnailRequest request) async {
+    // Simulate rendering delay
+    await Future<void>.delayed(const Duration(milliseconds: 50));
+
+    // Return a simple colored rectangle (1x1 pixel, UI will scale)
+    final bytes = Uint8List(4);
+    bytes[0] = 200; // R
+    bytes[1] = 200; // G
+    bytes[2] = 200; // B
+    bytes[3] = 255; // A
+
+    return bytes;
   }
 
   void _handleArtboardAction(ArtboardActionEvent event) {
@@ -100,12 +164,22 @@ class _NavigatorWindowState extends State<NavigatorWindow> {
         // Would remove artboards from provider
         break;
       case ArtboardAction.refresh:
-        // Trigger thumbnail regeneration
+        // Trigger manual thumbnail regeneration
         final artboardId = event.artboardIds.first;
-        _navigatorProvider.refreshThumbnailNow(
+        final refreshed = _navigatorProvider.refreshThumbnailNow(
           artboardId,
-          () => MockThumbnailGenerator.generate(artboardId, 200, 200),
+          trigger: RefreshTrigger.manual,
         );
+
+        if (!refreshed) {
+          // Show cooldown message if refresh was rejected
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Manual refresh cooldown active, please wait...'),
+              duration: Duration(seconds: 2),
+            ),
+          );
+        }
         break;
       case ArtboardAction.fitToView:
         // Would restore viewport via ViewportController

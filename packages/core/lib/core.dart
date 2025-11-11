@@ -22,6 +22,9 @@
 /// 4. Pure functions only - no side effects
 library core;
 
+// Thumbnail Worker (Background Processing)
+export 'thumbnail/thumbnail_worker.dart';
+
 /// Placeholder export to satisfy pub requirements.
 /// Actual domain models will be added in Iteration I2.
 class CorePlaceholder {
