@@ -74,7 +74,7 @@ class DocumentProvider extends ChangeNotifier {
   Document get document => _document;
 
   /// Gets the current viewport state from the document.
-  Viewport get viewport => _document.viewport;
+  Viewport? get viewport => _document.viewport;
 
   /// Gets whether the document has unsaved changes.
   ///

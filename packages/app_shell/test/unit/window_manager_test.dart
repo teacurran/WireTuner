@@ -68,23 +68,17 @@ class FakeOperationGrouping extends Observable
     implements OperationGroupingService {
   final List<OperationGroup> _completedGroups = [];
 
-  @override
   OperationGroup? get lastCompletedGroup =>
       _completedGroups.isEmpty ? null : _completedGroups.last;
 
-  @override
   List<OperationGroup> get completedGroups => List.unmodifiable(_completedGroups);
 
-  @override
   int get currentOperationEventCount => 0;
 
-  @override
   bool get isOperationActive => false;
 
-  @override
   int get idleThresholdMs => 500;
 
-  @override
   bool get hasActiveGroup => false;
 
   @override
@@ -331,7 +325,7 @@ void main() {
         );
 
         // Wait for listener notification
-        await Future.delayed(Duration.zero);
+        await Future<void>.delayed(Duration.zero);
 
         // Verify only window 1 has undo available
         // (Other windows don't receive operations from window 1)
@@ -636,7 +630,7 @@ void main() {
 
     group('Edge Cases', () {
       test('opening window with initial document', () async {
-        final initialDoc = Document(
+        final initialDoc = const Document(
           id: 'doc-1',
           title: 'Test Document',
         );
