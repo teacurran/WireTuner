@@ -15,6 +15,10 @@
 migrate_working_dir/
 node_modules/
 
+# Environment files
+*.env
+server/sync-api/.env
+
 # Codemachine artifacts
 .codemachine/memory/
 .codemachine/logs/
@@ -44,6 +48,7 @@ node_modules/
 .pub/
 /build/
 packages/**/build/
+server/**/build/
 
 # Symbolication related
 app.*.symbols
