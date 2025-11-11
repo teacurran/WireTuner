@@ -9,17 +9,14 @@
 /// - SVG import/export services
 /// - PDF export services
 /// - Event persistence and snapshot management
+/// - Collaboration client for real-time editing
 ///
 /// **Dependencies:**
 /// - Depends on `core` for domain models and event definitions
 /// - External I/O libraries: sqflite, path_provider, xml, pdf
+/// - WebSocket for collaboration
 ///
 /// **Architecture Layer:** Infrastructure
 library infrastructure;
 
-/// Placeholder export to satisfy pub requirements.
-/// Actual infrastructure services will be added in future iterations.
-class InfrastructurePlaceholder {
-  /// Constructor
-  const InfrastructurePlaceholder();
-}
+export 'collaboration/collaboration_client.dart';

@@ -7,9 +7,38 @@ environment:
   sdk: '>=3.2.0 <4.0.0'
 
 dependencies:
+  # Dart Frog Framework
+  dart_frog: ^1.2.6
+
+  # WebSocket support
+  shelf_web_socket: ^2.0.0
+  web_socket_channel: ^3.0.0
+
+  # Redis integration
+  redis: ^4.0.0
+
+  # GraphQL (for presence fallback) - TODO: Add when implementing GraphQL fallback
+  # graphql_server: ^5.2.0
+  # gql: ^1.0.0
+
+  # JWT authentication
+  dart_jsonwebtoken: ^2.14.0
+
+  # Core utilities
+  freezed_annotation: ^2.4.1
+  json_annotation: ^4.8.1
+  uuid: ^4.2.1
+
   # Logging
   logger: ^2.0.0
 
 dev_dependencies:
+  # Build tools
+  build_runner: ^2.4.6
+  freezed: ^2.4.5
+  json_serializable: ^6.7.1
+
+  # Testing
   test: ^1.24.0
+  mocktail: ^1.0.1
   lints: ^3.0.0
