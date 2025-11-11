@@ -1,0 +1,76 @@
+{
+  "meta": {
+    "version": "1.0",
+    "generated": "2025-11-09",
+    "project": "WireTuner",
+    "description": "API and file format specification manifest for surgical content retrieval"
+  },
+  "locations": [
+    {
+      "key": "file-format-spec",
+      "file": "file_format_spec.md",
+      "start_anchor": "<!-- anchor: file-format-spec -->",
+      "description": ".wiretuner file format specification with SQLite schema, semantic versioning, and migration strategies"
+    },
+    {
+      "key": "overview",
+      "file": "file_format_spec.md",
+      "start_anchor": "<!-- anchor: overview -->",
+      "description": "File format overview and design principles"
+    },
+    {
+      "key": "file-format-container",
+      "file": "file_format_spec.md",
+      "start_anchor": "<!-- anchor: file-format-container -->",
+      "description": "SQLite container format specifications and requirements"
+    },
+    {
+      "key": "sqlite-schema-specification",
+      "file": "file_format_spec.md",
+      "start_anchor": "<!-- anchor: sqlite-schema-specification -->",
+      "description": "Complete SQLite schema with metadata, events, and snapshots tables"
+    },
+    {
+      "key": "snapshot-binary-format",
+      "file": "file_format_spec.md",
+      "start_anchor": "<!-- anchor: snapshot-binary-format -->",
+      "description": "Binary snapshot format with versioned header and CRC32 checksums"
+    },
+    {
+      "key": "semantic-versioning",
+      "file": "file_format_spec.md",
+      "start_anchor": "<!-- anchor: semantic-versioning -->",
+      "description": "Semantic versioning scheme and version increment rules"
+    },
+    {
+      "key": "compatibility-matrix",
+      "file": "file_format_spec.md",
+      "start_anchor": "<!-- anchor: compatibility-matrix -->",
+      "description": "Compatibility guarantees between file and application versions"
+    },
+    {
+      "key": "migration-strategies",
+      "file": "file_format_spec.md",
+      "start_anchor": "<!-- anchor: migration-strategies -->",
+      "description": "Automatic migration procedures for forward compatibility"
+    },
+    {
+      "key": "downgrade-workflows",
+      "file": "file_format_spec.md",
+      "start_anchor": "<!-- anchor: downgrade-workflows -->",
+      "description": "Save As downgrade workflows and version incompatibility handling"
+    },
+    {
+      "key": "verification-validation",
+      "file": "file_format_spec.md",
+      "start_anchor": "<!-- anchor: verification-validation -->",
+      "description": "File integrity checks, CRC32 validation, and QA integration"
+    },
+    {
+      "key": "appendices",
+      "file": "file_format_spec.md",
+      "start_anchor": "<!-- anchor: appendices -->",
+      "description": "Examples, test vectors, references, and version history"
+    }
+  ]
+}

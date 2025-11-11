@@ -5,23 +5,18 @@
     "iteration_goal": "Implement fully functional Pen Tool for creating paths with straight segments and Bezier curves",
     "description": "Implement PenTool state machine in `lib/application/tools/pen_tool.dart`. Define states: IDLE, CREATING_PATH, ADJUSTING_HANDLES. Implement click-to-add-anchor behavior (generates CreatePathEvent on first click, AddAnchorEvent on subsequent clicks). Double-click or press Enter to finish path (FinishPathEvent). Write unit tests for state transitions.",
     "agent_type_hint": "BackendAgent",
-    "inputs": "Architecture blueprint Section 4.4 (Sequence Diagram - Pen tool)\nTicket T021 (Pen Tool - Create Anchor Points)",
-    "target_files": [
-      "lib/application/tools/pen_tool.dart",
-      "test/application/tools/pen_tool_test.dart"
-    ],
-    "input_files": [
-      "lib/application/tools/tool_interface.dart"
-    ],
-    "deliverables": "PenTool with state machine (IDLE → CREATING_PATH → IDLE)\nClick handling to add anchors\nDouble-click/Enter to finish path\nUnit tests for all state transitions",
-    "acceptance_criteria": "First click creates new path (CreatePathEvent)\nSubsequent clicks add anchors (AddAnchorEvent)\nDouble-click or Enter finishes path (FinishPathEvent)\nESC key cancels path creation\nUnit tests achieve 85%+ coverage",
+    "inputs": "*   Architecture blueprint Section 4.4 (Sequence Diagram - Pen tool)\n        *   Ticket T021 (Pen Tool - Create Anchor Points)",
+    "target_files": [],
+    "input_files": [],
+    "deliverables": "*   PenTool with state machine (IDLE → CREATING_PATH → IDLE)\n        *   Click handling to add anchors\n        *   Double-click/Enter to finish path\n        *   Unit tests for all state transitions",
+    "acceptance_criteria": "*   First click creates new path (CreatePathEvent)\n        *   Subsequent clicks add anchors (AddAnchorEvent)\n        *   Double-click or Enter finishes path (FinishPathEvent)\n        *   ESC key cancels path creation\n        *   Unit tests achieve 85%+ coverage",
     "dependencies": [
       "I5.T1",
       "I2.T1",
       "I2.T3"
     ],
     "parallelizable": true,
-    "done": false
+    "done": true
   },
   {
     "task_id": "I6.T2",
@@ -29,20 +24,16 @@
     "iteration_goal": "Implement fully functional Pen Tool for creating paths with straight segments and Bezier curves",
     "description": "Enhance PenTool to create straight line segments by default (no Bezier control points). Each click adds corner anchor without handles. Test creating multi-segment straight paths. Write integration tests for complete straight path workflow.",
     "agent_type_hint": "BackendAgent",
-    "inputs": "Ticket T022 (Pen Tool - Straight Segments)",
-    "target_files": [
-      "lib/application/tools/pen_tool.dart"
-    ],
-    "input_files": [
-      "lib/application/tools/pen_tool.dart"
-    ],
-    "deliverables": "Straight line segment creation\nCorner anchors (no BCP handles)\nIntegration tests for straight paths",
-    "acceptance_criteria": "Clicking creates straight segments between anchors\nAnchors have anchorType = corner, no handles\nPath renders as expected in canvas\nIntegration test creates 5-point straight path successfully",
+    "inputs": "*   Ticket T022 (Pen Tool - Straight Segments)",
+    "target_files": [],
+    "input_files": [],
+    "deliverables": "*   Straight line segment creation\n        *   Corner anchors (no BCP handles)\n        *   Integration tests for straight paths",
+    "acceptance_criteria": "*   Clicking creates straight segments between anchors\n        *   Anchors have anchorType = corner, no handles\n        *   Path renders as expected in canvas\n        *   Integration test creates 5-point straight path successfully",
     "dependencies": [
       "I6.T1"
     ],
     "parallelizable": false,
-    "done": false
+    "done": true
   },
   {
     "task_id": "I6.T3",
@@ -50,21 +41,17 @@
     "iteration_goal": "Implement fully functional Pen Tool for creating paths with straight segments and Bezier curves",
     "description": "Implement Bezier curve creation in PenTool. Click-and-drag to create anchor with Bezier handles. Dragging out from click position creates symmetric handles (smooth anchor type). Generate AddAnchorEvent with handleOut set. Implement Bezier segment between previous anchor's handleOut and new anchor's handleIn. Write integration tests creating curved paths.",
     "agent_type_hint": "BackendAgent",
-    "inputs": "Architecture blueprint Section 3.6 (Data Model - Segment with Bezier)\nTicket T023 (Pen Tool - Bezier Curves)",
-    "target_files": [
-      "lib/application/tools/pen_tool.dart"
-    ],
-    "input_files": [
-      "lib/application/tools/pen_tool.dart"
-    ],
-    "deliverables": "Click-and-drag creates Bezier handles\nSmooth anchor type with symmetric handles\nBezier segments rendered as curves\nIntegration tests for curved paths",
-    "acceptance_criteria": "Click-and-drag generates handleOut in direction of drag\nAnchor type = smooth, handleIn = -handleOut (symmetric)\nBezier curve segment created using cubic Bezier\nRendered curve matches expected shape\nIntegration test creates S-curve path",
+    "inputs": "*   Architecture blueprint Section 3.6 (Data Model - Segment with Bezier)\n        *   Ticket T023 (Pen Tool - Bezier Curves)",
+    "target_files": [],
+    "input_files": [],
+    "deliverables": "*   Click-and-drag creates Bezier handles\n        *   Smooth anchor type with symmetric handles\n        *   Bezier segments rendered as curves\n        *   Integration tests for curved paths",
+    "acceptance_criteria": "*   Click-and-drag generates handleOut in direction of drag\n        *   Anchor type = smooth, handleIn = -handleOut (symmetric)\n        *   Bezier curve segment created using cubic Bezier\n        *   Rendered curve matches expected shape\n        *   Integration test creates S-curve path",
     "dependencies": [
       "I6.T2",
       "I3.T2"
     ],
     "parallelizable": false,
-    "done": false
+    "done": true
   },
   {
     "task_id": "I6.T4",
@@ -72,20 +59,16 @@
     "iteration_goal": "Implement fully functional Pen Tool for creating paths with straight segments and Bezier curves",
     "description": "Add BCP adjustment to PenTool. After creating anchor with Bezier handles, allow clicking anchor again to adjust handles independently (converts to corner anchor type). Alt+drag to break handle symmetry. Generate ModifyAnchorEvent when adjusting. Write integration tests for handle manipulation workflow.",
     "agent_type_hint": "BackendAgent",
-    "inputs": "Ticket T024 (Pen Tool - Adjust BCPs)",
-    "target_files": [
-      "lib/application/tools/pen_tool.dart"
-    ],
-    "input_files": [
-      "lib/application/tools/pen_tool.dart"
-    ],
-    "deliverables": "Click existing anchor to adjust handles\nAlt+drag breaks handle symmetry (corner anchor)\nModifyAnchorEvent recorded\nIntegration tests",
-    "acceptance_criteria": "Clicking last anchor enters ADJUSTING_HANDLES state\nDragging adjusts handleOut\nAlt+drag adjusts handleOut independently (corner type)\nModifyAnchorEvent persisted to event log\nIntegration test adjusts handle and verifies curve shape",
+    "inputs": "*   Ticket T024 (Pen Tool - Adjust BCPs)",
+    "target_files": [],
+    "input_files": [],
+    "deliverables": "*   Click existing anchor to adjust handles\n        *   Alt+drag breaks handle symmetry (corner anchor)\n        *   ModifyAnchorEvent recorded\n        *   Integration tests",
+    "acceptance_criteria": "*   Clicking last anchor enters ADJUSTING_HANDLES state\n        *   Dragging adjusts handleOut\n        *   Alt+drag adjusts handleOut independently (corner type)\n        *   ModifyAnchorEvent persisted to event log\n        *   Integration test adjusts handle and verifies curve shape",
     "dependencies": [
       "I6.T3"
     ],
     "parallelizable": false,
-    "done": false
+    "done": true
   },
   {
     "task_id": "I6.T5",
@@ -93,19 +76,15 @@
     "iteration_goal": "Implement fully functional Pen Tool for creating paths with straight segments and Bezier curves",
     "description": "Create PlantUML State Diagram in `docs/diagrams/tool_state_machines.puml` documenting PenTool state machine (IDLE → CREATING_PATH → ADJUSTING_HANDLES → IDLE). Include transitions, trigger events (click, drag, double-click, ESC), and event generation (CreatePathEvent, AddAnchorEvent, etc.).",
     "agent_type_hint": "DocumentationAgent",
-    "inputs": "Implemented PenTool from I6.T1-I6.T4",
-    "target_files": [
-      "docs/diagrams/tool_state_machines.puml"
-    ],
-    "input_files": [
-      "lib/application/tools/pen_tool.dart"
-    ],
-    "deliverables": "PlantUML State Diagram for PenTool\nDiagram renders without syntax errors",
-    "acceptance_criteria": "Diagram accurately reflects PenTool states\nAll transitions labeled with triggers\nEvents generated shown as actions\nDiagram validates and renders correctly",
+    "inputs": "*   Implemented PenTool from I6.T1-I6.T4",
+    "target_files": [],
+    "input_files": [],
+    "deliverables": "*   PlantUML State Diagram for PenTool\n        *   Diagram renders without syntax errors",
+    "acceptance_criteria": "*   Diagram accurately reflects PenTool states\n        *   All transitions labeled with triggers\n        *   Events generated shown as actions\n        *   Diagram validates and renders correctly",
     "dependencies": [
       "I6.T4"
     ],
     "parallelizable": true,
-    "done": false
+    "done": true
   }
 ]

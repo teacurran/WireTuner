@@ -1,184 +1,150 @@
-# Iteration 5: Tool System Architecture
+<!-- anchor: iteration-5-plan -->
+### Iteration 5: Persistence, File Format, Import/Export, and Platform Parity
 
-**Version:** 1.0
-**Date:** 2025-11-05
-
----
-
-<!-- anchor: iteration-5-overview -->
-### Iteration 5: Tool System Architecture
-
-<!-- anchor: iteration-5-metadata -->
-*   **Iteration ID:** `I5`
-*   **Goal:** Establish tool framework and implement Selection and Direct Selection tools for object and anchor manipulation
-*   **Prerequisites:** I4 (canvas rendering), I2 (event recording)
-
-<!-- anchor: iteration-5-tasks -->
-*   **Tasks:**
+* **Iteration ID:** `I5`
+* **Goal:** Finalize save/load flows with semantic versioning, implement SVG/PDF export and Tier-2 AI import, codify interoperability specs, and run platform parity QA culminating in release packaging.
+* **Prerequisites:** `I1`–`I4` completed (event core, rendering, tools, undo/history) since persistence must serialize mature document states and import/export rely on vector engine features.
+* **Iteration Success Indicators:** Save/load <100 ms on baseline doc, AI import coverage for Tier-2 features with explicit warnings, SVG/PDF outputs validated by external viewers, parity checklist passing for macOS/Windows.
 
 <!-- anchor: task-i5-t1 -->
-*   **Task 5.1:**
-    *   **Task ID:** `I5.T1`
-    *   **Description:** Define ITool abstract interface in `lib/application/tools/tool_interface.dart`. Specify methods: onActivate(), onDeactivate(), onPointerDown/Move/Up(), onKeyPress(), renderOverlay(Canvas). Define Cursor get cursor property. All tools will implement this interface.
-    *   **Agent Type Hint:** `BackendAgent`
-    *   **Inputs:**
-        *   Architecture blueprint Section 4.6 (Internal API - Tool Interface)
-        *   Ticket T018 (Tool Framework)
-    *   **Input Files:** []
-    *   **Target Files:**
-        *   `lib/application/tools/tool_interface.dart`
-    *   **Deliverables:**
-        *   ITool abstract interface
-        *   Method signatures for all tool lifecycle and event handling
-    *   **Acceptance Criteria:**
-        *   Interface compiles without errors
-        *   All required methods defined with clear documentation
-        *   Cursor property defined (returns SystemMouseCursor or custom)
-    *   **Dependencies:** `I1.T1` (project setup)
-    *   **Parallelizable:** Yes
+* **Task 5.1:**
+    * **Task ID:** `I5.T1`
+    * **Description:** Implement document save orchestrator writing snapshots + metadata into `.wiretuner` SQLite files, handling Save and Save As flows with blocking UI + progress indicators.
+    * **Agent Type Hint:** `BackendAgent`
+    * **Inputs:** Snapshot serializer, event store, operation grouping for dirty state.
+    * **Input Files:** [`packages/event_core/lib/src/snapshot_manager.dart`, `packages/io_services/lib/src/sqlite_gateway.dart`, `packages/app_shell/lib/src/ui/menu_actions.dart`]
+    * **Target Files:** [`packages/io_services/lib/src/save_service.dart`, `packages/app_shell/lib/src/ui/save_dialogs.dart`, `packages/io_services/test/save_service_test.dart`]
+    * **Deliverables:** Save service with blocking dialogs, dirty-state tracking, unit tests for success/failure (disk full) scenarios.
+    * **Acceptance Criteria:** Save completes <100 ms for baseline doc; errors display actionable dialog; tests simulate failure + success; logging captures file path + version.
+    * **Dependencies:** `I2.T4`, `I4.T6`.
+    * **Parallelizable:** No.
 
 <!-- anchor: task-i5-t2 -->
-*   **Task 5.2:**
-    *   **Task ID:** `I5.T2`
-    *   **Description:** Implement ToolManager in `lib/application/tools/tool_manager.dart` as singleton service. Manage active tool state, provide setActiveTool(ITool), route pointer/keyboard events to active tool. Integrate with CanvasWidget to receive input events. Create ToolManagerProvider for state management.
-    *   **Agent Type Hint:** `BackendAgent`
-    *   **Inputs:**
-        *   Architecture blueprint Section 3.5 (Component Diagram - Tool Manager)
-        *   Ticket T018 (Tool Framework)
-    *   **Input Files:**
-        *   `lib/application/tools/tool_interface.dart` (from I5.T1)
-    *   **Target Files:**
-        *   `lib/application/tools/tool_manager.dart`
-        *   `lib/presentation/providers/tool_manager_provider.dart`
-        *   `test/application/tools/tool_manager_test.dart`
-    *   **Deliverables:**
-        *   ToolManager service with tool switching logic
-        *   Event routing to active tool
-        *   Provider for UI integration
-        *   Unit tests with mock tools
-    *   **Acceptance Criteria:**
-        *   setActiveTool() calls onDeactivate() on previous tool, onActivate() on new tool
-        *   Pointer events routed to active tool's handlers
-        *   Keyboard events routed to active tool
-        *   Unit tests verify routing and lifecycle
-    *   **Dependencies:** `I5.T1` (ITool interface)
-    *   **Parallelizable:** No (needs I5.T1)
+* **Task 5.2:**
+    * **Task ID:** `I5.T2`
+    * **Description:** Author `api/file_format_spec.md` describing `.wiretuner` semantic versioning, schema, backward-compatible downgrade flows, and compatibility matrix per Decision 4.
+    * **Agent Type Hint:** `DocumentationAgent`
+    * **Inputs:** Tasks `I5.T1`, `I2.T4`, Decision 4 table.
+    * **Input Files:** [`docs/reference/file_versioning_notes.md`, `docs/diagrams/data_snapshot_erd.mmd`]
+    * **Target Files:** [`api/file_format_spec.md`]
+    * **Deliverables:** Markdown spec with header structure, field definitions, migration steps, degrade warnings, JSON header example.
+    * **Acceptance Criteria:** Document references compatibility matrix, includes Save As degrade workflow, ties to QA plan; markdown lint passes; manifest entry added.
+    * **Dependencies:** `I5.T1`.
+    * **Parallelizable:** Yes.
 
 <!-- anchor: task-i5-t3 -->
-*   **Task 5.3:**
-    *   **Task ID:** `I5.T3`
-    *   **Description:** Implement HitTestService in `lib/domain/services/hit_test_service.dart` for detecting which object/anchor is under a point. Provide methods: hitTestObjects(Document, Point) returning nearest object, hitTestAnchors(Path, Point) returning anchor index. Use distance calculations and path containment logic. Write comprehensive unit tests.
-    *   **Agent Type Hint:** `BackendAgent`
-    *   **Inputs:**
-        *   Architecture blueprint Section 3.5 (Component Diagram - Hit Test Service)
-    *   **Input Files:**
-        *   `lib/domain/models/document.dart` (from I3.T6)
-        *   `lib/domain/models/path.dart` (from I3.T3)
-    *   **Target Files:**
-        *   `lib/domain/services/hit_test_service.dart`
-        *   `test/domain/services/hit_test_service_test.dart`
-    *   **Deliverables:**
-        *   HitTestService with hitTestObjects(), hitTestAnchors()
-        *   Distance-based hit detection for paths
-        *   Bounds-based hit detection for shapes
-        *   Unit tests covering edge cases (overlapping objects, small objects)
-    *   **Acceptance Criteria:**
-        *   hitTestObjects() returns nearest object within tolerance (5px)
-        *   hitTestAnchors() returns anchor index within tolerance (8px)
-        *   Returns null if no object/anchor within tolerance
-        *   Unit tests achieve 90%+ coverage
-    *   **Dependencies:** `I3.T6` (Document), `I3.T3` (Path)
-    *   **Parallelizable:** Yes (independent of tool implementations)
+* **Task 5.3:**
+    * **Task ID:** `I5.T3`
+    * **Description:** Implement load service reading `.wiretuner` files, verifying version compatibility, running migrations, and populating UI (recent files, error dialogs) with degrade warnings.
+    * **Agent Type Hint:** `BackendAgent`
+    * **Inputs:** Save service, file spec, undo navigator.
+    * **Input Files:** [`packages/io_services/lib/src/save_service.dart`, `api/file_format_spec.md`, `packages/event_core/lib/src/undo_navigator.dart`]
+    * **Target Files:** [`packages/io_services/lib/src/load_service.dart`, `packages/app_shell/lib/src/ui/open_dialogs.dart`, `packages/io_services/test/load_service_test.dart`, `test/integration/save_load_roundtrip_test.dart`]
+    * **Deliverables:** Load service + dialogs, integration test verifying round-trip, degrade warning UI.
+    * **Acceptance Criteria:** Load rejects unsupported versions gracefully; integration test uses fixture; warnings show when downgrading features; telemetry logs file versions.
+    * **Dependencies:** `I5.T1`, `I5.T2`.
+    * **Parallelizable:** No.
 
 <!-- anchor: task-i5-t4 -->
-*   **Task 5.4:**
-    *   **Task ID:** `I5.T4`
-    *   **Description:** Implement SelectionTool in `lib/application/tools/selection_tool.dart`. Click to select objects, Cmd+Click to toggle selection, drag to move selected objects. Generate MoveObjectEvent during drag (sampled at 50ms via EventRecorder). Use HitTestService for object detection. Write widget and integration tests.
-    *   **Agent Type Hint:** `BackendAgent`
-    *   **Inputs:**
-        *   Architecture blueprint Section 4.4 (Sequence Diagram - Tool interactions)
-        *   Ticket T019 (Selection Tool)
-    *   **Input Files:**
-        *   `lib/application/tools/tool_interface.dart` (from I5.T1)
-        *   `lib/domain/services/hit_test_service.dart` (from I5.T3)
-        *   `lib/infrastructure/event_sourcing/event_recorder.dart` (from I2.T3)
-    *   **Target Files:**
-        *   `lib/application/tools/selection_tool.dart`
-        *   `test/application/tools/selection_tool_test.dart`
-        *   `integration_test/selection_tool_workflow_test.dart`
-    *   **Deliverables:**
-        *   SelectionTool implementing ITool
-        *   Click-to-select logic with modifier key support
-        *   Drag-to-move with event recording
-        *   Integration tests for full selection workflow
-    *   **Acceptance Criteria:**
-        *   Click on object selects it (updates Selection in Document)
-        *   Cmd+Click toggles selection state
-        *   Drag generates MoveObjectEvent at 50ms intervals
-        *   Cursor changes based on hover state (arrow / move cursor)
-        *   Integration tests pass
-    *   **Dependencies:** `I5.T1` (ITool), `I5.T2` (ToolManager), `I5.T3` (HitTestService), `I2.T3` (EventRecorder)
-    *   **Parallelizable:** No (needs I5.T3)
+* **Task 5.4:**
+    * **Task ID:** `I5.T4`
+    * **Description:** Generate AI import feature matrix (Tier-2) documenting supported constructs, partial support, warnings; build parser leveraging PDF structure to extract paths/shapes.
+    * **Agent Type Hint:** `BackendAgent`
+    * **Inputs:** Decision 5, vector engine, event schema, file format spec.
+    * **Input Files:** [`docs/reference/vector_model.md`, `docs/reference/event_schema.md`, `api/file_format_spec.md`]
+    * **Target Files:** [`docs/reference/ai_import_matrix.md`, `packages/io_services/lib/src/importers/ai_importer.dart`, `packages/io_services/test/importers/ai_importer_test.dart`]
+    * **Deliverables:** Matrix doc, importer converting Tier-2 constructs to events, tests with sample AI fixtures + warning logs.
+    * **Acceptance Criteria:** Matrix lists Tier-1/Tier-2 coverage; importer warns on unsupported Tier-3 features; tests verify gradient/stroke conversions; doc cross-links to Decision 5.
+    * **Dependencies:** `I2.T3`, `I5.T2`.
+    * **Parallelizable:** No.
 
 <!-- anchor: task-i5-t5 -->
-*   **Task 5.5:**
-    *   **Task ID:** `I5.T5`
-    *   **Description:** Implement DirectSelectionTool in `lib/application/tools/direct_selection_tool.dart`. Click to select individual anchor points on paths. Display anchor points and BCP handles when path selected. Drag anchors to move them (generates MoveAnchorEvent). Use HitTestService.hitTestAnchors(). Write widget and integration tests.
-    *   **Agent Type Hint:** `BackendAgent`
-    *   **Inputs:**
-        *   Ticket T020 (Direct Selection Tool)
-    *   **Input Files:**
-        *   `lib/application/tools/tool_interface.dart` (from I5.T1)
-        *   `lib/domain/services/hit_test_service.dart` (from I5.T3)
-        *   `lib/infrastructure/event_sourcing/event_recorder.dart` (from I2.T3)
-    *   **Target Files:**
-        *   `lib/application/tools/direct_selection_tool.dart`
-        *   `test/application/tools/direct_selection_tool_test.dart`
-        *   `integration_test/direct_selection_workflow_test.dart`
-    *   **Deliverables:**
-        *   DirectSelectionTool implementing ITool
-        *   Anchor selection logic
-        *   Anchor dragging with MoveAnchorEvent recording
-        *   Integration tests
-    *   **Acceptance Criteria:**
-        *   Click on anchor selects it
-        *   Drag anchor generates MoveAnchorEvent at 50ms intervals
-        *   Anchor points and BCP handles rendered via renderOverlay()
-        *   Cursor changes to crosshair when hovering anchor
-        *   Integration tests verify anchor manipulation workflow
-    *   **Dependencies:** `I5.T1` (ITool), `I5.T3` (HitTestService), `I2.T3` (EventRecorder)
-    *   **Parallelizable:** Yes (can run in parallel with I5.T4)
+* **Task 5.5:**
+    * **Task ID:** `I5.T5`
+    * **Description:** Implement SVG export (Tier-2) supporting paths, shapes, gradients, clipping masks, compound paths, and metadata; ensure exported files pass W3C validator.
+    * **Agent Type Hint:** `BackendAgent`
+    * **Inputs:** Vector engine, render pipeline, file spec.
+    * **Input Files:** [`packages/vector_engine/lib/src/geometry/path.dart`, `docs/reference/vector_model.md`, `api/file_format_spec.md`]
+    * **Target Files:** [`packages/io_services/lib/src/exporters/svg_exporter.dart`, `packages/io_services/test/exporters/svg_exporter_test.dart`, `test/integration/svg_export_test.dart`]
+    * **Deliverables:** SVG exporter, unit tests verifying DOM output, integration test comparing against golden file opened via CLI validator.
+    * **Acceptance Criteria:** Exporter handles gradients/clipping; tests assert XML equality; validator CLI returns success; doc snippet explains known limitations.
+    * **Dependencies:** `I2.T6`, `I5.T2`.
+    * **Parallelizable:** Yes (after dependencies).
 
 <!-- anchor: task-i5-t6 -->
-*   **Task 5.6:**
-    *   **Task ID:** `I5.T6`
-    *   **Description:** Create tool toolbar UI in `lib/presentation/widgets/toolbar/tool_toolbar.dart`. Display buttons for each tool (Selection, Direct Selection, Pen, Rectangle, Ellipse, Polygon, Star). Clicking button calls ToolManager.setActiveTool(). Highlight active tool. Write widget tests.
-    *   **Agent Type Hint:** `FrontendAgent`
-    *   **Inputs:**
-        *   Ticket T018 (Tool Framework)
-    *   **Input Files:**
-        *   `lib/presentation/providers/tool_manager_provider.dart` (from I5.T2)
-    *   **Target Files:**
-        *   `lib/presentation/widgets/toolbar/tool_toolbar.dart`
-        *   `lib/presentation/widgets/toolbar/tool_button.dart`
-        *   `test/presentation/widgets/toolbar/tool_toolbar_test.dart`
-    *   **Deliverables:**
-        *   Tool toolbar widget with icon buttons
-        *   Active tool highlighting
-        *   Integration with ToolManagerProvider
-        *   Widget tests
-    *   **Acceptance Criteria:**
-        *   Toolbar displays all tool buttons
-        *   Clicking button activates corresponding tool
-        *   Active tool button highlighted (different color/border)
-        *   Widget tests verify button interactions
-    *   **Dependencies:** `I5.T2` (ToolManager)
-    *   **Parallelizable:** Yes (UI task, can overlap with tool implementations)
+* **Task 5.6:**
+    * **Task ID:** `I5.T6`
+    * **Description:** Implement PDF export leveraging `pdf` package, mapping vector objects to PDF operators, embedding fonts for text-as-path, and verifying output via external viewer tests.
+    * **Agent Type Hint:** `BackendAgent`
+    * **Inputs:** SVG exporter (for parity), vector engine, performance metrics.
+    * **Input Files:** [`packages/io_services/lib/src/exporters/svg_exporter.dart`, `packages/vector_engine/lib/src/geometry/path.dart`]
+    * **Target Files:** [`packages/io_services/lib/src/exporters/pdf_exporter.dart`, `packages/io_services/test/exporters/pdf_exporter_test.dart`, `test/integration/pdf_export_test.dart`]
+    * **Deliverables:** PDF exporter, tests verifying page size/objects, integration test opening file via `pdfinfo` or similar CLI.
+    * **Acceptance Criteria:** PDF opens in Preview/Acrobat without warnings; tests ensure gradients/fills map correctly; documentation lists color management assumptions.
+    * **Dependencies:** `I5.T5`.
+    * **Parallelizable:** No.
 
----
+<!-- anchor: task-i5-t7 -->
+* **Task 5.7:**
+    * **Task ID:** `I5.T7`
+    * **Description:** Implement SVG import (Tier-1/Tier-2) to complement AI import, focusing on path, gradient, clipping, and text-as-path conversion with warning logs for unsupported elements.
+    * **Agent Type Hint:** `BackendAgent`
+    * **Inputs:** SVG exporter knowledge, event schema, vector model.
+    * **Input Files:** [`packages/io_services/lib/src/exporters/svg_exporter.dart`, `docs/reference/event_schema.md`, `docs/reference/vector_model.md`]
+    * **Target Files:** [`packages/io_services/lib/src/importers/svg_importer.dart`, `packages/io_services/test/importers/svg_importer_test.dart`, `docs/reference/svg_import_notes.md`]
+    * **Deliverables:** Importer with DOM parser, tests using sample files, doc describing supported tags/attributes.
+    * **Acceptance Criteria:** Imports Round-trip sample doc (export then import) without diff; warnings issued for filters/blend modes; doc lists fallback behaviors.
+    * **Dependencies:** `I5.T5`.
+    * **Parallelizable:** Yes (post dependencies).
 
-**Iteration 5 Summary:**
-*   **Total Tasks:** 6
-*   **Estimated Duration:** 4-5 days
-*   **Critical Path:** I5.T1 → I5.T2, I5.T3 → I5.T4/I5.T5 (tool implementations), I5.T6 (parallel UI)
-*   **Deliverables:** Tool framework with Selection and Direct Selection tools, tool toolbar UI
+<!-- anchor: task-i5-t8 -->
+* **Task 5.8:**
+    * **Task ID:** `I5.T8`
+    * **Description:** Build platform parity QA checklist + automation (where possible) ensuring keyboard shortcuts, window chrome, file dialogs, and exporters behave identically on macOS/Windows.
+    * **Agent Type Hint:** `QAAgent`
+    * **Inputs:** Decisions 2 & 6, tasks `I5.T1`–`I5.T7`.
+    * **Input Files:** [`docs/qa/platform_parity_checklist.md`, `docs/qa/tooling_checklist.md`, `docs/reference/history_panel_usage.md`]
+    * **Target Files:** [`docs/qa/platform_parity_checklist.md`, `test/integration/platform_parity_test.dart`]
+    * **Deliverables:** Updated checklist, automated smoke test verifying shortcuts + exports per platform (guarded by tags), report template for manual QA.
+    * **Acceptance Criteria:** Checklist covers menus, shortcuts, file pickers; automation verifies parity-critical flows; doc includes sign-off template; manifest updated.
+    * **Dependencies:** `I5.T1`–`I5.T7`.
+    * **Parallelizable:** No.
+
+<!-- anchor: task-i5-t9 -->
+* **Task 5.9:**
+    * **Task ID:** `I5.T9`
+    * **Description:** Prepare release packaging scripts (macOS notarized DMG, Windows signed installer), update CI pipelines to build artifacts, and document release checklist.
+    * **Agent Type Hint:** `DevOpsAgent`
+    * **Inputs:** Section 2 deployment plan, CI from `I1.T7`, parity checklist.
+    * **Input Files:** [`scripts/ci/run_checks.sh`, `.github/workflows/ci.yml`, `docs/qa/platform_parity_checklist.md`]
+    * **Target Files:** [`scripts/ci/build_macos_release.sh`, `scripts/ci/build_windows_release.ps1`, `.github/workflows/release.yml`, `docs/qa/release_checklist.md`]
+    * **Deliverables:** Build scripts, release workflow (manual trigger), checklist describing signing/notarization steps.
+    * **Acceptance Criteria:** Scripts produce DMG/EXE locally; release workflow uploads artifacts; checklist includes hash verification + gate approvals.
+    * **Dependencies:** `I5.T8`.
+    * **Parallelizable:** Yes (with caution once parity ready).
+
+<!-- anchor: task-i5-t10 -->
+* **Task 5.10:**
+    * **Task ID:** `I5.T10`
+    * **Description:** Conduct end-to-end regression suite (unit, widget, integration, benchmarks, QA checklists) and create final report summarizing readiness, risks, and follow-up work.
+    * **Agent Type Hint:** `QAAgent`
+    * **Inputs:** All prior tasks, verification strategy (Section 6), manifest for referencing artifacts.
+    * **Input Files:** [`scripts/ci/run_checks.sh`, `docs/qa/platform_parity_checklist.md`, `docs/reference/rendering_troubleshooting.md`]
+    * **Target Files:** [`docs/qa/final_report.md`, `docs/qa/test_matrix.csv`]
+    * **Deliverables:** Final QA report with pass/fail matrix, backlog of post-v0.1 items, attachments referencing logs/artifacts.
+    * **Acceptance Criteria:** Report includes summary, risks, metrics; CSV lists each test suite; document cross-links to plan anchors; stakeholder sign-off recorded.
+    * **Dependencies:** `I5.T1`–`I5.T9`.
+    * **Parallelizable:** No.
+
+<!-- anchor: task-i5-t11 -->
+* **Task 5.11:**
+    * **Task ID:** `I5.T11`
+    * **Description:** Update README + marketing snippet with feature list (pen, shapes, undo, import/export), include download/install instructions, and link to release artifacts.
+    * **Agent Type Hint:** `DocumentationAgent`
+    * **Inputs:** Final QA report, release scripts, architecture docs.
+    * **Input Files:** [`README.md`, `docs/qa/final_report.md`, `.github/workflows/release.yml`]
+    * **Target Files:** [`README.md`, `docs/reference/release_notes.md`]
+    * **Deliverables:** Updated README, release notes summarizing highlights/known issues, references to file format spec + troubleshooting docs.
+    * **Acceptance Criteria:** README badges updated; release notes mention compatibility matrix + Tier-2 import limitations; Markdown lint passes; manifest updated.
+    * **Dependencies:** `I5.T9`, `I5.T10`.
+    * **Parallelizable:** No.

@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" version="1.1" viewBox="0 0 300 200" width="300" height="200">
+  <defs>
+    <!-- Linear gradient -->
+    <linearGradient id="linearGrad" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="red" stop-opacity="1"/>
+      <stop offset="50%" stop-color="yellow" stop-opacity="1"/>
+      <stop offset="100%" stop-color="blue" stop-opacity="1"/>
+    </linearGradient>
+
+    <!-- Radial gradient -->
+    <radialGradient id="radialGrad" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0" stop-color="white" stop-opacity="1"/>
+      <stop offset="1" stop-color="black" stop-opacity="1"/>
+    </radialGradient>
+
+    <!-- ClipPath -->
+    <clipPath id="circleClip">
+      <circle cx="75" cy="75" r="50"/>
+    </clipPath>
+  </defs>
+
+  <!-- Rectangle with linear gradient -->
+  <rect x="10" y="10" width="130" height="80" fill="url(#linearGrad)"/>
+
+  <!-- Circle with radial gradient -->
+  <circle cx="220" cy="50" r="40" fill="url(#radialGrad)" stroke="gray" stroke-width="1"/>
+
+  <!-- Rectangle with clipping path -->
+  <rect x="25" y="110" width="100" height="80" fill="green" clip-path="url(#circleClip)"/>
+</svg>

@@ -8,6 +8,8 @@ part 'path_events.g.dart';
 ///
 /// This event is dispatched when a user starts creating a path with the pen tool.
 /// It includes the initial anchor point and optional style properties.
+///
+/// Related: T004 (Event Model Definition), T020 (Pen Tool)
 @Freezed(toJson: true, fromJson: true)
 class CreatePathEvent extends EventBase with _$CreatePathEvent {
   /// Creates a new path creation event.
@@ -36,6 +38,8 @@ class CreatePathEvent extends EventBase with _$CreatePathEvent {
 ///
 /// This event is dispatched when a user adds a new point to a path being drawn.
 /// It includes the anchor position, type, and optional Bezier control handles.
+///
+/// Related: T004 (Event Model Definition), T020 (Pen Tool)
 @Freezed(toJson: true, fromJson: true)
 class AddAnchorEvent extends EventBase with _$AddAnchorEvent {
   /// Creates a new anchor addition event.
@@ -63,6 +67,8 @@ class AddAnchorEvent extends EventBase with _$AddAnchorEvent {
 ///
 /// This event is dispatched when a user finishes drawing a path.
 /// It marks the path as complete and optionally closes it.
+///
+/// Related: T004 (Event Model Definition), T020 (Pen Tool)
 @Freezed(toJson: true, fromJson: true)
 class FinishPathEvent extends EventBase with _$FinishPathEvent {
   /// Creates a new path finish event.
@@ -87,6 +93,8 @@ class FinishPathEvent extends EventBase with _$FinishPathEvent {
 ///
 /// This event is dispatched when a user modifies an anchor's position,
 /// control handles, or type (line/bezier conversion).
+///
+/// Related: T004 (Event Model Definition), T020 (Pen Tool), T021 (Selection and Manipulation)
 @Freezed(toJson: true, fromJson: true)
 class ModifyAnchorEvent extends EventBase with _$ModifyAnchorEvent {
   /// Creates a new anchor modification event.

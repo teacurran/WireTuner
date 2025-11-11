@@ -82,34 +82,6 @@ enum AnchorType {
 /// ```
 @immutable
 class AnchorPoint {
-  /// The position of this anchor on the canvas.
-  final Point position;
-
-  /// The incoming Bezier control point (BCP) handle.
-  ///
-  /// Null indicates no incoming curve control (straight line or end of path).
-  /// The handle is stored as a relative offset from [position], not as
-  /// absolute coordinates.
-  ///
-  /// This handle affects the curve coming INTO this anchor from the
-  /// previous segment.
-  final Point? handleIn;
-
-  /// The outgoing Bezier control point (BCP) handle.
-  ///
-  /// Null indicates no outgoing curve control (straight line or end of path).
-  /// The handle is stored as a relative offset from [position], not as
-  /// absolute coordinates.
-  ///
-  /// This handle affects the curve going OUT from this anchor to the
-  /// next segment.
-  final Point? handleOut;
-
-  /// The type of anchor, defining handle behavior.
-  ///
-  /// Defaults to [AnchorType.corner] for maximum flexibility.
-  final AnchorType anchorType;
-
   /// Creates an anchor point with the specified position and optional handles.
   ///
   /// The [position] is required and specifies the anchor's location on the canvas.
@@ -166,6 +138,34 @@ class AnchorPoint {
         handleOut: handleOut,
         anchorType: AnchorType.smooth,
       );
+
+  /// The position of this anchor on the canvas.
+  final Point position;
+
+  /// The incoming Bezier control point (BCP) handle.
+  ///
+  /// Null indicates no incoming curve control (straight line or end of path).
+  /// The handle is stored as a relative offset from [position], not as
+  /// absolute coordinates.
+  ///
+  /// This handle affects the curve coming INTO this anchor from the
+  /// previous segment.
+  final Point? handleIn;
+
+  /// The outgoing Bezier control point (BCP) handle.
+  ///
+  /// Null indicates no outgoing curve control (straight line or end of path).
+  /// The handle is stored as a relative offset from [position], not as
+  /// absolute coordinates.
+  ///
+  /// This handle affects the curve going OUT from this anchor to the
+  /// next segment.
+  final Point? handleOut;
+
+  /// The type of anchor, defining handle behavior.
+  ///
+  /// Defaults to [AnchorType.corner] for maximum flexibility.
+  final AnchorType anchorType;
 
   /// Whether this anchor has any handles (is a curve anchor).
   ///
@@ -228,7 +228,6 @@ class AnchorPoint {
   int get hashCode => Object.hash(position, handleIn, handleOut, anchorType);
 
   @override
-  String toString() =>
-      'AnchorPoint(position: $position, handleIn: $handleIn, '
+  String toString() => 'AnchorPoint(position: $position, handleIn: $handleIn, '
       'handleOut: $handleOut, anchorType: $anchorType)';
 }

@@ -4,17 +4,20 @@
  *
  * Cross-platform Flutter application execution script.
  * Ensures environment is set up before running the Flutter application.
+ * Supports both single-package projects and melos workspaces.
  *
  * Usage: node tools/run.cjs [device-id]
  * Exit codes: 0 = success, 1 = failure
  */
 
 const { execSync, spawnSync } = require('child_process');
+const { existsSync } = require('fs');
 const path = require('path');
 
 // Configuration
 const PROJECT_ROOT = path.resolve(__dirname, '..');
 const INSTALL_SCRIPT = path.join(__dirname, 'install.cjs');
+const MELOS_CONFIG = path.join(PROJECT_ROOT, 'melos.yaml');
 
 /**
  * Run the install script to ensure dependencies are up-to-date
@@ -23,11 +26,18 @@ const INSTALL_SCRIPT = path.join(__dirname, 'install.cjs');
 function ensureDependencies() {
   console.error('[run] Ensuring dependencies are up-to-date...');
   try {
-    execSync(`node "${INSTALL_SCRIPT}"`, {
+    const result = spawnSync('node', [INSTALL_SCRIPT], {
       cwd: PROJECT_ROOT,
       stdio: 'inherit',
-      encoding: 'utf-8'
+      encoding: 'utf-8',
+      shell: process.platform === 'win32'
     });
+
+    if (result.error || result.status !== 0) {
+      console.error('[run] Error: Failed to install dependencies');
+      return false;
+    }
+
     return true;
   } catch (error) {
     console.error('[run] Error: Failed to install dependencies');
@@ -75,6 +85,23 @@ function detectPlatform() {
 }
 
 /**
+ * Determine the application entry point path
+ * For melos workspaces, we use the root pubspec.yaml location
+ * @returns {string} Path to the application root
+ */
+function getAppPath() {
+  // Check if melos workspace - the main app is in the root
+  const isMelosWorkspace = existsSync(MELOS_CONFIG);
+
+  if (isMelosWorkspace) {
+    // In melos workspace, main app is typically in root or specified location
+    return PROJECT_ROOT;
+  }
+
+  return PROJECT_ROOT;
+}
+
+/**
  * Run the Flutter application
  * @param {string|null} device - Target device ID
  * @returns {boolean} Success status
@@ -82,28 +109,25 @@ function detectPlatform() {
 function runApplication(device) {
   const args = ['run'];
 
-  // Add device argument if specified
-  if (device) {
-    args.push('-d', device);
-  }
-
-  // Check for command line argument
+  // Check for command line argument first
   const userDevice = process.argv[2];
   if (userDevice) {
     args.push('-d', userDevice);
     console.error(`[run] Running on device: ${userDevice}`);
   } else if (device) {
+    args.push('-d', device);
     console.error(`[run] Running on detected device: ${device}`);
   } else {
     console.error('[run] Running on default device');
   }
 
-  console.error('[run] Starting Flutter application...');
+  const appPath = getAppPath();
+  console.error(`[run] Starting Flutter application from: ${appPath}`);
   console.error('[run] Press Ctrl+C to stop the application');
 
   try {
     const result = spawnSync('flutter', args, {
-      cwd: PROJECT_ROOT,
+      cwd: appPath,
       stdio: 'inherit',
       encoding: 'utf-8',
       shell: process.platform === 'win32'
@@ -158,4 +182,4 @@ if (require.main === module) {
   main();
 }
 
-module.exports = { ensureDependencies, detectPlatform, runApplication };
+module.exports = { ensureDependencies, detectPlatform, getAppPath, runApplication };

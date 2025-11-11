@@ -11,6 +11,14 @@ dependencies:
   flutter:
     sdk: flutter
 
+  # Local packages
+  app_shell:
+    path: packages/app_shell
+  event_core:
+    path: packages/event_core
+  io_services:
+    path: packages/io_services
+
   # State Management
   provider: ^6.0.0
 
@@ -25,6 +33,13 @@ dependencies:
   # Logging
   logger: ^2.0.0
 
+  # UUID Generation
+  uuid: ^4.0.0
+
+  # Export/Import
+  pdf: ^3.10.0
+  xml: ^6.5.0
+
   # UI Components
   cupertino_icons: ^1.0.8
 
@@ -35,6 +50,8 @@ dependencies:
 dev_dependencies:
   flutter_test:
     sdk: flutter
+  integration_test:
+    sdk: flutter
 
   # Code Generation
   freezed: ^2.4.0
@@ -43,6 +60,15 @@ dev_dependencies:
 
   # Linting
   flutter_lints: ^3.0.0
+
+  # Testing Utilities
+  crypto: ^3.0.3
+
+  # CLI Tools
+  args: ^2.4.0
+
+  # Workspace Management
+  melos: ^6.3.0
 
 flutter:
   uses-material-design: true

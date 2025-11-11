@@ -91,38 +91,6 @@ import 'package:wiretuner/domain/models/segment.dart';
 /// ```
 @immutable
 class Path {
-  /// The anchor points that define this path.
-  ///
-  /// Segments reference these anchors by index. The list must contain
-  /// at least one anchor for a valid path. Empty anchor lists are allowed
-  /// but represent degenerate paths with zero length and bounds.
-  ///
-  /// Each anchor defines a position and optional Bezier control point handles
-  /// that affect the curvature of adjacent segments.
-  final List<AnchorPoint> anchors;
-
-  /// The segments that connect anchor points.
-  ///
-  /// Each segment's [Segment.startAnchorIndex] and [Segment.endAnchorIndex]
-  /// must be valid indices into the [anchors] list.
-  ///
-  /// Segments define the type of connection (line or Bezier curve) between
-  /// two anchors. The number of segments is typically `anchors.length - 1`
-  /// for open paths, but can vary if anchors are not fully connected.
-  final List<Segment> segments;
-
-  /// Whether this path is closed.
-  ///
-  /// If true, an implicit segment connects the last anchor to the first
-  /// anchor, creating a closed loop. This affects geometric calculations:
-  /// - [bounds] includes the closing segment's control points
-  /// - [length] includes the closing segment's arc length
-  /// - [pointAt] can traverse the closing segment
-  ///
-  /// For a closed path with n anchors, there are effectively n segments
-  /// (n-1 explicit + 1 implicit).
-  final bool closed;
-
   /// Creates a path with the specified anchors and segments.
   ///
   /// The [anchors] list defines the positions and control points.
@@ -224,6 +192,38 @@ class Path {
         ],
         closed: false,
       );
+
+  /// The anchor points that define this path.
+  ///
+  /// Segments reference these anchors by index. The list must contain
+  /// at least one anchor for a valid path. Empty anchor lists are allowed
+  /// but represent degenerate paths with zero length and bounds.
+  ///
+  /// Each anchor defines a position and optional Bezier control point handles
+  /// that affect the curvature of adjacent segments.
+  final List<AnchorPoint> anchors;
+
+  /// The segments that connect anchor points.
+  ///
+  /// Each segment's [Segment.startAnchorIndex] and [Segment.endAnchorIndex]
+  /// must be valid indices into the [anchors] list.
+  ///
+  /// Segments define the type of connection (line or Bezier curve) between
+  /// two anchors. The number of segments is typically `anchors.length - 1`
+  /// for open paths, but can vary if anchors are not fully connected.
+  final List<Segment> segments;
+
+  /// Whether this path is closed.
+  ///
+  /// If true, an implicit segment connects the last anchor to the first
+  /// anchor, creating a closed loop. This affects geometric calculations:
+  /// - [bounds] includes the closing segment's control points
+  /// - [length] includes the closing segment's arc length
+  /// - [pointAt] can traverse the closing segment
+  ///
+  /// For a closed path with n anchors, there are effectively n segments
+  /// (n-1 explicit + 1 implicit).
+  final bool closed;
 
   /// Calculates the bounding rectangle that contains all points in this path.
   ///
@@ -491,9 +491,9 @@ class Path {
   /// which degrades the curve to a straight line.
   Point _evaluateBezier(AnchorPoint start, AnchorPoint end, double t) {
     final p0 = start.position;
-    final p1 =
-        start.handleOut != null ? start.position + start.handleOut! : p0;
-    final p2 = end.handleIn != null ? end.position + end.handleIn! : end.position;
+    final p1 = start.handleOut != null ? start.position + start.handleOut! : p0;
+    final p2 =
+        end.handleIn != null ? end.position + end.handleIn! : end.position;
     final p3 = end.position;
 
     final t2 = t * t;

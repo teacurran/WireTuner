@@ -8,11 +8,17 @@ export 'package:wiretuner/domain/events/event_base.dart';
 export 'package:wiretuner/domain/events/path_events.dart';
 export 'package:wiretuner/domain/events/object_events.dart';
 export 'package:wiretuner/domain/events/style_events.dart';
+export 'package:wiretuner/domain/events/selection_events.dart';
+export 'package:wiretuner/domain/events/viewport_events.dart';
+export 'package:wiretuner/domain/events/file_events.dart';
 
 import 'package:wiretuner/domain/events/event_base.dart';
 import 'package:wiretuner/domain/events/path_events.dart';
 import 'package:wiretuner/domain/events/object_events.dart';
 import 'package:wiretuner/domain/events/style_events.dart';
+import 'package:wiretuner/domain/events/selection_events.dart';
+import 'package:wiretuner/domain/events/viewport_events.dart';
+import 'package:wiretuner/domain/events/file_events.dart';
 
 /// Factory function for polymorphic event deserialization.
 ///
@@ -56,10 +62,36 @@ EventBase eventFromJson(Map<String, dynamic> json) {
       return MoveObjectEvent.fromJson(json);
     case 'CreateShapeEvent':
       return CreateShapeEvent.fromJson(json);
+    case 'DeleteObjectEvent':
+      return DeleteObjectEvent.fromJson(json);
 
     // Style Events
     case 'ModifyStyleEvent':
       return ModifyStyleEvent.fromJson(json);
+
+    // Selection Events
+    case 'SelectObjectsEvent':
+      return SelectObjectsEvent.fromJson(json);
+    case 'DeselectObjectsEvent':
+      return DeselectObjectsEvent.fromJson(json);
+    case 'ClearSelectionEvent':
+      return ClearSelectionEvent.fromJson(json);
+
+    // Viewport Events
+    case 'ViewportPanEvent':
+      return ViewportPanEvent.fromJson(json);
+    case 'ViewportZoomEvent':
+      return ViewportZoomEvent.fromJson(json);
+    case 'ViewportResetEvent':
+      return ViewportResetEvent.fromJson(json);
+
+    // File Events
+    case 'SaveDocumentEvent':
+      return SaveDocumentEvent.fromJson(json);
+    case 'LoadDocumentEvent':
+      return LoadDocumentEvent.fromJson(json);
+    case 'DocumentLoadedEvent':
+      return DocumentLoadedEvent.fromJson(json);
 
     default:
       throw ArgumentError('Unknown event type: $eventType');
@@ -70,11 +102,32 @@ EventBase eventFromJson(Map<String, dynamic> json) {
 ///
 /// Useful for validation and documentation purposes.
 const List<String> validEventTypes = [
+  // Path Events
   'CreatePathEvent',
   'AddAnchorEvent',
   'FinishPathEvent',
   'ModifyAnchorEvent',
+
+  // Object Events
   'MoveObjectEvent',
   'CreateShapeEvent',
+  'DeleteObjectEvent',
+
+  // Style Events
   'ModifyStyleEvent',
+
+  // Selection Events
+  'SelectObjectsEvent',
+  'DeselectObjectsEvent',
+  'ClearSelectionEvent',
+
+  // Viewport Events
+  'ViewportPanEvent',
+  'ViewportZoomEvent',
+  'ViewportResetEvent',
+
+  // File Events
+  'SaveDocumentEvent',
+  'LoadDocumentEvent',
+  'DocumentLoadedEvent',
 ];

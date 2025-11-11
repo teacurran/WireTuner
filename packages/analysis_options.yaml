@@ -1,0 +1,4 @@
+# Shared analysis options for all packages in the WireTuner workspace
+# This file includes the root-level analysis options to ensure consistency
+
+include: ../analysis_options.yaml

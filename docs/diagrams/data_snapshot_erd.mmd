@@ -1,0 +1,37 @@
+%% anchor: data-snapshot-erd
+%% WireTuner Event Sourcing Schema - Entity Relationship Diagram
+%% Version: 1.0 | Date: 2025-11-08 | Status: Active
+%% Architecture Decisions: Decision 1 (Event Sourcing), Decision 5 (50ms Sampling), Decision 6 (Snapshot Frequency)
+%% Related: .codemachine/artifacts/architecture/06_Rationale_and_Future.md
+
+erDiagram
+    metadata ||--o{ events : "contains"
+    metadata ||--o{ snapshots : "has"
+
+    metadata {
+        TEXT document_id PK "Unique document identifier (UUIDv4)"
+        TEXT title "Display name for the document"
+        INTEGER format_version "Schema version for compatibility"
+        INTEGER created_at "Unix timestamp (seconds) of creation"
+        INTEGER modified_at "Unix timestamp (seconds) of last modification"
+        TEXT author "Optional author name (future: collaboration)"
+    }
+
+    events {
+        INTEGER event_id PK "Auto-incrementing unique ID"
+        TEXT document_id FK "Foreign key to metadata table"
+        INTEGER event_sequence "0-based sequence number (unique per document)"
+        TEXT event_type "Event discriminator (e.g., CreatePathEvent)"
+        TEXT event_payload "JSON-serialized event data"
+        INTEGER timestamp "Unix timestamp in milliseconds"
+        TEXT user_id "Optional user ID (future: collaboration)"
+    }
+
+    snapshots {
+        INTEGER snapshot_id PK "Auto-incrementing unique ID"
+        TEXT document_id FK "Foreign key to metadata table"
+        INTEGER event_sequence "Snapshot taken after this event sequence"
+        BLOB snapshot_data "Serialized Document object (gzip compressed)"
+        INTEGER created_at "Unix timestamp of snapshot creation"
+        TEXT compression "Compression method (gzip, none, etc.)"
+    }

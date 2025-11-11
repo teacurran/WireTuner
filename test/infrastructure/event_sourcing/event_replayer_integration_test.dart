@@ -1,4 +1,3 @@
-import 'dart:typed_data';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:wiretuner/domain/events/event_base.dart';
@@ -173,7 +172,7 @@ void main() {
             'type': 'path',
             'id': 'path$i',
             'anchors': [
-              {'x': i.toDouble(), 'y': i.toDouble() * 2}
+              {'x': i.toDouble(), 'y': i.toDouble() * 2},
             ],
           },
         ),
@@ -233,7 +232,7 @@ void main() {
             'type': 'path',
             'id': 'path$i',
             'anchors': [
-              {'x': i.toDouble(), 'y': i.toDouble() * 2}
+              {'x': i.toDouble(), 'y': i.toDouble() * 2},
             ],
           },
         ),
@@ -398,7 +397,8 @@ void main() {
             'id': 'path$i',
             'anchors': List.generate(
               10,
-              (j) => {'x': (i * 10 + j).toDouble(), 'y': (i * 10 + j).toDouble()},
+              (j) =>
+                  {'x': (i * 10 + j).toDouble(), 'y': (i * 10 + j).toDouble()},
             ),
           },
         ),
@@ -406,7 +406,8 @@ void main() {
 
       // Act - Serialize with and without compression
       final compressedSerializer = SnapshotSerializer(enableCompression: true);
-      final uncompressedSerializer = SnapshotSerializer(enableCompression: false);
+      final uncompressedSerializer =
+          SnapshotSerializer(enableCompression: false);
 
       final compressedBytes = compressedSerializer.serialize(largeDoc);
       final uncompressedBytes = uncompressedSerializer.serialize(largeDoc);
@@ -415,7 +416,8 @@ void main() {
       expect(compressedBytes.length, lessThan(uncompressedBytes.length));
 
       // Typically expect at least 50% compression for JSON data
-      final compressionRatio = compressedBytes.length / uncompressedBytes.length;
+      final compressionRatio =
+          compressedBytes.length / uncompressedBytes.length;
       expect(compressionRatio, lessThan(0.5));
 
       // Verify both can be deserialized correctly

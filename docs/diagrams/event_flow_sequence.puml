@@ -1,0 +1,276 @@
+@startuml
+title Event Sourcing Lifecycle - Complete Flow from User Input to Replay
+
+' ============================================================================
+' This diagram illustrates the complete event sourcing lifecycle in WireTuner,
+' showing how events flow through the system from initial user interaction
+' through recording, sampling, persistence, snapshot management, and replay.
+'
+' Date: 2025-11-06
+' Version: 1.0
+' Related: docs/specs/event_lifecycle.md, ADR 003
+' ============================================================================
+
+actor User
+participant "Canvas Widget" as Canvas
+participant "Tool Manager" as ToolMgr
+participant "Active Tool\n(Pen/Selection/etc.)" as Tool
+
+box "Event Recording & Sampling" #LightBlue
+  participant "Event Sampler" as Sampler
+  participant "Event Recorder" as Recorder
+end box
+
+box "Event Processing" #LightGreen
+  participant "Event Dispatcher" as Dispatcher
+  participant "Event Handler\nRegistry" as Handlers
+  participant "Document State\n(Immutable)" as Doc
+end box
+
+box "Persistence Layer" #LightYellow
+  participant "SQLite Repository" as Repo
+  participant "Event Store" as EventStore
+  participant "Snapshot Manager" as SnapMgr
+  participant "Snapshot Store" as SnapStore
+end box
+
+participant "Canvas Renderer" as Renderer
+
+' ============================================================================
+' PHASE 1 & 2: EVENT RECORDING AND SAMPLING
+' ============================================================================
+
+User -> Canvas : User interaction\n(click, drag, keyboard)
+Canvas -> ToolMgr : onPointerDown/Move/Up(point)
+ToolMgr -> Tool : onPointerDown/Move/Up(point)
+
+alt High-frequency input (e.g., mouse drag)
+  Tool -> Sampler : recordMove(objectId, position, timestamp)
+
+  alt Within 50ms of last sample
+    Sampler -> Sampler : Buffer movement\n(throttle to 50ms)
+    note right of Sampler
+      Prevents event flood.
+      Buffers intermediate positions
+      until 50ms threshold reached.
+    end note
+  else 50ms elapsed since last sample
+    Sampler -> Recorder : recordEvent(MoveAnchorEvent/MoveObjectEvent)
+    note right of Sampler
+      Sampling reduces 2-second drag
+      from ~200 events to ~40 events
+      (5x storage reduction)
+    end note
+  end
+else Discrete input (e.g., single click)
+  Tool -> Recorder : recordEvent(CreatePathEvent/AddAnchorEvent/etc.)
+end
+
+' ============================================================================
+' PHASE 3: EVENT DISPATCH AND APPLICATION
+' ============================================================================
+
+Recorder -> Recorder : Assign sequence number\n(monotonic counter)
+Recorder -> Dispatcher : dispatch(event)
+
+Dispatcher -> Handlers : lookupHandler(event.type)
+Handlers --> Dispatcher : Handler function
+
+Dispatcher -> Doc : handler(currentDocument, event)
+
+note right of Doc
+  All domain models are immutable.
+  Event application is pure function:
+  (State, Event) → NewState
+
+  Example: AddAnchorEvent
+  1. Get path by ID from current doc
+  2. Create new Path with added anchor
+  3. Return new Document with updated path
+
+  No in-place mutations.
+end note
+
+Doc -> Doc : Create new immutable state
+Doc --> Dispatcher : New Document state
+
+Dispatcher --> Recorder : Event applied successfully
+
+' ============================================================================
+' PHASE 4: EVENT PERSISTENCE
+' ============================================================================
+
+Recorder -> Repo : insertEvent(event)
+
+Repo -> Repo : Serialize event to JSON
+
+Repo -> EventStore : INSERT INTO events\n(event_sequence, event_type,\nevent_payload, created_at)
+
+EventStore -> EventStore : SQLite transaction\n(WAL mode for durability)
+
+alt Insert successful
+  EventStore --> Repo : Success
+  Repo --> Recorder : Event persisted (sequence #N)
+else Disk full error
+  EventStore --> Repo : SQLITE_FULL error
+  Repo -> Repo : Retry with backoff\n(50ms, 100ms, 200ms)
+  alt Retry successful
+    Repo --> Recorder : Event persisted
+  else All retries failed
+    Repo --> Recorder : Error: Disk full
+    Recorder -> User : Surface error:\n"Cannot save - disk full"
+    note right of Recorder
+      Enter read-only mode,
+      allow export to alternate location
+    end note
+  end
+end
+
+' ============================================================================
+' UI Update
+' ============================================================================
+
+Recorder -> Canvas : notifyListeners()\n(Flutter Provider pattern)
+Canvas -> Renderer : build() → paint(NewDocument)
+Renderer --> User : Display updated canvas
+
+' ============================================================================
+' PHASE 5: SNAPSHOT MANAGEMENT (Every 1000 Events)
+' ============================================================================
+
+alt Event count milestone (1000, 2000, 3000...)
+  Recorder -> SnapMgr : onEventMilestone(sequence: N)
+
+  SnapMgr -> Doc : getCurrentDocument()
+  Doc --> SnapMgr : Current document state
+
+  SnapMgr -> SnapMgr : Serialize document to JSON
+  SnapMgr -> SnapMgr : Compress with gzip\n(~10:1 compression)
+
+  SnapMgr -> Repo : createSnapshot(eventSequence, compressedBlob)
+  Repo -> SnapStore : INSERT INTO snapshots\n(event_sequence, snapshot_data)
+
+  alt Snapshot creation successful
+    SnapStore --> Repo : Success
+    Repo --> SnapMgr : Snapshot created
+    note right of SnapMgr
+      Latency budget: < 25ms
+      Snapshot size: ~10-50KB
+      Keeps 10 most recent snapshots
+    end note
+  else Disk full / Serialization error
+    SnapStore --> Repo : Error
+    Repo --> SnapMgr : Snapshot failed
+    SnapMgr -> SnapMgr : Log warning, skip snapshot
+    note right of SnapMgr
+      Snapshots are optimization,
+      not critical path.
+      Continue event recording.
+    end note
+  end
+end
+
+' ============================================================================
+' PHASE 6: DOCUMENT LOAD (Event Replay)
+' ============================================================================
+
+== Document Load Flow ==
+
+User -> Canvas : Open .wiretuner file
+Canvas -> Repo : loadDocument(filePath)
+
+Repo -> EventStore : SELECT MAX(event_sequence)\nFROM events
+EventStore --> Repo : maxSequence = N
+
+Repo -> SnapStore : SELECT snapshot_data, event_sequence\nFROM snapshots\nWHERE event_sequence <= N\nORDER BY event_sequence DESC\nLIMIT 1
+SnapStore --> Repo : Snapshot at sequence M,\ncompressed BLOB
+
+Repo -> Repo : Decompress snapshot\n(gzip → JSON)
+Repo -> Repo : Deserialize JSON → Document
+
+Repo -> EventStore : SELECT * FROM events\nWHERE event_sequence > M\nORDER BY event_sequence ASC
+EventStore --> Repo : Events M+1 to N\n(up to 1000 events)
+
+loop For each event (M+1 to N)
+  Repo -> Dispatcher : dispatch(event)
+  Dispatcher -> Handlers : lookupHandler(event.type)
+  Dispatcher -> Doc : handler(document, event)
+  Doc -> Doc : Apply event → New state
+  Doc --> Dispatcher : Updated document
+end
+
+note right of Repo
+  Latency budget: < 200ms
+
+  Typical: Snapshot + 100-500 events
+  Worst case: 1000 events between snapshots
+
+  Optimization: Viewport culling,
+  lazy rendering during replay
+end note
+
+Repo --> Canvas : Final document state
+Canvas -> Renderer : paint(Document)
+Renderer --> User : Display loaded document
+
+' ============================================================================
+' PHASE 6B: UNDO/REDO (Event Navigation / Time Travel)
+' ============================================================================
+
+== Undo Operation (Cmd+Z) ==
+
+User -> Canvas : Press Cmd+Z (Undo)
+Canvas -> Recorder : undo()
+
+Recorder -> Recorder : currentSequence = N\ntargetSequence = N - 1
+
+Recorder -> SnapStore : SELECT MAX(event_sequence)\nFROM snapshots\nWHERE event_sequence <= (N-1)
+SnapStore --> Recorder : snapshotSequence = M
+
+Recorder -> SnapStore : SELECT snapshot_data\nFROM snapshots\nWHERE event_sequence = M
+SnapStore --> Recorder : Snapshot BLOB
+
+Recorder -> Recorder : Deserialize snapshot\n→ Base Document
+
+Recorder -> EventStore : SELECT * FROM events\nWHERE event_sequence > M\nAND event_sequence <= (N-1)\nORDER BY event_sequence ASC
+EventStore --> Recorder : Events M+1 to N-1
+
+loop For each event (M+1 to N-1)
+  Recorder -> Dispatcher : dispatch(event)
+  Dispatcher -> Doc : applyEvent(event)
+  Doc -> Doc : Create new immutable state
+end
+
+Recorder -> Canvas : setDocument(documentAtN-1,\ncurrentSequence: N-1)
+Canvas -> Renderer : paint(Document)
+Renderer --> User : Display document with\nlast action undone
+
+note right of Recorder
+  Undo/Redo is time travel
+  to specific sequence number.
+
+  Redo: Navigate to N+1
+
+  Latency budget: < 100ms
+  (typically < 100 events from cache)
+end note
+
+' ============================================================================
+' Error Handling Annotations
+' ============================================================================
+
+note over EventStore
+  **Error Handling:**
+  - Disk Full: Retry with backoff, enter read-only mode
+  - Corruption: Integrity check on startup, validate JSON
+  - Missing Events: Detect sequence gaps, surface error
+end note
+
+note over SnapStore
+  **Error Handling:**
+  - Snapshot Corruption: Fallback to previous snapshot
+  - Decompression Error: Warn user, attempt partial recovery
+  - Missing Snapshot: Replay from document start (slower)
+end note
+
+@enduml

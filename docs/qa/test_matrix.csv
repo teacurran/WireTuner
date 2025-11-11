@@ -1,0 +1,31 @@
+Test Suite,Category,Platform,Runner/Environment,Status,Coverage %,Duration (s),Artifacts/Logs,Notes
+Flutter Analyze,Static Analysis,Cross-platform,CI / GitHub Actions,PASS,100,5,scripts/ci/run_checks.sh,No issues found
+Code Formatting,Static Analysis,Cross-platform,CI / GitHub Actions,WARN,100,2,scripts/ci/run_checks.sh,Minor formatting issues - Fix with: dart format lib/ test/
+Unit Tests - vector_engine,Unit,Cross-platform,Flutter Test,RUNNING,TBD,TBD,coverage/lcov.info,Core geometry and vector operations
+Unit Tests - event_core,Unit,Cross-platform,Flutter Test,RUNNING,TBD,TBD,coverage/lcov.info,Event sourcing and replay logic
+Unit Tests - tool_framework,Unit,Cross-platform,Flutter Test,RUNNING,TBD,TBD,packages/tool_framework/coverage/,Tool abstraction and lifecycle
+Unit Tests - import_export,Unit,Cross-platform,Flutter Test,RUNNING,TBD,TBD,coverage/lcov.info,SVG/PDF import and export helpers
+Widget Tests - Canvas,Widget,Cross-platform,Flutter Test,PENDING,N/A,N/A,test/widget/,Canvas rendering and interactions
+Widget Tests - History Panel,Widget,Cross-platform,Flutter Test,PENDING,N/A,N/A,test/widget/,Undo/redo UI and state
+Widget Tests - Selection Tool,Widget,Cross-platform,Flutter Test,PENDING,N/A,N/A,test/widget/,Selection interactions and feedback
+Widget Tests - Pen Tool,Widget,Cross-platform,Flutter Test,PENDING,N/A,N/A,test/widget/,Pen drawing and bezier editing
+Integration Tests - Event Replay,Integration,Cross-platform,Flutter Test,PENDING,N/A,N/A,test/integration/,Event → canvas replay validation
+Integration Tests - Save/Load,Integration,Cross-platform,Flutter Test,PENDING,N/A,N/A,test/integration/,Save/load round-trip with version migration
+Integration Tests - Pen Flow,Integration,Cross-platform,Flutter Test,PENDING,N/A,N/A,test/integration/,End-to-end pen tool workflow
+Integration Tests - Selection Flow,Integration,Cross-platform,Flutter Test,PENDING,N/A,N/A,test/integration/,End-to-end selection workflow
+Integration Tests - Crash Recovery,Integration,macOS,Flutter Test,PENDING,N/A,N/A,test/integration/,SQLite recovery after simulated crash
+Integration Tests - Crash Recovery,Integration,Windows,Flutter Test,PENDING,N/A,N/A,test/integration/,SQLite recovery after simulated crash
+Benchmarks - Render Pipeline,Benchmark,macOS,Flutter Driver,PENDING,N/A,N/A,benchmark/results/,Stress test with 10k+ objects
+Benchmarks - Render Pipeline,Benchmark,Windows,Flutter Driver,PENDING,N/A,N/A,benchmark/results/,Stress test with 10k+ objects
+Benchmarks - Event Replay,Benchmark,macOS,Flutter Driver,PENDING,N/A,N/A,benchmark/results/,500k event replay throughput
+Benchmarks - Event Replay,Benchmark,Windows,Flutter Driver,PENDING,N/A,N/A,benchmark/results/,500k event replay throughput
+Manual QA - Platform Parity,Manual,macOS,Manual Tester,PENDING,N/A,N/A,docs/qa/platform_parity_checklist.md,UI/UX consistency and feature parity
+Manual QA - Platform Parity,Manual,Windows,Manual Tester,PENDING,N/A,N/A,docs/qa/platform_parity_checklist.md,UI/UX consistency and feature parity
+Manual QA - History/Recovery,Manual,macOS,Manual Tester,PENDING,N/A,N/A,docs/qa/,Undo/redo playbook and crash scenarios
+Manual QA - History/Recovery,Manual,Windows,Manual Tester,PENDING,N/A,N/A,docs/qa/,Undo/redo playbook and crash scenarios
+Manual QA - Import/Export,Manual,macOS,Manual Tester,PENDING,N/A,N/A,docs/qa/,SVG/PDF export validation with external tools
+Manual QA - Import/Export,Manual,Windows,Manual Tester,PENDING,N/A,N/A,docs/qa/,SVG/PDF export validation with external tools
+Diagram Validation,Static Analysis,Cross-platform,CI / GitHub Actions,PENDING,N/A,N/A,scripts/ci/run_checks.sh,PlantUML/Mermaid syntax validation
+SQLite Smoke Tests,Integration,macOS,CI / GitHub Actions,PENDING,N/A,N/A,scripts/ci/run_checks.sh,Database operations and migrations
+SQLite Smoke Tests,Integration,Windows,CI / GitHub Actions,PENDING,N/A,N/A,scripts/ci/run_checks.sh,Database operations and migrations
+Security Scan,Static Analysis,Cross-platform,GitHub Actions (weekly),PENDING,N/A,N/A,.github/workflows/,Dependency audit for vulnerabilities

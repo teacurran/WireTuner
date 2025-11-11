@@ -1,185 +1,150 @@
-# Iteration 4: Rendering Engine
+<!-- anchor: iteration-4-plan -->
+### Iteration 4: Direct Manipulation, Undo/Redo, and History UX
 
-**Version:** 1.0
-**Date:** 2025-11-05
-
----
-
-<!-- anchor: iteration-4-overview -->
-### Iteration 4: Rendering Engine
-
-<!-- anchor: iteration-4-metadata -->
-*   **Iteration ID:** `I4`
-*   **Goal:** Build high-performance canvas rendering system using Flutter CustomPainter with viewport transforms and 60 FPS target
-*   **Prerequisites:** I3 (domain models), I2 (event system for state updates)
-
-<!-- anchor: iteration-4-tasks -->
-*   **Tasks:**
+* **Iteration ID:** `I4`
+* **Goal:** Deliver operation-based undo/redo, history browsing, snapshot tuning, direct manipulation polish (drag handles/objects), and multi-window coordination aligned with Decisions 1, 2, and 7.
+* **Prerequisites:** Iterations `I1`–`I3` (workspace, event core, rendering, tool framework) completed.
+* **Iteration Success Indicators:** Undo latency <80 ms, history panel scrubbing 5k events/sec, multi-window consistency with isolated undo stacks.
 
 <!-- anchor: task-i4-t1 -->
-*   **Task 4.1:**
-    *   **Task ID:** `I4.T1`
-    *   **Description:** Implement CanvasWidget in `lib/presentation/widgets/canvas/canvas_widget.dart` as main container for vector rendering. Use GestureDetector for input handling (pointer down/move/up, scroll for zoom). Integrate with DocumentProvider to reactively rebuild on state changes. Create basic layout with canvas centered in main window.
-    *   **Agent Type Hint:** `FrontendAgent`
-    *   **Inputs:**
-        *   Architecture blueprint Section 3.4 (Container Diagram - Canvas Renderer)
-        *   Ticket T013 (Canvas System with CustomPainter)
-    *   **Input Files:**
-        *   `lib/presentation/providers/document_provider.dart` (create if not exists)
-    *   **Target Files:**
-        *   `lib/presentation/widgets/canvas/canvas_widget.dart`
-        *   `lib/presentation/providers/document_provider.dart`
-        *   `test/presentation/widgets/canvas/canvas_widget_test.dart`
-    *   **Deliverables:**
-        *   CanvasWidget with GestureDetector for input
-        *   Integration with DocumentProvider (Consumer widget)
-        *   Widget tests verifying build
-    *   **Acceptance Criteria:**
-        *   CanvasWidget builds without errors
-        *   GestureDetector captures pointer events
-        *   Widget rebuilds when DocumentProvider notifies
-        *   Widget tests pass
-    *   **Dependencies:** `I1.T1` (project setup), `I3.T6` (Document model)
-    *   **Parallelizable:** Yes
+* **Task 4.1:**
+    * **Task ID:** `I4.T1`
+    * **Description:** Implement operation grouping service that listens to event recorder, detects idle thresholds (200 ms), and emits operation boundaries with descriptions.
+    * **Agent Type Hint:** `BackendAgent`
+    * **Inputs:** Decision 7, Task `I1.T3` recorder interfaces, telemetry from `I3.T9`.
+    * **Input Files:** [`packages/event_core/lib/src/recorder.dart`, `packages/event_core/lib/src/metrics.dart`, `docs/reference/undo_labels.md`]
+    * **Target Files:** [`packages/event_core/lib/src/operation_grouping.dart`, `packages/event_core/test/operation_grouping_test.dart`]
+    * **Deliverables:** Grouping service with configurable idle threshold, tests covering continuous typing vs. paused operations, and doc comments referencing Decision 7.
+    * **Acceptance Criteria:** Groups contiguous events correctly; exposes API for manual boundaries; tests cover edge cases; metrics log operations/sec.
+    * **Dependencies:** `I3.T9`.
+    * **Parallelizable:** No (foundation for undo).
 
 <!-- anchor: task-i4-t2 -->
-*   **Task 4.2:**
-    *   **Task ID:** `I4.T2`
-    *   **Description:** Implement Viewport transformation logic in `lib/domain/models/viewport.dart` (if not already complete from I3.T6). Add methods: toScreen(Point), toWorld(Point), toScreenTransform() returning Matrix4. Implement pan and zoom logic. Write unit tests for coordinate transformations at various zoom levels.
-    *   **Agent Type Hint:** `BackendAgent`
-    *   **Inputs:**
-        *   Architecture blueprint Section 5.3 (Scalability - Viewport Culling)
-        *   Ticket T014 (Viewport Transform Pan/Zoom)
-    *   **Input Files:**
-        *   `lib/domain/models/viewport.dart` (from I3.T6, enhance if needed)
-    *   **Target Files:**
-        *   `lib/domain/models/viewport.dart`
-        *   `test/domain/models/viewport_test.dart`
-    *   **Deliverables:**
-        *   Viewport with toScreen/toWorld coordinate conversions
-        *   Pan (translate) and zoom (scale) transformations
-        *   Unit tests verifying transforms at zoom 0.1, 1.0, 10.0
-    *   **Acceptance Criteria:**
-        *   toScreen/toWorld correctly convert coordinates
-        *   Pan updates viewport offset
-        *   Zoom scales around cursor point
-        *   Unit tests achieve 90%+ coverage
-    *   **Dependencies:** `I3.T6` (Viewport model)
-    *   **Parallelizable:** Yes (can overlap with I4.T1)
+* **Task 4.2:**
+    * **Task ID:** `I4.T2`
+    * **Description:** Produce Mermaid timeline diagram illustrating undo/redo navigation across snapshots, operations, and event sequences, including redo-branch invalidation.
+    * **Agent Type Hint:** `DiagrammingAgent`
+    * **Inputs:** Task `I4.T1`, Decision 7, Section 2.1 artifact plan.
+    * **Input Files:** [`packages/event_core/lib/src/operation_grouping.dart`, `docs/reference/undo_labels.md`]
+    * **Target Files:** [`docs/diagrams/undo_timeline.mmd`]
+    * **Deliverables:** Timeline showing events vs. operations, snapshot markers, user actions, and notes about performance targets.
+    * **Acceptance Criteria:** Diagram renders via Mermaid CLI; includes anchors; referenced in README/manifest; clearly states redo clearing rules.
+    * **Dependencies:** `I4.T1`.
+    * **Parallelizable:** Yes.
 
 <!-- anchor: task-i4-t3 -->
-*   **Task 4.3:**
-    *   **Task ID:** `I4.T3`
-    *   **Description:** Implement CanvasPainter in `lib/presentation/widgets/canvas/canvas_painter.dart` extending CustomPainter. Override paint() method to render Document objects. Apply viewport transform, render each VectorObject's path with style (fill/stroke). Optimize with shouldRepaint() logic. Write widget tests and performance benchmarks (target 60 FPS with 1000 objects).
-    *   **Agent Type Hint:** `FrontendAgent`
-    *   **Inputs:**
-        *   Architecture blueprint Section 3.2 (Rendering - CustomPainter)
-        *   Architecture blueprint Section 5.3 (Performance - Rendering Optimizations)
-        *   Ticket T015 (Path Rendering with Bezier)
-    *   **Input Files:**
-        *   `lib/domain/models/document.dart` (from I3.T6)
-        *   `lib/domain/models/viewport.dart` (from I4.T2)
-    *   **Target Files:**
-        *   `lib/presentation/widgets/canvas/canvas_painter.dart`
-        *   `test/presentation/widgets/canvas/canvas_painter_test.dart`
-        *   `test/performance/rendering_benchmark_test.dart`
-    *   **Deliverables:**
-        *   CustomPainter rendering all VectorObjects
-        *   Bezier curve rendering via Canvas.drawPath()
-        *   Viewport transform applied to all objects
-        *   Performance benchmark achieving 60 FPS with 1000 simple paths
-    *   **Acceptance Criteria:**
-        *   paint() renders all objects from Document
-        *   Bezier curves rendered smoothly (using Flutter's Path API)
-        *   shouldRepaint() returns false when document unchanged
-        *   Performance benchmark: 16ms frame time with 1000 objects
-        *   Widget tests verify rendering output (golden tests optional)
-    *   **Dependencies:** `I3.T6` (Document), `I4.T2` (Viewport)
-    *   **Parallelizable:** No (needs I4.T2 for transforms)
+* **Task 4.3:**
+    * **Task ID:** `I4.T3`
+    * **Description:** Implement undo/redo navigator service integrating snapshots, operation grouping, and Provider notifications; expose keyboard bindings (Cmd/Ctrl+Z, Shift+Cmd/Ctrl+Z).
+    * **Agent Type Hint:** `BackendAgent`
+    * **Inputs:** Tasks `I4.T1`, `I2.T4`, `I2.T10`, `I3.T9`.
+    * **Input Files:** [`packages/event_core/lib/src/replayer.dart`, `packages/event_core/lib/src/operation_grouping.dart`, `packages/app_shell/lib/src/state/document_provider.dart`]
+    * **Target Files:** [`packages/event_core/lib/src/undo_navigator.dart`, `packages/app_shell/lib/src/state/undo_provider.dart`, `packages/event_core/test/undo_navigator_test.dart`]
+    * **Deliverables:** Undo navigator with APIs for undo/redo/scrub, provider integration updating UI, tests covering navigation/resets.
+    * **Acceptance Criteria:** Undo respects operation boundaries; redo invalidated on new events; tests cover multi-window state separation; logging includes operation names.
+    * **Dependencies:** `I4.T1`, `I2.T4`.
+    * **Parallelizable:** No.
 
 <!-- anchor: task-i4-t4 -->
-*   **Task 4.4:**
-    *   **Task ID:** `I4.T4`
-    *   **Description:** Enhance CanvasPainter to render Shape objects by calling shape.toPath() and rendering generated path. Test rendering for all shape types (rectangle, ellipse, polygon, star) with various styles (filled, stroked, both).
-    *   **Agent Type Hint:** `FrontendAgent`
-    *   **Inputs:**
-        *   Ticket T016 (Shape Rendering)
-        *   Shape models from I3.T4
-    *   **Input Files:**
-        *   `lib/presentation/widgets/canvas/canvas_painter.dart` (from I4.T3)
-        *   `lib/domain/models/shape.dart` (from I3.T4)
-    *   **Target Files:**
-        *   `lib/presentation/widgets/canvas/canvas_painter.dart` (update)
-        *   `test/presentation/widgets/canvas/shape_rendering_test.dart`
-    *   **Deliverables:**
-        *   Shape rendering via toPath() conversion
-        *   Visual tests for all shape types
-    *   **Acceptance Criteria:**
-        *   All ShapeType variants render correctly
-        *   Shapes respect style (fill, stroke, opacity)
-        *   Widget tests cover all shape types
-    *   **Dependencies:** `I4.T3` (CanvasPainter), `I3.T4` (Shape)
-    *   **Parallelizable:** No (needs I4.T3)
+* **Task 4.4:**
+    * **Task ID:** `I4.T4`
+    * **Description:** Build history panel UI showing chronological operations with thumbnails, search/filter, and scrubber that replays at target 5k events/sec for preview.
+    * **Agent Type Hint:** `FrontendAgent`
+    * **Inputs:** Undo navigator, render pipeline, telemetry.
+    * **Input Files:** [`packages/app_shell/lib/src/state/undo_provider.dart`, `packages/event_core/lib/src/undo_navigator.dart`, `packages/app_shell/lib/src/canvas/wiretuner_canvas.dart`]
+    * **Target Files:** [`packages/app_shell/lib/src/ui/history_panel.dart`, `packages/app_shell/lib/src/ui/history_thumbnail_service.dart`, `packages/app_shell/test/widget/history_panel_test.dart`]
+    * **Deliverables:** History panel widget, thumbnail generator (offscreen render), tests verifying scroll/search, and doc snippet.
+    * **Acceptance Criteria:** Panel loads operations lazily; scrubbing updates canvas within budget; thumbnails cached; tests emulate search + navigation.
+    * **Dependencies:** `I4.T3`, `I2.T6`.
+    * **Parallelizable:** No.
 
 <!-- anchor: task-i4-t5 -->
-*   **Task 4.5:**
-    *   **Task ID:** `I4.T5`
-    *   **Description:** Implement selection visualization in CanvasPainter. Render bounding boxes for selected objects, anchor points for direct selection, and BCP handles. Create OverlayPainter in `lib/presentation/widgets/canvas/overlay_painter.dart` for tool-specific overlays (guides, cursors). Write widget tests.
-    *   **Agent Type Hint:** `FrontendAgent`
-    *   **Inputs:**
-        *   Architecture blueprint Section 3.4 (Container Diagram - Tool Overlay)
-        *   Ticket T017 (Selection Visualization)
-    *   **Input Files:**
-        *   `lib/presentation/widgets/canvas/canvas_painter.dart` (from I4.T4)
-        *   `lib/domain/models/selection.dart` (from I3.T6)
-    *   **Target Files:**
-        *   `lib/presentation/widgets/canvas/canvas_painter.dart` (update for selection rendering)
-        *   `lib/presentation/widgets/canvas/overlay_painter.dart`
-        *   `test/presentation/widgets/canvas/selection_visualization_test.dart`
-    *   **Deliverables:**
-        *   Bounding box rendering for selected objects
-        *   Anchor point rendering (circles at anchor positions)
-        *   BCP handle rendering (lines from anchor to control points)
-        *   OverlayPainter for temporary tool feedback
-    *   **Acceptance Criteria:**
-        *   Selected objects show blue bounding box (configurable color)
-        *   Anchor points render as small circles when path selected
-        *   BCP handles render as lines with endpoint circles
-        *   OverlayPainter renders independently from main canvas
-        *   Widget tests verify selection rendering
-    *   **Dependencies:** `I4.T4` (Shape rendering), `I3.T6` (Selection model)
-    *   **Parallelizable:** No (needs I4.T4)
+* **Task 4.5:**
+    * **Task ID:** `I4.T5`
+    * **Description:** Enhance direct manipulation flows (object dragging, anchor handles) with inertia options, magnetic grid snapping, and event batching to reduce noise while maintaining accuracy.
+    * **Agent Type Hint:** `FrontendAgent`
+    * **Inputs:** Tools from `I3`, operation grouping, metrics.
+    * **Input Files:** [`packages/tool_framework/lib/src/tools/direct_selection_tool.dart`, `packages/event_core/lib/src/operation_grouping.dart`]
+    * **Target Files:** [`packages/tool_framework/lib/src/tools/direct_selection_tool.dart`, `packages/tool_framework/lib/src/snapping/snapping_service.dart`, `packages/tool_framework/test/tools/direct_selection_snap_test.dart`]
+    * **Deliverables:** Snapping service, updated tool logic, tests verifying accuracy + buffered events.
+    * **Acceptance Criteria:** Snapping toggles respond instantly; operations aggregated elegantly; tests assert drift <1px; doc updates describe grid settings.
+    * **Dependencies:** `I4.T1`, `I3.T4`.
+    * **Parallelizable:** Yes (after dependencies).
 
 <!-- anchor: task-i4-t6 -->
-*   **Task 4.6:**
-    *   **Task ID:** `I4.T6`
-    *   **Description:** Integrate pan/zoom gestures into CanvasWidget. Handle scroll events for zoom (pinch on trackpad, mouse wheel). Handle pan gesture (two-finger drag, or space+drag). Update Viewport model on gesture and trigger repaint. Write widget tests for gesture handling.
-    *   **Agent Type Hint:** `FrontendAgent`
-    *   **Inputs:**
-        *   Ticket T014 (Viewport Transform Pan/Zoom)
-    *   **Input Files:**
-        *   `lib/presentation/widgets/canvas/canvas_widget.dart` (from I4.T1)
-        *   `lib/domain/models/viewport.dart` (from I4.T2)
-    *   **Target Files:**
-        *   `lib/presentation/widgets/canvas/canvas_widget.dart` (update with gesture handlers)
-        *   `test/presentation/widgets/canvas/pan_zoom_test.dart`
-    *   **Deliverables:**
-        *   Scroll event handling for zoom
-        *   Pan gesture handling (update viewport offset)
-        *   Viewport state updates trigger repaint
-        *   Widget tests simulating gestures
-    *   **Acceptance Criteria:**
-        *   Scroll wheel zooms in/out around cursor position
-        *   Pan gesture translates viewport
-        *   Zoom constrained to reasonable range (0.1x - 100x)
-        *   Widget tests verify viewport updates
-    *   **Dependencies:** `I4.T1` (CanvasWidget), `I4.T2` (Viewport)
-    *   **Parallelizable:** No (needs I4.T2)
+* **Task 4.6:**
+    * **Task ID:** `I4.T6`
+    * **Description:** Tune snapshot cadence (default 1000 events) via adaptive strategy (dense editing vs. idle) and surface instrumentation showing snapshot queue/backlog.
+    * **Agent Type Hint:** `BackendAgent`
+    * **Inputs:** Snapshot serializer, operation grouping metrics, Decision 1.
+    * **Input Files:** [`packages/event_core/lib/src/snapshot_manager.dart`, `packages/event_core/lib/src/metrics.dart`]
+    * **Target Files:** [`packages/event_core/lib/src/snapshot_manager.dart`, `packages/event_core/test/snapshot_manager_tuning_test.dart`, `docs/reference/snapshot_strategy.md`]
+    * **Deliverables:** Adaptive snapshot logic, tests verifying thresholds, reference doc describing heuristics + overrides.
+    * **Acceptance Criteria:** Snapshot creation stays under 100 ms; doc explains CLI/env overrides; instrumentation displays queue status in logs.
+    * **Dependencies:** `I2.T4`, `I1.T8`.
+    * **Parallelizable:** Yes.
 
----
+<!-- anchor: task-i4-t7 -->
+* **Task 4.7:**
+    * **Task ID:** `I4.T7`
+    * **Description:** Implement multi-window coordination: ensure each document window maintains isolated undo stacks, metrics, and logging context; add window manager tests.
+    * **Agent Type Hint:** `BackendAgent`
+    * **Inputs:** Decision 2, undo navigator, workspace shell.
+    * **Input Files:** [`packages/app_shell/lib/src/window/window_manager.dart`, `packages/event_core/lib/src/undo_navigator.dart`]
+    * **Target Files:** [`packages/app_shell/lib/src/window/window_manager.dart`, `packages/app_shell/test/unit/window_manager_test.dart`, `docs/reference/multi_window_notes.md`]
+    * **Deliverables:** Window manager enhancements, tests verifying isolation, doc describing lifecycle + cleanup hooks.
+    * **Acceptance Criteria:** Opening multiple windows duplicates state cleanly; closing window frees resources; doc references Decision 2; tests simulate 3 windows.
+    * **Dependencies:** `I4.T3`.
+    * **Parallelizable:** No.
 
-**Iteration 4 Summary:**
-*   **Total Tasks:** 6
-*   **Estimated Duration:** 5-6 days
-*   **Critical Path:** I4.T1/I4.T2 → I4.T3 → I4.T4 → I4.T5, I4.T6 (parallel with I4.T5)
-*   **Deliverables:** Working canvas renderer with 60 FPS performance, pan/zoom, selection visualization
+<!-- anchor: task-i4-t8 -->
+* **Task 4.8:**
+    * **Task ID:** `I4.T8`
+    * **Description:** Build timeline scrubber keyboard shortcuts + transport controls (play, pause, step forward/back) for history replay, aligning with Decision 1 performance targets.
+    * **Agent Type Hint:** `FrontendAgent`
+    * **Inputs:** History panel, undo navigator, event replayer.
+    * **Input Files:** [`packages/app_shell/lib/src/ui/history_panel.dart`, `packages/event_core/lib/src/replayer.dart`]
+    * **Target Files:** [`packages/app_shell/lib/src/ui/history_transport.dart`, `packages/app_shell/test/widget/history_transport_test.dart`]
+    * **Deliverables:** Transport widget, keyboard mapping (J/K/L style), tests verifying playback rates + UI states.
+    * **Acceptance Criteria:** Replay hits 5k events/sec target; UI disables controls appropriately; tests cover playback + stepping; user doc updated.
+    * **Dependencies:** `I4.T4`.
+    * **Parallelizable:** Yes (post history panel).
+
+<!-- anchor: task-i4-t9 -->
+* **Task 4.9:**
+    * **Task ID:** `I4.T9`
+    * **Description:** Add crash recovery validation: simulate crash mid-operation, relaunch app, ensure last snapshot + events restore state; document recovery steps for users.
+    * **Agent Type Hint:** `QAAgent`
+    * **Inputs:** Snapshot manager, undo navigator, CI benchmark harness.
+    * **Input Files:** [`test/integration/event_to_canvas_test.dart`, `packages/event_core/lib/src/snapshot_manager.dart`, `docs/reference/snapshot_strategy.md`]
+    * **Target Files:** [`test/integration/crash_recovery_test.dart`, `docs/qa/recovery_playbook.md`]
+    * **Deliverables:** Integration test forcing abrupt termination, QA playbook describing manual validation, metrics summary.
+    * **Acceptance Criteria:** Recovery test passes; playbook lists reproduction steps; metrics show <100 ms load time; doc references Decision 1.
+    * **Dependencies:** `I4.T6`, `I4.T3`.
+    * **Parallelizable:** No.
+
+<!-- anchor: task-i4-t10 -->
+* **Task 4.10:**
+    * **Task ID:** `I4.T10`
+    * **Description:** Implement history export/import stubs (JSON) for debugging: allow exporting subsections of event log and re-importing for reproduction, flagged as dev-only feature.
+    * **Agent Type Hint:** `BackendAgent`
+    * **Inputs:** Event schema, undo navigator, snapshot serializer.
+    * **Input Files:** [`docs/reference/event_schema.md`, `packages/event_core/lib/src/undo_navigator.dart`, `packages/event_core/lib/src/snapshot_serializer.dart`]
+    * **Target Files:** [`packages/event_core/lib/src/history_exporter.dart`, `packages/event_core/test/history_exporter_test.dart`, `docs/reference/history_debug.md`]
+    * **Deliverables:** Export/import API, tests verifying schema compliance, doc describing dev workflow + warnings.
+    * **Acceptance Criteria:** Exported JSON validated against schema; import rebuilds state; doc marks feature experimental; CLI command added to `justfile`.
+    * **Dependencies:** `I4.T3`, `I2.T4`.
+    * **Parallelizable:** Yes (after dependencies).
+
+<!-- anchor: task-i4-t11 -->
+* **Task 4.11:**
+    * **Task ID:** `I4.T11`
+    * **Description:** Update QA + documentation to include undo/redo usage, history panel instructions, troubleshooting tips for timeline playback, and parity verification steps.
+    * **Agent Type Hint:** `DocumentationAgent`
+    * **Inputs:** Tasks `I4.T1`–`I4.T10`, existing QA docs, Section 6 verification strategy.
+    * **Input Files:** [`docs/qa/tooling_checklist.md`, `docs/qa/recovery_playbook.md`, `docs/diagrams/undo_timeline.mmd`]
+    * **Target Files:** [`docs/qa/history_checklist.md`, `README.md`, `docs/reference/history_panel_usage.md`]
+    * **Deliverables:** New checklist, README history section, reference doc with screenshots/anchors.
+    * **Acceptance Criteria:** Documentation references all relevant anchors; QA checklist includes macOS/Windows shortcuts; Markdown lint passes; manifest updated.
+    * **Dependencies:** `I4.T8`, `I4.T9`.
+    * **Parallelizable:** No.

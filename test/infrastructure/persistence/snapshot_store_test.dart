@@ -3,6 +3,7 @@ import 'dart:typed_data';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:path/path.dart' as path;
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
+import 'package:wiretuner/domain/document/document.dart';
 import 'package:wiretuner/infrastructure/persistence/database_provider.dart';
 import 'package:wiretuner/infrastructure/persistence/snapshot_store.dart';
 import 'package:wiretuner/infrastructure/event_sourcing/snapshot_serializer.dart';
@@ -58,9 +59,8 @@ void main() {
     }
 
     /// Helper to create test snapshot data
-    Uint8List createTestSnapshotData(String content) {
-      return Uint8List.fromList(content.codeUnits);
-    }
+    Uint8List createTestSnapshotData(String content) =>
+        Uint8List.fromList(content.codeUnits);
 
     group('insertSnapshot', () {
       test('stores BLOB with metadata correctly', () async {
@@ -138,11 +138,14 @@ void main() {
 
         // Create realistic snapshot using SnapshotSerializer
         final serializer = SnapshotSerializer(enableCompression: true);
-        final document = {
-          'id': 'doc1',
-          'title': 'Test Document',
-          'layers': ['layer1', 'layer2']
-        };
+        const document = Document(
+          id: 'doc1',
+          title: 'Test Document',
+          layers: [
+            Layer(id: 'layer1', name: 'Layer 1'),
+            Layer(id: 'layer2', name: 'Layer 2'),
+          ],
+        );
         final snapshotData = serializer.serialize(document);
 
         final snapshotId = await snapshotStore.insertSnapshot(
@@ -162,9 +165,11 @@ void main() {
 
         final retrievedData = result.first['snapshot_data'] as Uint8List;
         final deserialized = serializer.deserialize(retrievedData);
-        expect(deserialized['id'], equals('doc1'));
-        expect(deserialized['title'], equals('Test Document'));
-        expect(deserialized['layers'], equals(['layer1', 'layer2']));
+        expect(deserialized.id, equals('doc1'));
+        expect(deserialized.title, equals('Test Document'));
+        expect(deserialized.layers.length, equals(2));
+        expect(deserialized.layers[0].id, equals('layer1'));
+        expect(deserialized.layers[1].id, equals('layer2'));
       });
 
       test('stores empty BLOB', () async {
@@ -658,7 +663,8 @@ void main() {
         expect(beforeDelete.first['count'], equals(2));
 
         // Delete document (should cascade to snapshots)
-        await db.delete('metadata', where: 'document_id = ?', whereArgs: ['doc1']);
+        await db
+            .delete('metadata', where: 'document_id = ?', whereArgs: ['doc1']);
 
         // Verify snapshots were deleted due to CASCADE
         final afterDelete = await db.rawQuery(

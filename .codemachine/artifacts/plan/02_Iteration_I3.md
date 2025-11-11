@@ -1,232 +1,150 @@
-# Iteration 3: Vector Data Model
+<!-- anchor: iteration-3-plan -->
+### Iteration 3: Tool Framework, Selection, and Pen Tool Core
 
-**Version:** 1.0
-**Date:** 2025-11-05
-
----
-
-<!-- anchor: iteration-3-overview -->
-### Iteration 3: Vector Data Model
-
-<!-- anchor: iteration-3-metadata -->
-*   **Iteration ID:** `I3`
-*   **Goal:** Implement immutable domain models for vector objects (Document, Path, Shape, Segment, AnchorPoint, Style, Transform) with comprehensive unit tests
-*   **Prerequisites:** I1 (project setup)
-
-<!-- anchor: iteration-3-tasks -->
-*   **Tasks:**
+* **Iteration ID:** `I3`
+* **Goal:** Establish a robust tool framework with selection/direct-selection tooling, pen tool creation flows, overlays, and cursor/state management so later iterations can add shape tools, direct manipulation, and undo orchestration.
+* **Prerequisites:** `I1` (infrastructure) and `I2` (vector engine + rendering). Tools rely on hit testing, viewport controls, and event schema docs delivered earlier.
+* **Iteration Success Indicators:** Tool switching latency <30 ms, selection accuracy ≥99% on hit-test suite, pen tool creating closed/open paths recorded as valid events.
 
 <!-- anchor: task-i3-t1 -->
-*   **Task 3.1:**
-    *   **Task ID:** `I3.T1`
-    *   **Description:** Implement core geometry primitives in `lib/domain/models/`: Point (x, y), Rectangle (bounds), Matrix4 wrapper for transforms. Use vector_math package. Make all classes immutable with const constructors where possible. Write extensive unit tests for geometric operations (distance, intersection, transformation).
-    *   **Agent Type Hint:** `BackendAgent`
-    *   **Inputs:**
-        *   Architecture blueprint Section 3.6 (Data Model - Geometry primitives)
-        *   Ticket T009 (Core Geometry Primitives)
-    *   **Input Files:** []
-    *   **Target Files:**
-        *   `lib/domain/models/geometry/point.dart`
-        *   `lib/domain/models/geometry/rectangle.dart`
-        *   `lib/domain/models/transform.dart`
-        *   `test/domain/models/geometry/geometry_test.dart`
-    *   **Deliverables:**
-        *   Immutable Point, Rectangle classes
-        *   Transform class wrapping Matrix4
-        *   Unit tests achieving 90%+ coverage
-    *   **Acceptance Criteria:**
-        *   All classes are immutable (@immutable annotation)
-        *   Point supports arithmetic operations (add, subtract, distance)
-        *   Rectangle supports intersection, union, containsPoint
-        *   Transform supports translate, rotate, scale, composition
-        *   Unit tests verify all operations with edge cases
-    *   **Dependencies:** `I1.T1` (project setup, vector_math dependency)
-    *   **Parallelizable:** Yes
+* **Task 3.1:**
+    * **Task ID:** `I3.T1`
+    * **Description:** Implement the tool framework runtime: `ITool` interface, tool manager, dependency injection wiring, activation/deactivation lifecycle hooks, and provider integration for UI components.
+    * **Agent Type Hint:** `BackendAgent`
+    * **Inputs:** Section 2 key components, Task `I2.T7` hit testing, Task `I2.T8` viewport notifications.
+    * **Input Files:** [`packages/tool_framework/lib/tool_framework.dart`, `packages/vector_engine/lib/src/hit_testing/hit_tester.dart`]
+    * **Target Files:** [`packages/tool_framework/lib/src/tool_manager.dart`, `packages/tool_framework/lib/src/tool_registry.dart`, `packages/tool_framework/test/tool_manager_test.dart`, `packages/app_shell/lib/src/state/tool_provider.dart`]
+    * **Deliverables:** Tool manager with registration API, active tool stream, hotkey mapping placeholder, plus tests verifying activation order and singleton enforcement.
+    * **Acceptance Criteria:** Switching tools triggers lifecycle callbacks; tool provider notifies UI; tests cover invalid activation attempts; documentation references Section 2.
+    * **Dependencies:** `I2.T7`, `I2.T8`.
+    * **Parallelizable:** No (foundation for remaining tasks).
 
 <!-- anchor: task-i3-t2 -->
-*   **Task 3.2:**
-    *   **Task ID:** `I3.T2`
-    *   **Description:** Implement AnchorPoint and Segment models in `lib/domain/models/`. AnchorPoint has position, optional handleIn/handleOut (BCPs), and anchorType enum (corner/smooth/symmetric). Segment connects two anchors with type (line/bezier/arc). Both immutable with copyWith() methods. Write unit tests.
-    *   **Agent Type Hint:** `BackendAgent`
-    *   **Inputs:**
-        *   Architecture blueprint Section 3.6 (Data Model - AnchorPoint, Segment)
-        *   Ticket T010 (Path Data Model)
-    *   **Input Files:**
-        *   `lib/domain/models/geometry/point.dart` (from I3.T1)
-    *   **Target Files:**
-        *   `lib/domain/models/anchor_point.dart`
-        *   `lib/domain/models/segment.dart`
-        *   `test/domain/models/anchor_point_test.dart`
-        *   `test/domain/models/segment_test.dart`
-    *   **Deliverables:**
-        *   Immutable AnchorPoint class with BCP handles
-        *   Segment class with line/bezier/arc types
-        *   copyWith() methods for immutable updates
-        *   Unit tests for anchor types and segment construction
-    *   **Acceptance Criteria:**
-        *   AnchorPoint correctly represents corner, smooth, symmetric types
-        *   Segment stores correct anchor references and control points
-        *   copyWith() creates new instances with modified fields
-        *   Unit tests achieve 85%+ coverage
-    *   **Dependencies:** `I3.T1` (Point)
-    *   **Parallelizable:** Yes (can overlap with I3.T1)
+* **Task 3.2:**
+    * **Task ID:** `I3.T2`
+    * **Description:** Produce PlantUML state-machine diagram covering selection, direct selection, and pen tool states (Idle, Hover, PointerDown, Dragging, Commit) with undo grouping markers.
+    * **Agent Type Hint:** `DiagrammingAgent`
+    * **Inputs:** Task `I3.T1` framework, Decisions 5 & 7, Section 2.1 artifact plan.
+    * **Input Files:** [`packages/tool_framework/lib/src/tool_manager.dart`, `docs/reference/event_schema.md`]
+    * **Target Files:** [`docs/diagrams/tool_framework_state_machine.puml`]
+    * **Deliverables:** Diagram including state transitions, guard conditions, notes for 50 ms sampling, anchors + legend.
+    * **Acceptance Criteria:** PlantUML renders cleanly; diagram cross-referenced from README and manifest; includes explicit undo boundary markers and event IDs.
+    * **Dependencies:** `I3.T1`.
+    * **Parallelizable:** Yes.
 
 <!-- anchor: task-i3-t3 -->
-*   **Task 3.3:**
-    *   **Task ID:** `I3.T3`
-    *   **Description:** Implement Path model in `lib/domain/models/path.dart`. Path contains list of Segments, closed boolean flag. Provide methods: bounds(), length(), pointAt(t), addSegment(). Make immutable with copyWith(). Write unit tests including Bezier curve paths.
-    *   **Agent Type Hint:** `BackendAgent`
-    *   **Inputs:**
-        *   Architecture blueprint Section 3.6 (Data Model - Path)
-        *   Ticket T010 (Path Data Model)
-    *   **Input Files:**
-        *   `lib/domain/models/segment.dart` (from I3.T2)
-    *   **Target Files:**
-        *   `lib/domain/models/path.dart`
-        *   `test/domain/models/path_test.dart`
-    *   **Deliverables:**
-        *   Immutable Path class with segment list
-        *   bounds() calculates bounding rectangle
-        *   length() computes total path length
-        *   pointAt(t) returns point along path at parameter t [0-1]
-        *   Unit tests with straight and curved paths
-    *   **Acceptance Criteria:**
-        *   Path correctly stores segments and closed state
-        *   bounds() accurate for Bezier curves (use control point bounds initially)
-        *   length() approximates arc length for curves
-        *   Unit tests cover open/closed paths, straight/curved segments
-    *   **Dependencies:** `I3.T2` (Segment, AnchorPoint)
-    *   **Parallelizable:** No (needs I3.T2)
+* **Task 3.3:**
+    * **Task ID:** `I3.T3`
+    * **Description:** Implement Selection Tool supporting object selection (click, marquee), multi-select (Shift), and move operations emitting `MoveObject` events via recorder stub.
+    * **Agent Type Hint:** `FrontendAgent`
+    * **Inputs:** Tool framework, hit testing, viewport, event recorder interface.
+    * **Input Files:** [`packages/tool_framework/lib/src/tool_manager.dart`, `packages/vector_engine/lib/src/hit_testing/hit_tester.dart`, `packages/event_core/lib/src/recorder.dart`]
+    * **Target Files:** [`packages/tool_framework/lib/src/tools/selection_tool.dart`, `packages/app_shell/lib/src/canvas/overlays/selection_overlay.dart`, `packages/tool_framework/test/tools/selection_tool_test.dart`]
+    * **Deliverables:** Selection tool class, overlay updates for bounding boxes, tests simulating pointer events and verifying event recorder interactions.
+    * **Acceptance Criteria:** Tool selects multiple objects, handles keyboard modifiers, emits move events with proper payload, passes widget + unit tests.
+    * **Dependencies:** `I3.T1`, `I2.T7`, `I1.T3`.
+    * **Parallelizable:** No (foundation for direct selection).
 
 <!-- anchor: task-i3-t4 -->
-*   **Task 3.4:**
-    *   **Task ID:** `I3.T4`
-    *   **Description:** Implement Style model in `lib/domain/models/style.dart` for fill/stroke properties. Include fill color, stroke color, stroke width, opacity, blend mode. Make immutable. Implement Shape model in `lib/domain/models/shape.dart` with ShapeType enum (rect, ellipse, polygon, star) and parameters map. Shape has toPath() method to generate Path representation. Write unit tests for all shape types.
-    *   **Agent Type Hint:** `BackendAgent`
-    *   **Inputs:**
-        *   Architecture blueprint Section 3.6 (Data Model - Style, Shape)
-        *   Ticket T011 (Shape Data Model)
-    *   **Input Files:**
-        *   `lib/domain/models/path.dart` (from I3.T3)
-    *   **Target Files:**
-        *   `lib/domain/models/style.dart`
-        *   `lib/domain/models/shape.dart`
-        *   `test/domain/models/style_test.dart`
-        *   `test/domain/models/shape_test.dart`
-    *   **Deliverables:**
-        *   Immutable Style class with paint properties
-        *   Shape class with parametric definitions
-        *   toPath() implementations for rect, ellipse, polygon, star
-        *   Unit tests verifying shape-to-path conversion
-    *   **Acceptance Criteria:**
-        *   Style stores all paint properties
-        *   Shape.toPath() generates correct Path for each ShapeType
-        *   Rectangle shape produces 4-segment closed path
-        *   Ellipse shape produces Bezier approximation
-        *   Polygon shape produces n-sided regular polygon
-        *   Star shape produces n-pointed star with inner/outer radii
-        *   Unit tests cover all shape types and edge cases
-    *   **Dependencies:** `I3.T3` (Path)
-    *   **Parallelizable:** No (needs I3.T3)
+* **Task 3.4:**
+    * **Task ID:** `I3.T4`
+    * **Description:** Implement Direct Selection Tool enabling anchor/BCP selection, dragging with 50 ms sampled events, and snapping toggles (grid, angles) for advanced editing.
+    * **Agent Type Hint:** `FrontendAgent`
+    * **Inputs:** Selection tool behaviors, geometry library, event schema sampling metadata.
+    * **Input Files:** [`packages/tool_framework/lib/src/tools/selection_tool.dart`, `packages/vector_engine/lib/src/geometry/path.dart`, `docs/reference/event_schema.md`]
+    * **Target Files:** [`packages/tool_framework/lib/src/tools/direct_selection_tool.dart`, `packages/app_shell/lib/src/canvas/overlays/direct_selection_overlay.dart`, `packages/tool_framework/test/tools/direct_selection_tool_test.dart`]
+    * **Deliverables:** Direct selection tool class, overlay for handles, tests verifying anchor selection + event emission.
+    * **Acceptance Criteria:** Dragging anchors generates `MoveAnchorEvent` sequences respecting sampler; snapping toggle documented; tests hit anchor-level accuracy thresholds.
+    * **Dependencies:** `I3.T3`, `I2.T3`, `I1.T3`.
+    * **Parallelizable:** No.
 
 <!-- anchor: task-i3-t5 -->
-*   **Task ID:** `I3.T5`
-*   **Description:** Implement VectorObject abstract base class and Layer model in `lib/domain/models/`. VectorObject has id, transform, style, and abstract methods bounds(), hitTest(). Layer has id, name, visible, locked, and list of VectorObjects. Make both immutable. Update Path and Shape to extend VectorObject. Write unit tests.
-    *   **Agent Type Hint:** `BackendAgent`
-    *   **Inputs:**
-        *   Architecture blueprint Section 3.6 (Data Model - VectorObject, Layer)
-    *   **Input Files:**
-        *   `lib/domain/models/path.dart` (from I3.T3)
-        *   `lib/domain/models/shape.dart` (from I3.T4)
-        *   `lib/domain/models/transform.dart` (from I3.T1)
-        *   `lib/domain/models/style.dart` (from I3.T4)
-    *   **Target Files:**
-        *   `lib/domain/models/vector_object.dart`
-        *   `lib/domain/models/layer.dart`
-        *   `lib/domain/models/path.dart` (update to extend VectorObject)
-        *   `lib/domain/models/shape.dart` (update to extend VectorObject)
-        *   `test/domain/models/vector_object_test.dart`
-        *   `test/domain/models/layer_test.dart`
-    *   **Deliverables:**
-        *   VectorObject abstract base class
-        *   Path and Shape extending VectorObject
-        *   Layer model with object list
-        *   Unit tests for layer operations (add, remove, reorder objects)
-    *   **Acceptance Criteria:**
-        *   VectorObject defines common interface for all drawable objects
-        *   Path.bounds() accounts for transform matrix
-        *   Shape.bounds() computed from generated path
-        *   Layer correctly manages object list
-        *   Unit tests verify polymorphism (Layer can hold Path or Shape)
-    *   **Dependencies:** `I3.T3` (Path), `I3.T4` (Shape, Style)
-    *   **Parallelizable:** No (needs I3.T4)
+* **Task 3.5:**
+    * **Task ID:** `I3.T5`
+    * **Description:** Build cursor manager + tool overlays that change cursor icons per tool state and show contextual hints (angle lock, snapping). Integrate with macOS/Windows conventions.
+    * **Agent Type Hint:** `FrontendAgent`
+    * **Inputs:** Section 2 tech stack, Decisions 6 (parity), Tasks `I3.T1`–`I3.T4`.
+    * **Input Files:** [`packages/app_shell/lib/src/state/tool_provider.dart`, `packages/app_shell/lib/src/canvas/selection_overlay.dart`]
+    * **Target Files:** [`packages/app_shell/lib/src/ui/cursor_manager.dart`, `packages/app_shell/lib/src/ui/tool_hints.dart`, `packages/app_shell/test/widget/cursor_manager_test.dart`]
+    * **Deliverables:** Cursor manager service, UI hints widget, tests verifying platform-specific mappings.
+    * **Acceptance Criteria:** Cursor updates within 1 frame; macOS uses `SystemMouseCursors.precise`, Windows uses `basic`; hints internationalization-ready; tests cover parity rules.
+    * **Dependencies:** `I3.T3`, `I3.T4`.
+    * **Parallelizable:** Yes (once tool states exist).
 
 <!-- anchor: task-i3-t6 -->
-*   **Task 3.6:**
-    *   **Task ID:** `I3.T6`
-    *   **Description:** Implement Document model in `lib/domain/models/document.dart` as root aggregate. Contains list of Layers, Selection, Viewport. Provide query methods: getObjectById(), getAllObjects(), getObjectsInBounds(). Make immutable with copyWith(). Write comprehensive unit tests including complex documents with nested objects.
-    *   **Agent Type Hint:** `BackendAgent`
-    *   **Inputs:**
-        *   Architecture blueprint Section 3.6 (Data Model - Document)
-        *   Architecture blueprint Section 4.6 (Internal API - Document State)
-        *   Ticket T012 (Document Model)
-    *   **Input Files:**
-        *   `lib/domain/models/layer.dart` (from I3.T5)
-        *   `lib/domain/models/geometry/rectangle.dart` (from I3.T1)
-    *   **Target Files:**
-        *   `lib/domain/models/document.dart`
-        *   `lib/domain/models/selection.dart`
-        *   `lib/domain/models/viewport.dart`
-        *   `test/domain/models/document_test.dart`
-    *   **Deliverables:**
-        *   Immutable Document class with layer hierarchy
-        *   Selection model (set of object IDs, anchor indices)
-        *   Viewport model (pan, zoom, canvas size)
-        *   Query methods (getObjectById, getAllObjects, getObjectsInBounds)
-        *   Unit tests with multi-layer documents
-    *   **Acceptance Criteria:**
-        *   Document correctly manages layer list
-        *   getObjectById() searches across all layers
-        *   getAllObjects() flattens layer hierarchy
-        *   getObjectsInBounds() uses bounds() for filtering
-        *   Selection tracks object IDs and anchor indices
-        *   Viewport supports pan/zoom transformations
-        *   Unit tests achieve 90%+ coverage for Document class
-    *   **Dependencies:** `I3.T5` (Layer, VectorObject)
-    *   **Parallelizable:** No (final task, needs all previous I3 tasks)
+* **Task 3.6:**
+    * **Task ID:** `I3.T6`
+    * **Description:** Implement Pen Tool phase 1—creating anchors, toggling between straight vs. curved points, closing paths, and previewing upcoming segments before commit.
+    * **Agent Type Hint:** `FrontendAgent`
+    * **Inputs:** Tool framework, geometry, event schema, selection overlay.
+    * **Input Files:** [`packages/tool_framework/lib/src/tools/direct_selection_tool.dart`, `packages/vector_engine/lib/src/geometry/path.dart`, `docs/diagrams/tool_framework_state_machine.puml`]
+    * **Target Files:** [`packages/tool_framework/lib/src/tools/pen_tool.dart`, `packages/tool_framework/test/tools/pen_tool_creation_test.dart`, `packages/app_shell/lib/src/canvas/overlays/pen_preview_overlay.dart`]
+    * **Deliverables:** Pen tool class covering anchor creation + preview lines, overlay for rubber-band preview, tests verifying event payloads for `CreatePath` + `AddAnchor` events.
+    * **Acceptance Criteria:** Path creation works for open/closed shapes; preview overlay matches pointer movement; events recorded with correct metadata; tests cover both straight + curved toggles.
+    * **Dependencies:** `I3.T4`, `I2.T3`, `I1.T3`.
+    * **Parallelizable:** No.
 
 <!-- anchor: task-i3-t7 -->
-*   **Task 3.7:**
-    *   **Task ID:** `I3.T7`
-    *   **Description:** Generate PlantUML ERD diagram in `docs/diagrams/database_erd.puml` showing SQLite schema (metadata, events, snapshots tables) with relationships and field types. Also generate PlantUML Class Diagram in `docs/diagrams/domain_model_class.puml` showing in-memory domain model (Document, Layer, VectorObject hierarchy, Path, Shape, Segment, AnchorPoint, Style, Transform). Both diagrams should match implemented models.
-    *   **Agent Type Hint:** `DocumentationAgent` or `DiagrammingAgent`
-    *   **Inputs:**
-        *   Architecture blueprint Section 3.6 (Data Model ERD)
-        *   Implemented domain models from I3.T1-I3.T6
-        *   Database schema from I1.T5
-    *   **Input Files:**
-        *   `lib/domain/models/*.dart` (all domain models)
-        *   `lib/infrastructure/persistence/schema.dart`
-    *   **Target Files:**
-        *   `docs/diagrams/database_erd.puml`
-        *   `docs/diagrams/domain_model_class.puml`
-    *   **Deliverables:**
-        *   PlantUML ERD diagram for SQLite schema
-        *   PlantUML Class Diagram for domain model
-        *   Both diagrams render without syntax errors
-    *   **Acceptance Criteria:**
-        *   ERD accurately reflects metadata, events, snapshots tables with primary/foreign keys
-        *   Class diagram shows inheritance (VectorObject → Path, Shape)
-        *   Class diagram shows composition (Document contains Layers, Layer contains VectorObjects)
-        *   Diagrams validate and render correctly
-    *   **Dependencies:** `I3.T6` (all domain models completed)
-    *   **Parallelizable:** Yes (documentation task)
+* **Task 3.7:**
+    * **Task ID:** `I3.T7`
+    * **Description:** Extend Pen Tool with Bezier curve handles (dragging out BCPs during placement), handle locking (symmetrical/corner), and keyboard modifiers for converting anchors.
+    * **Agent Type Hint:** `FrontendAgent`
+    * **Inputs:** Task `I3.T6`, geometry library, undo granularity decision.
+    * **Input Files:** [`packages/tool_framework/lib/src/tools/pen_tool.dart`, `docs/reference/vector_model.md`, `docs/reference/event_schema.md`]
+    * **Target Files:** [`packages/tool_framework/lib/src/tools/pen_tool.dart`, `packages/tool_framework/test/tools/pen_tool_bezier_test.dart`, `docs/reference/pen_tool_usage.md`]
+    * **Deliverables:** Enhanced pen tool supporting BCP manipulation, tests verifying handle math + event output, and user-facing doc describing modifiers.
+    * **Acceptance Criteria:** Handles obey symmetrical/corner rules; events include handle positions; doc lists keyboard shortcuts; tests assert geometry outputs.
+    * **Dependencies:** `I3.T6`.
+    * **Parallelizable:** No.
 
----
+<!-- anchor: task-i3-t8 -->
+* **Task 3.8:**
+    * **Task ID:** `I3.T8`
+    * **Description:** Implement tool overlay rendering order + z-index management to coordinate selection boxes, pen previews, snapping guides, and future shape guides.
+    * **Agent Type Hint:** `FrontendAgent`
+    * **Inputs:** Tasks `I3.T3`–`I3.T7`, canvas pipeline from `I2`.
+    * **Input Files:** [`packages/app_shell/lib/src/canvas/selection_overlay.dart`, `packages/app_shell/lib/src/canvas/wiretuner_canvas.dart`]
+    * **Target Files:** [`packages/app_shell/lib/src/canvas/overlay_layer.dart`, `packages/app_shell/lib/src/canvas/overlay_registry.dart`, `packages/app_shell/test/widget/overlay_layer_test.dart`]
+    * **Deliverables:** Overlay registry with deterministic stacking, tests verifying order + hit pass-through, documentation snippet.
+    * **Acceptance Criteria:** Overlays stack as configured; pointer events route to active overlay; tests cover stacking + removal; README references overlay architecture.
+    * **Dependencies:** `I3.T5`, `I3.T7`.
+    * **Parallelizable:** Yes (post dependencies).
 
-**Iteration 3 Summary:**
-*   **Total Tasks:** 7
-*   **Estimated Duration:** 5-6 days
-*   **Critical Path:** I3.T1 → I3.T2 → I3.T3 → I3.T4 → I3.T5 → I3.T6 (sequential model building)
-*   **Parallelizable Work:** I3.T1 and I3.T2 can partially overlap, I3.T7 runs in parallel with later tasks
-*   **Deliverables:** Complete immutable domain model with unit tests, architecture diagrams
+<!-- anchor: task-i3-t9 -->
+* **Task 3.9:**
+    * **Task ID:** `I3.T9`
+    * **Description:** Add telemetry + undo boundary annotations for tools: ensure operations flush pending sampled events, emit human-readable labels (“Move Rectangle”) for UI, and log tool usage counts.
+    * **Agent Type Hint:** `BackendAgent`
+    * **Inputs:** Task `I1.T8` metrics, `I3` tool implementations, Decision 7 undo granularity.
+    * **Input Files:** [`packages/event_core/lib/src/metrics.dart`, `packages/tool_framework/lib/src/tools/pen_tool.dart`]
+    * **Target Files:** [`packages/tool_framework/lib/src/tool_telemetry.dart`, `packages/tool_framework/test/tool_telemetry_test.dart`, `docs/reference/undo_labels.md`]
+    * **Deliverables:** Telemetry helper, undo label mapping table, tests verifying labels for each tool, and documentation for UI surfaces.
+    * **Acceptance Criteria:** Each tool registers descriptive labels; telemetry aggregated per tool; doc lists operations; metrics exported via logger.
+    * **Dependencies:** `I3.T3`–`I3.T7`, `I1.T8`.
+    * **Parallelizable:** Yes (after dependencies).
+
+<!-- anchor: task-i3-t10 -->
+* **Task 3.10:**
+    * **Task ID:** `I3.T10`
+    * **Description:** Deliver manual + automated QA scripts covering selection + pen flows: widget tests simulating pointer sequences, integration test verifying events persisted, and QA checklist referencing Decision 6 parity.
+    * **Agent Type Hint:** `QAAgent`
+    * **Inputs:** All prior I3 tasks, event schema, metrics outputs.
+    * **Input Files:** [`packages/tool_framework/test/tools/pen_tool_bezier_test.dart`, `test/integration/event_to_canvas_test.dart`, `docs/reference/pen_tool_usage.md`]
+    * **Target Files:** [`test/integration/tool_pen_selection_test.dart`, `docs/qa/tooling_checklist.md`]
+    * **Deliverables:** Integration test verifying pen + selection interplay, QA checklist with macOS/Windows steps, recorded expected telemetry ranges.
+    * **Acceptance Criteria:** Tests pass headless; QA checklist includes parity notes; telemetry thresholds documented; references anchors for manifest.
+    * **Dependencies:** `I3.T3`–`I3.T9`.
+    * **Parallelizable:** No (final validation).
+
+<!-- anchor: task-i3-t11 -->
+* **Task 3.11:**
+    * **Task ID:** `I3.T11`
+    * **Description:** Update documentation + onboarding materials (README, developer workflow) with tool usage gifs/screenshots (if possible) and describe how to enable mock events for demos.
+    * **Agent Type Hint:** `DocumentationAgent`
+    * **Inputs:** Tool outputs, QA checklist, Section 1 goal statement.
+    * **Input Files:** [`README.md`, `docs/reference/pen_tool_usage.md`, `docs/qa/tooling_checklist.md`]
+    * **Target Files:** [`README.md`, `docs/reference/dev_workflow.md`, `docs/reference/tooling_overview.md`]
+    * **Deliverables:** Refreshed docs explaining tool states, keybindings, screenshots/gifs references, plus instructions for running integration tests.
+    * **Acceptance Criteria:** README tool section matches shipped features, links to plan anchors; dev workflow doc updated; Markdown lint passes; assets added to `.gitignore` if needed.
+    * **Dependencies:** `I3.T6`–`I3.T10`.
+    * **Parallelizable:** No (final documentation sweep).

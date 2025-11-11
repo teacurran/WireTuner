@@ -4,17 +4,20 @@
  *
  * Cross-platform Flutter test execution script.
  * Ensures dependencies are installed before running tests.
+ * Supports both single-package projects and melos workspaces.
  *
  * Usage: node tools/test.cjs [test-file-or-directory]
  * Exit codes: 0 = tests passed, 1 = tests failed or script error
  */
 
 const { execSync, spawnSync } = require('child_process');
+const { existsSync } = require('fs');
 const path = require('path');
 
 // Configuration
 const PROJECT_ROOT = path.resolve(__dirname, '..');
 const INSTALL_SCRIPT = path.join(__dirname, 'install.cjs');
+const MELOS_CONFIG = path.join(PROJECT_ROOT, 'melos.yaml');
 
 /**
  * Run the install script to ensure dependencies are up-to-date
@@ -23,11 +26,18 @@ const INSTALL_SCRIPT = path.join(__dirname, 'install.cjs');
 function ensureDependencies() {
   console.error('[test] Ensuring dependencies are up-to-date...');
   try {
-    execSync(`node "${INSTALL_SCRIPT}"`, {
+    const result = spawnSync('node', [INSTALL_SCRIPT], {
       cwd: PROJECT_ROOT,
       stdio: 'inherit',
-      encoding: 'utf-8'
+      encoding: 'utf-8',
+      shell: process.platform === 'win32'
     });
+
+    if (result.error || result.status !== 0) {
+      console.error('[test] Error: Failed to install dependencies');
+      return false;
+    }
+
     return true;
   } catch (error) {
     console.error('[test] Error: Failed to install dependencies');
@@ -41,42 +51,71 @@ function ensureDependencies() {
  * @returns {boolean} Success status
  */
 function runTests(testPath) {
-  const args = ['test'];
+  const isMelosWorkspace = existsSync(MELOS_CONFIG);
 
-  // Add specific test path if provided
-  if (testPath) {
-    args.push(testPath);
-    console.error(`[test] Running tests in: ${testPath}`);
+  if (isMelosWorkspace && !testPath) {
+    // Use melos to run tests across all packages
+    console.error('[test] Running all tests across all packages...');
+
+    try {
+      const result = spawnSync('melos', ['run', 'test'], {
+        cwd: PROJECT_ROOT,
+        stdio: 'inherit',
+        encoding: 'utf-8',
+        shell: process.platform === 'win32'
+      });
+
+      if (result.error) {
+        console.error(`[test] Error: ${result.error.message}`);
+        return false;
+      }
+
+      if (result.status !== 0) {
+        console.error(`[test] Tests failed with exit code ${result.status}`);
+        return false;
+      }
+
+      console.error('[test] All tests passed!');
+      return true;
+    } catch (error) {
+      console.error(`[test] Error running tests: ${error.message}`);
+      return false;
+    }
   } else {
-    console.error('[test] Running all tests...');
-  }
+    // Single package or specific test path
+    const args = ['test'];
 
-  // Add coverage reporting (optional, can be configured)
-  // args.push('--coverage');
-
-  try {
-    const result = spawnSync('flutter', args, {
-      cwd: PROJECT_ROOT,
-      stdio: 'inherit',
-      encoding: 'utf-8',
-      shell: process.platform === 'win32'
-    });
-
-    if (result.error) {
-      console.error(`[test] Error: ${result.error.message}`);
-      return false;
+    if (testPath) {
+      args.push(testPath);
+      console.error(`[test] Running tests in: ${testPath}`);
+    } else {
+      console.error('[test] Running all tests...');
     }
 
-    if (result.status !== 0) {
-      console.error(`[test] Tests failed with exit code ${result.status}`);
+    try {
+      const result = spawnSync('flutter', args, {
+        cwd: PROJECT_ROOT,
+        stdio: 'inherit',
+        encoding: 'utf-8',
+        shell: process.platform === 'win32'
+      });
+
+      if (result.error) {
+        console.error(`[test] Error: ${result.error.message}`);
+        return false;
+      }
+
+      if (result.status !== 0) {
+        console.error(`[test] Tests failed with exit code ${result.status}`);
+        return false;
+      }
+
+      console.error('[test] All tests passed!');
+      return true;
+    } catch (error) {
+      console.error(`[test] Error running tests: ${error.message}`);
       return false;
     }
-
-    console.error('[test] All tests passed!');
-    return true;
-  } catch (error) {
-    console.error(`[test] Error running tests: ${error.message}`);
-    return false;
   }
 }
 

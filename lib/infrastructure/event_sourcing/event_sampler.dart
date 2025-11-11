@@ -132,6 +132,11 @@ class EventSampler {
   /// Gets the current sampling interval.
   Duration get samplingInterval => _samplingInterval;
 
+  /// Returns true if an event is currently buffered.
+  ///
+  /// Useful for testing and monitoring buffer state.
+  bool get hasBufferedEvent => _bufferedEvent != null;
+
   /// Internal method to emit an event and update state.
   void _emitEvent(EventBase event) {
     try {

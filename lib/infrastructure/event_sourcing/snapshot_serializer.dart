@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
 import 'package:logger/logger.dart';
+import 'package:wiretuner/domain/document/document.dart';
 
 /// Serializes and deserializes document snapshots to/from binary format.
 ///
@@ -23,10 +24,39 @@ import 'package:logger/logger.dart';
 /// (< 1MB), this is acceptable. If performance becomes an issue, consider
 /// async serialization or chunking.
 class SnapshotSerializer {
+  SnapshotSerializer({this.enableCompression = true});
   final Logger _logger = Logger();
   final bool enableCompression;
 
-  SnapshotSerializer({this.enableCompression = true});
+  /// Serializes a document to uncompressed JSON bytes (UTF-8).
+  ///
+  /// This method is useful for calculating telemetry metrics like compression ratio.
+  /// Returns the uncompressed byte representation of the document.
+  ///
+  /// Example:
+  /// ```dart
+  /// final serializer = SnapshotSerializer(enableCompression: true);
+  /// final uncompressedBytes = serializer.serializeToJson(document);
+  /// final uncompressedSize = uncompressedBytes.length;
+  /// ```
+  Uint8List serializeToJson(dynamic document) {
+    try {
+      // Step 1: Document → JSON Map
+      final jsonMap = _toJson(document);
+
+      // Step 2: JSON Map → String
+      final jsonString = jsonEncode(jsonMap);
+
+      // Step 3: String → UTF-8 bytes
+      final bytes = utf8.encode(jsonString);
+
+      return Uint8List.fromList(bytes);
+    } catch (e, stackTrace) {
+      _logger.e('Failed to serialize document to JSON',
+          error: e, stackTrace: stackTrace);
+      rethrow;
+    }
+  }
 
   /// Serializes a document to binary format (JSON + optional gzip).
   ///
@@ -69,28 +99,29 @@ class SnapshotSerializer {
         );
         return Uint8List.fromList(compressed);
       } else {
-        _logger.d('Serialized document $docId: ${bytes.length} bytes (uncompressed)');
+        _logger.d(
+            'Serialized document $docId: ${bytes.length} bytes (uncompressed)');
         return Uint8List.fromList(bytes);
       }
     } catch (e, stackTrace) {
-      _logger.e('Failed to serialize document', error: e, stackTrace: stackTrace);
+      _logger.e('Failed to serialize document',
+          error: e, stackTrace: stackTrace);
       rethrow;
     }
   }
 
-  /// Deserializes binary snapshot back to document.
+  /// Deserializes binary snapshot back to Document.
   ///
   /// The deserialization process:
   /// 1. Detect if data is compressed (gzip magic bytes: 0x1f, 0x8b)
   /// 2. Decompress if needed
   /// 3. Decode UTF-8 bytes to string
   /// 4. Parse JSON string to Map
-  /// 5. Return Map (caller constructs document via fromJson())
+  /// 5. Hydrate Document via fromJson()
   ///
-  /// **Note**: This method returns a Map<String, dynamic> instead of a typed
-  /// document object because the Document class is not yet implemented. Once
-  /// the real Document model is available in I3.T6, this can be updated to
-  /// return a typed Document.
+  /// This method returns a typed [Document] instance by using the Document's
+  /// fromJson factory. The Document model handles schema versioning and
+  /// migrations internally.
   ///
   /// Throws [FormatException] if data is corrupted or invalid.
   ///
@@ -98,19 +129,22 @@ class SnapshotSerializer {
   /// ```dart
   /// final serializer = SnapshotSerializer(enableCompression: true);
   /// final document = serializer.deserialize(bytes);
+  /// assert(document is Document);
   /// ```
-  dynamic deserialize(Uint8List bytes) {
+  Document deserialize(Uint8List bytes) {
     try {
       _logger.d('Deserializing snapshot (${bytes.length} bytes)');
 
       // Step 1: Detect compression (gzip magic bytes)
-      final isCompressed = bytes.length >= 2 && bytes[0] == 0x1f && bytes[1] == 0x8b;
+      final isCompressed =
+          bytes.length >= 2 && bytes[0] == 0x1f && bytes[1] == 0x8b;
 
       // Step 2: Decompress if needed
       List<int> decompressed;
       if (isCompressed) {
         decompressed = gzip.decode(bytes);
-        _logger.d('Decompressed: ${bytes.length} bytes → ${decompressed.length} bytes');
+        _logger.d(
+            'Decompressed: ${bytes.length} bytes → ${decompressed.length} bytes');
       } else {
         decompressed = bytes;
       }
@@ -121,19 +155,21 @@ class SnapshotSerializer {
       // Step 4: String → JSON Map
       final jsonMap = jsonDecode(jsonString) as Map<String, dynamic>;
 
-      // Step 5: Return Map (caller constructs document via fromJson())
-      final docId = jsonMap['id'] ?? 'unknown';
-      _logger.d('Deserialized document: $docId');
-      return jsonMap;
+      // Step 5: Hydrate Document from JSON
+      final document = Document.fromJson(jsonMap);
+      _logger.d('Deserialized document: ${document.id}');
+      return document;
     } on FormatException catch (e) {
-      _logger.e('Failed to deserialize snapshot: Invalid JSON format', error: e);
+      _logger.e('Failed to deserialize snapshot: Invalid JSON format',
+          error: e);
       throw FormatException(
         'Snapshot deserialization failed: Invalid JSON format. '
         'Data may be corrupted or not a valid snapshot. '
         'Original error: ${e.message}',
       );
     } catch (e, stackTrace) {
-      _logger.e('Failed to deserialize snapshot', error: e, stackTrace: stackTrace);
+      _logger.e('Failed to deserialize snapshot',
+          error: e, stackTrace: stackTrace);
       throw Exception(
         'Snapshot deserialization failed: $e. '
         'This may indicate a schema version mismatch or corrupted data.',

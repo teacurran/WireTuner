@@ -157,7 +157,8 @@ void main() {
 
         final bounds = path.bounds();
 
-        expect(bounds, equals(const Rectangle(x: 0, y: 0, width: 0, height: 0)));
+        expect(
+            bounds, equals(const Rectangle(x: 0, y: 0, width: 0, height: 0)));
       });
 
       test('returns point-sized rectangle for single anchor', () {
@@ -208,7 +209,10 @@ void main() {
             ),
           ],
           segments: [
-            Segment(startAnchorIndex: 0, endAnchorIndex: 1, segmentType: SegmentType.bezier),
+            Segment(
+                startAnchorIndex: 0,
+                endAnchorIndex: 1,
+                segmentType: SegmentType.bezier),
           ],
         );
 
@@ -358,7 +362,10 @@ void main() {
             ),
           ],
           segments: [
-            Segment(startAnchorIndex: 0, endAnchorIndex: 1, segmentType: SegmentType.bezier),
+            Segment(
+                startAnchorIndex: 0,
+                endAnchorIndex: 1,
+                segmentType: SegmentType.bezier),
           ],
         );
 
@@ -384,8 +391,14 @@ void main() {
             ),
           ],
           segments: [
-            Segment(startAnchorIndex: 0, endAnchorIndex: 1, segmentType: SegmentType.line), // 50 units
-            Segment(startAnchorIndex: 1, endAnchorIndex: 2, segmentType: SegmentType.bezier), // Curved
+            Segment(
+                startAnchorIndex: 0,
+                endAnchorIndex: 1,
+                segmentType: SegmentType.line), // 50 units
+            Segment(
+                startAnchorIndex: 1,
+                endAnchorIndex: 2,
+                segmentType: SegmentType.bezier), // Curved
           ],
         );
 
@@ -513,7 +526,10 @@ void main() {
             ),
           ],
           segments: [
-            Segment(startAnchorIndex: 0, endAnchorIndex: 1, segmentType: SegmentType.bezier),
+            Segment(
+                startAnchorIndex: 0,
+                endAnchorIndex: 1,
+                segmentType: SegmentType.bezier),
           ],
         );
 
@@ -682,9 +698,11 @@ void main() {
           closed: true,
         );
 
-        expect(originalPath.anchors[0].position, equals(const Point(x: 0, y: 0)));
+        expect(
+            originalPath.anchors[0].position, equals(const Point(x: 0, y: 0)));
         expect(originalPath.closed, isFalse);
-        expect(updatedPath.anchors[0].position, equals(const Point(x: 10, y: 10)));
+        expect(
+            updatedPath.anchors[0].position, equals(const Point(x: 10, y: 10)));
         expect(updatedPath.closed, isTrue);
       });
     });

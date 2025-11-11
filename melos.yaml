@@ -1,0 +1,40 @@
+name: wiretuner_workspace
+
+packages:
+  - packages/**
+
+command:
+  bootstrap:
+    runPubGetInParallel: true
+    runPubGetOffline: false
+
+scripts:
+  analyze:
+    description: Run static analysis across all packages
+    run: |
+      melos exec -- dart analyze .
+      flutter analyze
+
+  test:
+    description: Run all tests across all packages
+    run: melos exec --fail-fast -- flutter test
+
+  format:
+    description: Format all Dart files
+    run: melos exec -- dart format .
+
+  format:check:
+    description: Check formatting of all Dart files
+    run: melos exec -- dart format --set-exit-if-changed .
+
+  clean:
+    description: Clean all packages
+    run: melos exec -- flutter clean
+
+  get:
+    description: Run pub get in all packages
+    run: melos exec -- flutter pub get
+
+  build:runner:
+    description: Run build_runner in packages that need code generation
+    run: melos exec --depends-on="build_runner" -- flutter pub run build_runner build --delete-conflicting-outputs

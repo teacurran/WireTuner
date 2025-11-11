@@ -57,13 +57,19 @@ class MockEventStore implements EventStore {
   }
 
   @override
-  Future<int> getMaxSequence(String documentId) async {
-    return _maxSequence;
-  }
+  Future<int> getMaxSequence(String documentId) async => _maxSequence;
 
   @override
   Future<int> insertEvent(String documentId, EventBase event) async {
     throw UnimplementedError('insertEvent not needed for replay tests');
+  }
+
+  @override
+  Future<List<int>> insertEventsBatch(
+    String documentId,
+    List<EventBase> events,
+  ) async {
+    throw UnimplementedError('insertEventsBatch not needed for replay tests');
   }
 }
 
@@ -186,17 +192,17 @@ void main() {
 
     test('replays events from sequence 0 to latest', () async {
       // Arrange
-      final event1 = CreatePathEvent(
+      const event1 = CreatePathEvent(
         eventId: 'e1',
         timestamp: 1000,
         pathId: 'path1',
-        startAnchor: const Point(x: 10, y: 20),
+        startAnchor: Point(x: 10, y: 20),
       );
-      final event2 = AddAnchorEvent(
+      const event2 = AddAnchorEvent(
         eventId: 'e2',
         timestamp: 2000,
         pathId: 'path1',
-        position: const Point(x: 30, y: 40),
+        position: Point(x: 30, y: 40),
       );
       eventStore.addEvents([event1, event2]);
 
@@ -220,23 +226,23 @@ void main() {
     test('replays events in specified range (fromSeq to toSeq)', () async {
       // Arrange
       final events = [
-        CreatePathEvent(
+        const CreatePathEvent(
           eventId: 'e1',
           timestamp: 1000,
           pathId: 'path1',
-          startAnchor: const Point(x: 10, y: 20),
+          startAnchor: Point(x: 10, y: 20),
         ),
-        AddAnchorEvent(
+        const AddAnchorEvent(
           eventId: 'e2',
           timestamp: 2000,
           pathId: 'path1',
-          position: const Point(x: 30, y: 40),
+          position: Point(x: 30, y: 40),
         ),
-        AddAnchorEvent(
+        const AddAnchorEvent(
           eventId: 'e3',
           timestamp: 3000,
           pathId: 'path1',
-          position: const Point(x: 50, y: 60),
+          position: Point(x: 50, y: 60),
         ),
       ];
       eventStore.addEvents(events);
@@ -259,17 +265,17 @@ void main() {
     test('handles null toSeq (replays to end)', () async {
       // Arrange
       final events = [
-        CreatePathEvent(
+        const CreatePathEvent(
           eventId: 'e1',
           timestamp: 1000,
           pathId: 'path1',
-          startAnchor: const Point(x: 10, y: 20),
+          startAnchor: Point(x: 10, y: 20),
         ),
-        AddAnchorEvent(
+        const AddAnchorEvent(
           eventId: 'e2',
           timestamp: 2000,
           pathId: 'path1',
-          position: const Point(x: 30, y: 40),
+          position: Point(x: 30, y: 40),
         ),
       ];
       eventStore.addEvents(events);
@@ -291,17 +297,17 @@ void main() {
     test('applies events in correct order', () async {
       // Arrange
       final events = [
-        CreatePathEvent(
+        const CreatePathEvent(
           eventId: 'e1',
           timestamp: 1000,
           pathId: 'path1',
-          startAnchor: const Point(x: 10, y: 20),
+          startAnchor: Point(x: 10, y: 20),
         ),
-        CreatePathEvent(
+        const CreatePathEvent(
           eventId: 'e2',
           timestamp: 2000,
           pathId: 'path2',
-          startAnchor: const Point(x: 100, y: 200),
+          startAnchor: Point(x: 100, y: 200),
         ),
       ];
       eventStore.addEvents(events);
@@ -324,23 +330,23 @@ void main() {
     test('replays from intermediate sequence', () async {
       // Arrange
       final events = [
-        CreatePathEvent(
+        const CreatePathEvent(
           eventId: 'e1',
           timestamp: 1000,
           pathId: 'path1',
-          startAnchor: const Point(x: 10, y: 20),
+          startAnchor: Point(x: 10, y: 20),
         ),
-        CreatePathEvent(
+        const CreatePathEvent(
           eventId: 'e2',
           timestamp: 2000,
           pathId: 'path2',
-          startAnchor: const Point(x: 100, y: 200),
+          startAnchor: Point(x: 100, y: 200),
         ),
-        CreatePathEvent(
+        const CreatePathEvent(
           eventId: 'e3',
           timestamp: 3000,
           pathId: 'path3',
-          startAnchor: const Point(x: 200, y: 300),
+          startAnchor: Point(x: 200, y: 300),
         ),
       ];
       eventStore.addEvents(events);
@@ -395,11 +401,11 @@ void main() {
 
     test('falls back to full replay when no snapshot exists', () async {
       // Arrange
-      final event = CreatePathEvent(
+      const event = CreatePathEvent(
         eventId: 'e1',
         timestamp: 1000,
         pathId: 'path1',
-        startAnchor: const Point(x: 10, y: 20),
+        startAnchor: Point(x: 10, y: 20),
       );
       eventStore.addEvents([event]);
       snapshotStore.clearSnapshot();
@@ -442,17 +448,17 @@ void main() {
       });
 
       // Add delta events (sequence 1001-1002)
-      final deltaEvent1 = CreatePathEvent(
+      const deltaEvent1 = CreatePathEvent(
         eventId: 'e1001',
         timestamp: 2000,
         pathId: 'path6',
-        startAnchor: const Point(x: 10, y: 20),
+        startAnchor: Point(x: 10, y: 20),
       );
-      final deltaEvent2 = CreatePathEvent(
+      const deltaEvent2 = CreatePathEvent(
         eventId: 'e1002',
         timestamp: 3000,
         pathId: 'path7',
-        startAnchor: const Point(x: 30, y: 40),
+        startAnchor: Point(x: 30, y: 40),
       );
       eventStore.addEventsAtSequence([deltaEvent1, deltaEvent2], 1001);
 
@@ -548,17 +554,17 @@ void main() {
       });
 
       // Add events at sequences 51 and 52
-      final event51 = CreatePathEvent(
+      const event51 = CreatePathEvent(
         eventId: 'e51',
         timestamp: 2000,
         pathId: 'path2',
-        startAnchor: const Point(x: 10, y: 20),
+        startAnchor: Point(x: 10, y: 20),
       );
-      final event52 = CreatePathEvent(
+      const event52 = CreatePathEvent(
         eventId: 'e52',
         timestamp: 3000,
         pathId: 'path3',
-        startAnchor: const Point(x: 30, y: 40),
+        startAnchor: Point(x: 30, y: 40),
       );
       eventStore.addEventsAtSequence([event51, event52], 51);
 
@@ -642,17 +648,17 @@ void main() {
         () async {
       // Arrange
       final events = [
-        CreatePathEvent(
+        const CreatePathEvent(
           eventId: 'e1',
           timestamp: 1000,
           pathId: 'path1',
-          startAnchor: const Point(x: 10, y: 20),
+          startAnchor: Point(x: 10, y: 20),
         ),
-        CreatePathEvent(
+        const CreatePathEvent(
           eventId: 'e2',
           timestamp: 2000,
           pathId: 'path2',
-          startAnchor: const Point(x: 30, y: 40),
+          startAnchor: Point(x: 30, y: 40),
         ),
       ];
       eventStore.addEvents(events);
@@ -685,8 +691,7 @@ void main() {
       }
     });
 
-    test('full document lifecycle - create events, snapshot, replay',
-        () async {
+    test('full document lifecycle - create events, snapshot, replay', () async {
       // Arrange - simulate creating 100 events (sequences 0-99)
       final events = List.generate(
         100,
@@ -709,7 +714,7 @@ void main() {
             'type': 'path',
             'id': 'path$i',
             'anchors': [
-              {'x': i.toDouble(), 'y': i.toDouble()}
+              {'x': i.toDouble(), 'y': i.toDouble()},
             ],
           },
         ),

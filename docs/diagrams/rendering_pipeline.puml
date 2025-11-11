@@ -1,0 +1,257 @@
+@startuml
+title Rendering Pipeline - WireTuner Canvas System
+
+!define TELEMETRY_POINT <<Telemetry>>
+!define DIRTY_REGION <<DirtyRegion>>
+
+skinparam backgroundColor #FEFEFE
+skinparam sequenceArrowThickness 2
+skinparam roundcorner 5
+skinparam maxMessageSize 100
+
+actor User
+participant "GestureDetector" as Gesture
+participant "ViewportController" as Viewport TELEMETRY_POINT
+participant "DocumentProvider" as Provider
+participant "RepaintBoundary" as Boundary
+participant "CustomPaint\n(DocumentPainter)" as Painter DIRTY_REGION
+participant "Canvas" as Canvas
+participant "Overlays\n(Tool/Selection)" as Overlays
+
+== Initialization ==
+
+User -> Gesture: App launches
+Gesture -> Viewport: Create controller\n(pan=0, zoom=1.0)
+Gesture -> Boundary: Wrap CustomPaint
+Boundary -> Painter: Create with paths\nand viewport
+note right Painter TELEMETRY_POINT
+  **Telemetry Insertion Point:**
+  - Painter creation count
+  - Initial render timestamp
+end note
+
+== User Interaction: Pan ==
+
+User -> Gesture: Drag gesture
+note right Gesture TELEMETRY_POINT
+  **Telemetry Insertion Point:**
+  - Gesture start/end events
+  - Gesture type and delta
+end note
+
+Gesture -> Viewport: pan(delta)
+activate Viewport
+Viewport -> Viewport: Update _panOffset
+Viewport -> Viewport: _updateMatrices()
+note right Viewport DIRTY_REGION
+  **Dirty Region Strategy:**
+  Pan affects entire viewport,
+  so full repaint is required.
+  Future: Track viewport-relative
+  dirty rectangles.
+end note
+Viewport -> Viewport: notifyListeners()
+deactivate Viewport
+
+Viewport -> Painter: Trigger repaint via Listenable
+activate Painter
+Painter -> Painter: shouldRepaint()\n→ returns true
+note right Painter DIRTY_REGION
+  **Dirty Region Check:**
+  - Compare viewport state
+  - Compare paths reference
+  - Return true if changed
+end note
+
+Painter -> Canvas: paint(canvas, size)
+Painter -> Canvas: canvas.save()
+Painter -> Canvas: canvas.transform(\nworldToScreenMatrix)
+note right Canvas
+  Apply viewport transform:
+  screen = translate(pan)
+         * scale(zoom)
+         * world
+end note
+
+loop For each path
+  Painter -> Painter: _convertDomainPathToUiPath()
+  note right Painter DIRTY_REGION
+    **Optimization Opportunity:**
+    Future: Cache ui.Path if domain
+    path unchanged. Only rebuild
+    paths in dirty regions.
+  end note
+
+  Painter -> Canvas: drawPath(uiPath, paint)
+end
+
+Painter -> Canvas: canvas.restore()
+deactivate Painter
+
+Canvas -> Boundary: Rasterized pixels
+Boundary -> User: Display updated viewport
+
+== User Interaction: Zoom ==
+
+User -> Gesture: Pinch/scroll gesture
+note right Gesture TELEMETRY_POINT
+  **Telemetry Insertion Point:**
+  - Zoom gesture events
+  - Focal point tracking
+  - Zoom level changes
+end note
+
+Gesture -> Viewport: zoom(factor,\nfocalPoint)
+activate Viewport
+Viewport -> Viewport: Calculate world\nfocal point
+Viewport -> Viewport: Update _zoom\n(clamped 0.05-8.0)
+Viewport -> Viewport: _updateMatrices()
+Viewport -> Viewport: Adjust pan to keep\nfocal point stationary
+note right Viewport DIRTY_REGION
+  **Dirty Region Strategy:**
+  Zoom affects entire viewport.
+  All paths must be re-rendered
+  with new scale.
+end note
+Viewport -> Viewport: notifyListeners()
+deactivate Viewport
+
+Viewport -> Painter: Trigger repaint
+activate Painter
+Painter -> Painter: shouldRepaint()\n→ returns true
+Painter -> Canvas: paint(canvas, size)
+note right Painter TELEMETRY_POINT
+  **Telemetry Insertion Point:**
+  - Paint call count
+  - Paint duration (ms)
+  - Path count rendered
+  - Viewport zoom/pan state
+end note
+
+Painter -> Canvas: Apply transform
+loop For each path
+  Painter -> Canvas: drawPath()
+end
+Painter -> Canvas: restore()
+deactivate Painter
+
+Canvas -> Boundary: Rasterized pixels
+note right Boundary
+  **RepaintBoundary Benefit:**
+  Isolates canvas repaints from
+  rest of widget tree. Toolbar,
+  panels, dialogs don't rebuild.
+end note
+Boundary -> User: Display zoomed view
+
+== Document State Change ==
+
+Provider -> Provider: Document updated\n(new paths added)
+Provider -> Painter: New paths list
+activate Painter
+Painter -> Painter: shouldRepaint()\n→ returns true
+note right Painter DIRTY_REGION
+  **Dirty Region Strategy:**
+  Future: Compute bounding box
+  of changed paths. Only repaint
+  affected screen region.
+
+  Current: Full repaint.
+end note
+
+Painter -> Canvas: paint(canvas, size)
+Painter -> Canvas: Apply viewport transform
+loop For each path (including new)
+  Painter -> Painter: Convert domain → ui.Path
+  note right Painter
+    **Path Conversion:**
+    - moveTo(first anchor)
+    - lineTo / cubicTo per segment
+    - close() if path.closed
+  end note
+  Painter -> Canvas: drawPath()
+end
+Painter -> Canvas: restore()
+deactivate Painter
+
+Canvas -> Boundary: Updated raster
+Boundary -> Overlays: Render tool overlays
+note right Overlays
+  **Overlay Layer:**
+  Selection handles, bounding boxes,
+  anchor points, control handles,
+  tool-specific UI elements.
+
+  Rendered in separate CustomPainter
+  on top of document layer.
+end note
+
+Overlays -> User: Display updated document
+
+== Telemetry Summary ==
+
+note over Viewport, Overlays TELEMETRY_POINT
+  **Telemetry Insertion Points Summary:**
+
+  1. **Gesture Events** (GestureDetector)
+     - onPanStart, onPanUpdate, onPanEnd
+     - onScaleStart, onScaleUpdate, onScaleEnd
+     - Timestamps, deltas, focal points
+
+  2. **Viewport State** (ViewportController)
+     - Pan/zoom change events
+     - Transform matrix updates
+     - Clamp boundary hits
+
+  3. **Paint Performance** (DocumentPainter)
+     - paint() call count and duration
+     - shouldRepaint() call count
+     - Path count rendered per frame
+     - Canvas command count (future)
+
+  4. **Repaint Boundaries** (RepaintBoundary)
+     - Boundary effectiveness (isolates repaints)
+     - Render object tree depth
+
+  5. **Frame Timing** (Flutter DevTools)
+     - Raster time, UI time
+     - Jank detection (missed 16ms budget)
+end note
+
+== Dirty Region Strategy ==
+
+note over Painter, Canvas DIRTY_REGION
+  **Dirty Region Computation Strategy:**
+
+  **Current Implementation:**
+  - Full repaint on any change
+  - Simple and correct
+
+  **Future Optimization:**
+
+  1. **Track Changed Paths:**
+     - Compare old/new path lists
+     - Identify added, removed, modified paths
+
+  2. **Compute Dirty Rectangles:**
+     - Calculate bounds of changed paths (world space)
+     - Transform to screen space via viewport
+     - Expand by stroke width + antialiasing margin
+
+  3. **Canvas Clipping:**
+     - Use canvas.clipRect() to dirty region
+     - Only render paths intersecting dirty rect
+     - Reduces drawPath() calls dramatically
+
+  4. **Partial Invalidation:**
+     - Notify Flutter framework of dirty rect
+     - Framework can optimize compositor updates
+     - Leverage Layer tree caching
+
+  **Complexity Trade-off:**
+  Dirty regions add complexity. Profile first
+  to ensure performance gain justifies cost.
+  Recommended threshold: 100+ paths.
+end note
+
+@enduml

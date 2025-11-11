@@ -1,0 +1,262 @@
+@startuml
+title Pen Tool State Machine - Interactive Path Creation with Bezier Curves
+
+' ============================================================================
+' This diagram documents the complete state machine for the Pen Tool,
+' showing how the tool transitions between states as users create vector
+' paths with straight line and Bezier curve segments.
+'
+' The Pen Tool uses a three-state machine:
+' - idle: Waiting for first click to start path
+' - creatingPath: Actively placing anchors and building path
+' - adjustingHandles: Adjusting Bezier control handles on last anchor
+'
+' The diagram shows all state transitions, their triggers (user input),
+' guards (conditions), and actions (events emitted).
+'
+' Date: 2025-11-08
+' Version: 1.0
+' Related: lib/application/tools/pen/pen_tool.dart
+' Related: docs/specs/pen_tool.md
+' Related Events: CreatePathEvent, AddAnchorEvent, ModifyAnchorEvent,
+'                 FinishPathEvent, StartGroupEvent, EndGroupEvent
+' ============================================================================
+
+state "idle" as Idle {
+  Idle : Tool activated, waiting for user input
+  Idle : No active path (currentPathId = null)
+}
+
+state "creatingPath" as Creating {
+  Creating : Active path being created
+  Creating : Placing anchors and segments
+  Creating : Preview next segment to hover position
+  Creating : --
+  Creating : Pointer Events:
+  Creating : • onPointerDown → track drag start
+  Creating : • onPointerMove → update preview
+  Creating : • onPointerUp → emit anchor event
+}
+
+state "adjustingHandles" as Adjusting {
+  Adjusting : Adjusting Bezier handles on last anchor
+  Adjusting : Clicked on last anchor position
+  Adjusting : Dragging to adjust control points
+  Adjusting : --
+  Adjusting : Alt Key Behavior:
+  Adjusting : • Not pressed: Symmetric handles
+  Adjusting : • Pressed: Independent handles
+}
+
+' ============================================================================
+' Initial and Final Transitions
+' ============================================================================
+
+[*] --> Idle : onActivate()
+
+' ============================================================================
+' State Transitions
+' ============================================================================
+
+Idle --> Creating : onPointerDown\n[first click] /\nStartGroupEvent,\nCreatePathEvent,\nset currentPathId,\nset anchorCount = 1
+
+note right of Idle
+  **First Click Starts Path:**
+  - Generate unique pathId and groupId
+  - Emit StartGroupEvent (begin undo group)
+  - Emit CreatePathEvent with:
+    • pathId
+    • startAnchor position
+    • strokeColor (#000000)
+    • strokeWidth (2.0)
+  - Transition to creatingPath
+  - Track _lastAnchorPosition
+end note
+
+Creating --> Creating : onPointerUp\n[drag distance < 5.0] /\nAddAnchorEvent\n(anchorType: line)
+
+Creating --> Creating : onPointerUp\n[drag distance >= 5.0] /\nAddAnchorEvent\n(anchorType: bezier,\nhandleIn, handleOut)
+
+note right of Creating
+  **Self-Transitions (Add Anchor):**
+
+  Anchors created on pointer up, not down.
+  This enables drag-to-curve detection:
+
+  1. onPointerDown → track drag start
+  2. onPointerMove → set isDragging = true
+  3. onPointerUp → calculate drag distance
+
+  **Straight Line (drag < 5.0):**
+  - AddAnchorEvent with anchorType: line
+  - No handles
+
+  **Bezier Curve (drag >= 5.0):**
+  - AddAnchorEvent with anchorType: bezier
+  - handleOut = drag end - anchor position
+  - handleIn = -handleOut (symmetric)
+    or null (Alt pressed, independent)
+
+  **Modifier: Shift Key**
+  - Constrains angle to 45° increments
+  - Applied during anchor placement
+end note
+
+Creating --> Adjusting : onPointerDown\n[click on last anchor] /\nenter adjustment mode,\ntrack drag start
+
+note left of Adjusting
+  **Click on Last Anchor:**
+
+  Distance threshold: 10.0 world units
+  (same as double-click threshold)
+
+  Enables user to adjust handles
+  after placing a Bezier anchor.
+
+  Checked BEFORE double-click
+  detection to prevent conflicts.
+end note
+
+Adjusting --> Creating : onPointerUp /\nModifyAnchorEvent\n(anchorIndex,\nhandleIn, handleOut)
+
+note right of Adjusting
+  **Return to Path Creation:**
+
+  After adjusting handles, user
+  continues creating path (not finish).
+
+  ModifyAnchorEvent emitted with:
+  - pathId
+  - anchorIndex (_anchorCount - 1)
+  - handleOut (from drag end)
+  - handleIn (-handleOut or null)
+
+  Path creation continues until
+  explicit finish or cancel.
+end note
+
+Creating --> Idle : onPointerDown\n[double-click] /\nFinishPathEvent,\nEndGroupEvent,\nresetState()
+
+Creating --> Idle : onKeyPress\n[Enter key] /\nFinishPathEvent,\nEndGroupEvent,\nresetState()
+
+note bottom of Creating
+  **Finish Path (Normal Completion):**
+
+  Two triggers:
+  1. Double-click detection
+     • Time threshold: 500ms
+     • Distance threshold: 10.0 world units
+
+  2. Enter key press
+
+  Both emit same events:
+  - FinishPathEvent (pathId, closed: false)
+  - EndGroupEvent (groupId)
+  - Flush events to persistence
+  - Reset state to idle
+end note
+
+Creating --> Idle : onKeyPress\n[Escape key] /\nEndGroupEvent,\nresetState()
+
+note left of Creating
+  **Cancel Path:**
+
+  Escape key pressed:
+  - Emit EndGroupEvent ONLY
+    (no FinishPathEvent)
+  - Incomplete path ignored by handlers
+  - Reset state to idle
+
+  Undo group closed without
+  completing the path.
+end note
+
+Creating --> Idle : onDeactivate() /\nFinishPathEvent,\nEndGroupEvent,\nresetState()
+
+note left of Idle
+  **Tool Deactivation:**
+
+  If tool deactivated mid-path creation:
+  - Gracefully finish path (closed: false)
+  - Emit FinishPathEvent + EndGroupEvent
+  - Reset state to idle
+
+  Ensures no orphaned paths.
+end note
+
+' ============================================================================
+' Modifier Key Behaviors
+' ============================================================================
+
+note top of Creating
+  **Modifier Keys:**
+
+  **Shift Key (Angle Constraint):**
+  - Active during straight line anchor placement
+  - Constrains angle to 45° increments (0°, 45°, 90°, 135°, 180°, etc.)
+  - Applied via _constrainToAngle() helper
+  - Uses atan2, snaps to nearest π/4 radians
+
+  **Alt/Option Key (Handle Symmetry):**
+  - Active during Bezier anchor creation and handle adjustment
+  - Not pressed: Symmetric handles (handleIn = -handleOut)
+  - Pressed: Independent handles (handleIn = null, corner anchor)
+  - Checked via HardwareKeyboard.instance.isAltPressed
+end note
+
+' ============================================================================
+' Event Sequencing and Undo Grouping
+' ============================================================================
+
+note bottom of Idle
+  **Event Sequencing:**
+
+  Complete path creation sequence:
+  1. StartGroupEvent (groupId, description: "Create path")
+  2. CreatePathEvent (pathId, startAnchor, styles)
+  3. AddAnchorEvent × N (one per anchor after first)
+  4. [Optional] ModifyAnchorEvent × M (handle adjustments)
+  5. FinishPathEvent (pathId, closed)
+  6. EndGroupEvent (groupId)
+
+  **Undo Grouping:**
+  Entire path (all clicks/drags) is ONE undo group.
+  Bounded by StartGroupEvent...EndGroupEvent.
+  Undo removes entire path atomically.
+
+  **Canceled Paths:**
+  Emit EndGroupEvent without FinishPathEvent.
+  Event handlers ignore incomplete paths.
+end note
+
+' ============================================================================
+' Event Details
+' ============================================================================
+
+note right of Idle
+  **Event Definitions:**
+
+  **StartGroupEvent:**
+  - eventId, timestamp, groupId, description
+
+  **CreatePathEvent:**
+  - eventId, timestamp, pathId, startAnchor
+  - strokeColor, strokeWidth
+
+  **AddAnchorEvent:**
+  - eventId, timestamp, pathId, position
+  - anchorType (line or bezier)
+  - handleIn, handleOut (optional, for bezier)
+
+  **ModifyAnchorEvent:**
+  - eventId, timestamp, pathId, anchorIndex
+  - handleIn, handleOut (optional)
+
+  **FinishPathEvent:**
+  - eventId, timestamp, pathId, closed
+
+  **EndGroupEvent:**
+  - eventId, timestamp, groupId
+end note
+
+@enduml

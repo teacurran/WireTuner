@@ -1,10 +1,24 @@
 @startuml
 !include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Component.puml
 
+/' anchor: component-overview '/
+
 title Component Diagram - WireTuner Architecture Overview
 
-' UI Layer
-Container_Boundary(ui_layer, "UI Layer") {
+note as version_meta
+  **Version:** 0.1
+  **Date:** 2025-11-09
+  **Author:** WireTuner Team
+  **Reference:** Section 2 Core Architecture
+  **Source:** .codemachine/artifacts/plan/01_Plan_Overview_and_Setup.md#core-architecture
+end note
+
+' ==========================================
+' COMPONENT BOUNDARIES (Section 2)
+' ==========================================
+
+' 01. UI Shell & Window Manager
+Container_Boundary(ui_layer, "01. UI Shell & Window Manager") {
   Component(main_window, "Main Window", "Flutter Widget", "Root application window and layout")
   Component(toolbar, "Toolbar", "Flutter Widget", "Tool selection and quick actions")
   Component(tool_panel, "Tool Panel", "Flutter Widget", "Tool-specific options and settings")
@@ -12,14 +26,14 @@ Container_Boundary(ui_layer, "UI Layer") {
   Component(dialogs, "Dialogs", "Flutter Widget", "Modals for file operations and settings")
 }
 
-' Canvas Renderer
-Container_Boundary(canvas_renderer, "Canvas Renderer") {
+' 02. Rendering Pipeline
+Container_Boundary(canvas_renderer, "02. Rendering Pipeline") {
   Component(custom_painter, "Vector Painter", "CustomPainter", "60 FPS vector rendering with viewport transforms")
   Component(tessellator, "Curve Tessellator", "Dart Service", "Converts bezier curves to renderable polygons")
 }
 
-' Tool System
-Container_Boundary(tool_system, "Tool System") {
+' 03. Tool Framework
+Container_Boundary(tool_system, "03. Tool Framework") {
   Component(tool_manager, "Tool Manager", "Dart Service", "Active tool tracking and switching")
   Component(tool_interface, "ITool Interface", "Abstract Interface", "onPointerDown/Move/Up, onKeyPress, render")
 
@@ -35,8 +49,8 @@ Container_Boundary(tool_system, "Tool System") {
   Component(overlay_renderer, "Overlay Renderer", "CustomPainter", "Draws tool-specific UI (handles, guides)")
 }
 
-' Event Sourcing Core
-Container_Boundary(event_core, "Event Sourcing Core") {
+' 04. Event Recorder & Replayer
+Container_Boundary(event_core, "04. Event Recorder & Replayer") {
   Component(event_recorder, "Event Recorder", "Dart Service", "Samples input at 50ms, creates events")
   Component(event_sampler, "Event Sampler", "Dart Service", "Throttles high-frequency input to 50ms")
   Component(event_dispatcher, "Event Dispatcher", "Dart Service", "Routes events to appropriate handlers")
@@ -51,8 +65,8 @@ Container_Boundary(event_core, "Event Sourcing Core") {
   Component(event_model, "Event Model", "Sealed Class Hierarchy", "CreatePath, AddAnchor, MoveObject, etc.")
 }
 
-' Vector Engine
-Container_Boundary(vector_engine, "Vector Engine") {
+' 05. Vector Engine
+Container_Boundary(vector_engine, "05. Vector Engine") {
   Component(document, "Document", "Immutable Class", "Root container: layers, artboards, objects")
   Component(path, "Path", "Immutable Class", "Sequence of segments, open or closed")
   Component(shape, "Shape", "Immutable Class", "Rectangle, Ellipse, Polygon, Star")
@@ -66,14 +80,18 @@ Container_Boundary(vector_engine, "Vector Engine") {
   Component(path_operations, "Path Operations", "Dart Service", "Boolean ops, offset, simplify")
 }
 
-' Persistence Layer
-Container_Boundary(persistence_layer, "Persistence Layer") {
-  ContainerDb(event_store, "Event Store", "SQLite")
-  ContainerDb(snapshot_store, "Snapshot Store", "SQLite")
+' 06. Persistence Services
+Container_Boundary(persistence_layer, "06. Persistence Services") {
+  Component(sqlite_repository, "SQLite Repository", "Dart Service", "Unified CRUD interface for metadata, events, snapshots")
+  Component(database_provider, "Database Provider", "Dart Service", "Manages SQLite connection lifecycle and migrations")
+  Component(event_store, "Event Store", "Dart Service", "Append-only event log operations")
+  Component(schema_manager, "Schema Manager", "Dart Service", "Creates and migrates database schema")
+
+  ContainerDb(sqlite_db, "SQLite Database", ".wiretuner file", "metadata, events, snapshots tables")
 }
 
-' Import/Export Services
-Container_Boundary(import_export, "Import/Export Services") {
+' 07. Import/Export Services
+Container_Boundary(import_export, "07. Import/Export Services") {
   Component(svg_exporter, "SVG Exporter", "Dart Service", "Converts Document to SVG 1.1 XML")
   Component(pdf_exporter, "PDF Exporter", "Dart Service", "Generates PDF 1.7 documents")
   Component(ai_importer, "AI Importer", "Dart Service", "Parses Adobe Illustrator files (PDF-based)")
@@ -120,10 +138,17 @@ Rel(event_replayer, event_handler, "Applies events via", "State reconstruction")
 Rel(event_navigator, event_replayer, "Uses for state at index", "Undo/redo navigation")
 
 ' Event Sourcing to Persistence
-Rel(event_recorder, event_store, "Persists to", "Append-only SQL INSERT")
-Rel(snapshot_manager, snapshot_store, "Persists to", "BLOB SQL INSERT")
-Rel(event_replayer, event_store, "Reads events from", "SQL SELECT")
-Rel(event_replayer, snapshot_store, "Loads base snapshot from", "SQL SELECT")
+Rel(event_recorder, sqlite_repository, "Persists events via", "insertEvent()")
+Rel(snapshot_manager, sqlite_repository, "Creates snapshots via", "createSnapshot()")
+Rel(event_replayer, sqlite_repository, "Loads state via", "getLatestSnapshot() + getEvents()")
+
+' Persistence Layer Internal
+Rel(sqlite_repository, database_provider, "Uses connection from", "getDatabase()")
+Rel(sqlite_repository, event_store, "Delegates event ops to", "EventStore wrapper")
+Rel(database_provider, schema_manager, "Creates schema via", "onCreate callback")
+Rel(event_store, sqlite_db, "Queries/inserts to", "events table")
+Rel(sqlite_repository, sqlite_db, "Queries/inserts to", "metadata, snapshots tables")
+Rel(database_provider, sqlite_db, "Opens/closes", "Connection management")
 
 ' Vector Engine Internal
 Rel(document, path, "Contains 0..n", "")
@@ -158,5 +183,32 @@ Rel(dialogs, svg_importer, "Triggers import via", "File open dialog")
 Rel(dialogs, ai_importer, "Triggers import via", "File open dialog")
 Rel(dialogs, svg_exporter, "Triggers export via", "File save dialog")
 Rel(dialogs, pdf_exporter, "Triggers export via", "File save dialog")
+
+' ============================================
+' Legend - Component Boundaries (Section 2)
+' ============================================
+
+legend right
+  |= # |= Component Boundary |= Description |
+  | 01 | **UI Shell & Window Manager** | Flutter widgets, application chrome, menu, window lifecycle, document routing (Decision 2) |
+  | 02 | **Rendering Pipeline** | CustomPainter for 60 FPS rendering, viewport transforms, offscreen caching |
+  | 03 | **Tool Framework** | ITool interface, state machines for selection/pen/shape tools, tool overlays |
+  | 04 | **Event Recorder & Replayer** | 50ms sampler (Decision 5), SQLite event store, snapshot manager (Decision 6), undo navigator |
+  | 05 | **Vector Engine** | Immutable data models (Decision 4): paths, shapes, anchors, styles, geometry utilities |
+  | 06 | **Persistence Services** | SQLite event store (Decision 3), snapshot manager, file versioning |
+  | 07 | **Import/Export Services** | AI/SVG import, SVG/PDF export modules |
+
+  **Architectural Decisions Referenced:**
+  • Decision 1: Event Sourcing Architecture
+  • Decision 2: Flutter Desktop Framework
+  • Decision 3: SQLite for Event Storage
+  • Decision 4: Immutable Data Patterns
+  • Decision 5: 50ms Event Sampling
+  • Decision 6: Snapshot Every 1000 Events
+  • Decision 7: Provider for State Management
+
+  **State Management:** Provider (Decision 7) propagates state through UI Shell
+  **Technology Stack:** Flutter 3.16+, Dart 3.2+, SQLite (sqflite_common_ffi)
+end legend
 
 @enduml

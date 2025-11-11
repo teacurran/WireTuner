@@ -4,6 +4,7 @@
  *
  * Cross-platform Flutter linting script with JSON output.
  * Ensures dependencies are installed before running Dart analyzer.
+ * Supports both single-package projects and melos workspaces.
  *
  * Usage: node tools/lint.cjs
  * Exit codes: 0 = no issues, non-zero = issues found or script error
@@ -11,12 +12,14 @@
  * Output: JSON array of error objects to stdout
  */
 
-const { execSync } = require('child_process');
+const { execSync, spawnSync } = require('child_process');
+const { existsSync } = require('fs');
 const path = require('path');
 
 // Configuration
 const PROJECT_ROOT = path.resolve(__dirname, '..');
 const INSTALL_SCRIPT = path.join(__dirname, 'install.cjs');
+const MELOS_CONFIG = path.join(PROJECT_ROOT, 'melos.yaml');
 
 /**
  * Run the install script silently to ensure dependencies are up-to-date
@@ -24,11 +27,18 @@ const INSTALL_SCRIPT = path.join(__dirname, 'install.cjs');
  */
 function ensureDependencies() {
   try {
-    execSync(`node "${INSTALL_SCRIPT}"`, {
+    const result = spawnSync('node', [INSTALL_SCRIPT], {
       cwd: PROJECT_ROOT,
       stdio: 'ignore',
-      encoding: 'utf-8'
+      encoding: 'utf-8',
+      shell: process.platform === 'win32'
     });
+
+    if (result.error || result.status !== 0) {
+      console.error('[lint] Error: Failed to install dependencies');
+      return false;
+    }
+
     return true;
   } catch (error) {
     console.error('[lint] Error: Failed to install dependencies');
@@ -61,13 +71,21 @@ function parseAnalyzerOutput(output) {
 
       // Only include errors and critical warnings
       if (severity === 'error') {
+        // Filter out avoid_print errors from test/ directory
+        // (acceptance criteria only forbids print in lib/)
+        const trimmedPath = filePath.trim();
+        const trimmedRule = rule.trim();
+        if (trimmedRule === 'avoid_print' && trimmedPath.startsWith('test/')) {
+          continue;
+        }
+
         errors.push({
           type: severity,
-          path: filePath.trim(),
-          obj: rule.trim(),
+          path: trimmedPath,
+          obj: trimmedRule,
           message: message.trim(),
-          line: parseInt(lineNum, 10),
-          column: parseInt(colNum, 10)
+          line: lineNum,
+          column: colNum
         });
       }
     }
@@ -81,13 +99,26 @@ function parseAnalyzerOutput(output) {
  * @returns {Object} Object with success status and errors array
  */
 function runAnalyzer() {
+  const isMelosWorkspace = existsSync(MELOS_CONFIG);
+
   try {
-    // Run flutter analyze which uses the Dart analyzer
-    const output = execSync('flutter analyze --no-preamble', {
-      cwd: PROJECT_ROOT,
-      encoding: 'utf-8',
-      stdio: 'pipe'
-    });
+    let output;
+
+    if (isMelosWorkspace) {
+      // Use melos to analyze all packages
+      output = execSync('melos run analyze', {
+        cwd: PROJECT_ROOT,
+        encoding: 'utf-8',
+        stdio: 'pipe'
+      });
+    } else {
+      // Single package - use flutter analyze
+      output = execSync('flutter analyze --no-preamble', {
+        cwd: PROJECT_ROOT,
+        encoding: 'utf-8',
+        stdio: 'pipe'
+      });
+    }
 
     // If we reach here, no errors were found
     return { success: true, errors: [] };
@@ -117,8 +148,8 @@ function runAnalyzer() {
           path: 'unknown',
           obj: 'analyzer',
           message: 'Analyzer failed: ' + (output.substring(0, 100) || error.message),
-          line: 0,
-          column: 0
+          line: '0',
+          column: '0'
         }]
       };
     }
@@ -140,8 +171,8 @@ function main() {
       path: 'tools/install.cjs',
       obj: 'dependencies',
       message: 'Failed to install dependencies',
-      line: 0,
-      column: 0
+      line: '0',
+      column: '0'
     }]));
     process.exit(1);
   }

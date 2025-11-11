@@ -8,6 +8,8 @@ part 'style_events.g.dart';
 ///
 /// This event is dispatched when a user changes the visual properties
 /// of an object such as fill color, stroke color, width, or opacity.
+///
+/// Related: T004 (Event Model Definition), T021 (Selection and Manipulation)
 @Freezed(toJson: true, fromJson: true)
 class ModifyStyleEvent extends EventBase with _$ModifyStyleEvent {
   /// Creates a new style modification event.

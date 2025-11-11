@@ -124,6 +124,7 @@ class DatabaseProvider {
         version: currentSchemaVersion,
         onCreate: _onCreate,
         onUpgrade: _onUpgrade,
+        onOpen: _onOpen,
       );
 
       _logger.i('Database opened successfully: $fullPath');
@@ -198,6 +199,15 @@ class DatabaseProvider {
   Future<void> _onUpgrade(Database db, int oldVersion, int newVersion) async {
     _logger.i('Upgrading database from version $oldVersion to $newVersion');
     // Schema migrations will be implemented in future tasks
+  }
+
+  /// Callback invoked when the database is opened (every time).
+  ///
+  /// This enables foreign key constraints for the connection.
+  /// In SQLite, foreign keys must be enabled for each connection.
+  Future<void> _onOpen(Database db) async {
+    _logger.d('Enabling foreign keys for connection');
+    await db.execute('PRAGMA foreign_keys = ON');
   }
 
   /// Returns whether the provider has been initialized.

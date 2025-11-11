@@ -15,7 +15,7 @@ void main() {
 
     test('registerHandler stores handler for event type', () {
       // Arrange
-      EventHandler handler = (state, event) => 'new state';
+      handler(state, event) => 'new state';
 
       // Act
       registry.registerHandler('TestEvent', handler);
@@ -34,8 +34,8 @@ void main() {
 
     test('registerHandler overwrites existing handler', () {
       // Arrange
-      final handler1 = (state, event) => 'state1';
-      final handler2 = (state, event) => 'state2';
+      handler1(state, event) => 'state1';
+      handler2(state, event) => 'state2';
 
       // Act
       registry.registerHandler('TestEvent', handler1);
@@ -214,9 +214,8 @@ void main() {
 
     test('dispatch returns handler return value', () {
       // Arrange
-      registry.registerHandler('CreatePathEvent', (state, event) {
-        return 'transformed state';
-      });
+      registry.registerHandler(
+          'CreatePathEvent', (state, event) => 'transformed state');
 
       final event = CreatePathEvent(
         eventId: 'evt-1',
@@ -261,11 +260,11 @@ void main() {
         return 'new state';
       });
 
-      final event = CreatePathEvent(
+      const event = CreatePathEvent(
         eventId: 'evt-complex-123',
         timestamp: 1234567890,
         pathId: 'path-abc',
-        startAnchor: const Point(x: 123.45, y: 678.90),
+        startAnchor: Point(x: 123.45, y: 678.90),
         fillColor: '#FF0000',
         strokeColor: '#00FF00',
         strokeWidth: 2.5,
@@ -366,13 +365,11 @@ void main() {
     group('dispatchAll', () {
       test('dispatches multiple events in sequence', () {
         // Arrange
-        registry.registerHandler('CreatePathEvent', (state, event) {
-          return (state as int) + 1;
-        });
+        registry.registerHandler(
+            'CreatePathEvent', (state, event) => (state as int) + 1);
 
-        registry.registerHandler('AddAnchorEvent', (state, event) {
-          return (state as int) + 10;
-        });
+        registry.registerHandler(
+            'AddAnchorEvent', (state, event) => (state as int) + 10);
 
         final events = [
           CreatePathEvent(
@@ -413,9 +410,8 @@ void main() {
 
       test('dispatchAll stops on unhandled event', () {
         // Arrange
-        registry.registerHandler('CreatePathEvent', (state, event) {
-          return (state as int) + 1;
-        });
+        registry.registerHandler(
+            'CreatePathEvent', (state, event) => (state as int) + 1);
 
         final events = [
           CreatePathEvent(

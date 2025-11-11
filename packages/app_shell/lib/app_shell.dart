@@ -1,0 +1,22 @@
+/// Flutter UI shell and window management for WireTuner.
+///
+/// This package provides the main application shell, window management,
+/// and top-level UI structure for the WireTuner vector editor.
+///
+/// ## State Management
+///
+/// - [ToolProvider]: Tool system provider configuration
+/// - [UndoProvider]: Undo/redo navigator Flutter adapter
+///
+/// ## Multi-Window Management
+///
+/// - [WindowManager]: Multi-window lifecycle and coordination manager
+/// - [WindowScope]: Window-scoped dependency container
+library app_shell;
+
+export 'src/app_shell_base.dart';
+export 'src/state/tool_provider.dart';
+export 'src/state/undo_provider.dart';
+export 'src/window/window_manager.dart';
+export 'src/ui/open_dialogs.dart';
+export 'src/ui/save_dialogs.dart';

@@ -1,0 +1,172 @@
+erDiagram
+    %% ========================================================================
+    %% WireTuner Data & Domain ERD
+    %% ========================================================================
+    %% This diagram maps SQLite persistent tables to in-memory domain aggregates.
+    %% The persistent layer provides durability through event sourcing.
+    %% The domain layer provides rich behavior through immutable Dart objects.
+    %%
+    %% Legend:
+    %% - [SQLite Tables] = Persistent storage (event sourcing)
+    %% - [Domain Entities] = In-memory Dart objects (reconstructed via replay)
+    %% ========================================================================
+
+    %% ------------------------------------------------------------------------
+    %% PERSISTENT LAYER: SQLite Tables
+    %% ------------------------------------------------------------------------
+
+    metadata {
+        TEXT document_id PK "Unique document identifier"
+        TEXT title "Document title"
+        INTEGER format_version "Schema version for compatibility"
+        INTEGER created_at "Unix timestamp (ms)"
+        INTEGER modified_at "Unix timestamp (ms)"
+        TEXT author "Optional author name"
+    }
+
+    events {
+        INTEGER event_id PK "Auto-increment primary key"
+        TEXT document_id FK "References metadata.document_id"
+        INTEGER event_sequence "0-based sequence per document"
+        TEXT event_type "Event discriminator (CreatePath, MoveAnchor, etc)"
+        TEXT event_payload "JSON-serialized event data"
+        INTEGER timestamp "Unix timestamp (ms)"
+        TEXT user_id "For future collaboration features"
+    }
+
+    snapshots {
+        INTEGER snapshot_id PK "Auto-increment primary key"
+        TEXT document_id FK "References metadata.document_id"
+        INTEGER event_sequence "Snapshot taken after this sequence"
+        BLOB snapshot_data "Serialized Document state"
+        INTEGER created_at "Unix timestamp (ms)"
+        TEXT compression "Compression method (gzip, none)"
+    }
+
+    %% ------------------------------------------------------------------------
+    %% DOMAIN LAYER: In-Memory Dart Entities
+    %% ------------------------------------------------------------------------
+
+    Document {
+        String id "Unique identifier"
+        String title "Document title"
+        List_Layer layers "List of drawing layers"
+        Selection selection "Currently selected objects"
+        Viewport viewport "View transform and zoom"
+    }
+
+    Layer {
+        String id "Unique identifier"
+        String name "Layer name"
+        bool visible "Layer visibility flag"
+        bool locked "Layer edit lock flag"
+        List_VectorObject objects "Objects on this layer"
+    }
+
+    VectorObject {
+        String id "Unique identifier"
+        Transform transform "Affine transformation matrix"
+        Style style "Fill and stroke styling"
+    }
+
+    Path {
+        List_AnchorPoint anchors "Anchor points defining path"
+        List_Segment segments "Segments connecting anchors"
+        bool closed "Whether path loops back"
+    }
+
+    Shape {
+        Point center "Shape center point"
+        ShapeKind kind "rectangle, ellipse, polygon, star"
+        double width "Width (for rect, ellipse)"
+        double height "Height (for rect, ellipse)"
+        double cornerRadius "Corner radius (for rect)"
+        double radius "Radius (for polygon, star)"
+        double innerRadius "Inner radius (for star)"
+        int sides "Side count (polygon) or point count (star)"
+        double rotation "Rotation angle in radians"
+    }
+
+    Segment {
+        int startAnchorIndex "Index into path anchors list"
+        int endAnchorIndex "Index into path anchors list"
+        SegmentType segmentType "line, bezier, arc"
+    }
+
+    AnchorPoint {
+        Point position "Anchor position on canvas"
+        Point handleIn "Optional Bezier control point (relative)"
+        Point handleOut "Optional Bezier control point (relative)"
+        AnchorType anchorType "corner, smooth, symmetric"
+    }
+
+    Style {
+        Paint fill "Fill paint (color, gradient)"
+        Paint stroke "Stroke paint"
+        double strokeWidth "Stroke width"
+        double opacity "Object opacity (0-1)"
+        BlendMode blendMode "Compositing blend mode"
+    }
+
+    Transform {
+        Matrix4 matrix "4x4 affine transformation matrix"
+    }
+
+    Selection {
+        Set_String objectIds "Set of selected object IDs"
+        Map_String_Set_int anchorIndices "Selected anchor indices per object"
+    }
+
+    Viewport {
+        Point pan "Canvas pan offset"
+        double zoom "Zoom level"
+        Size canvasSize "Canvas dimensions"
+    }
+
+    %% ------------------------------------------------------------------------
+    %% RELATIONSHIPS: Persistent Layer
+    %% ------------------------------------------------------------------------
+
+    metadata ||--o{ events : "1:N (CASCADE DELETE)"
+    metadata ||--o{ snapshots : "1:N (CASCADE DELETE)"
+
+    %% Note: events and snapshots are independent but both reference metadata
+    %% Snapshots are created every 1000 events per architecture decision
+
+    %% ------------------------------------------------------------------------
+    %% RELATIONSHIPS: Domain Layer (Composition)
+    %% ------------------------------------------------------------------------
+
+    Document ||--|{ Layer : "contains 0..N"
+    Document ||--|| Selection : "has 1"
+    Document ||--|| Viewport : "has 1"
+
+    Layer ||--o{ VectorObject : "contains 0..N"
+
+    VectorObject ||--|| Transform : "has 1"
+    VectorObject ||--|| Style : "has 1"
+    VectorObject ||--|{ Path : "is a (inheritance)"
+    VectorObject ||--|{ Shape : "is a (inheritance)"
+
+    Path ||--|{ Segment : "composed of 2..N"
+    Path ||--|{ AnchorPoint : "composed of 1..N"
+
+    Segment }o--|| AnchorPoint : "references start"
+    Segment }o--|| AnchorPoint : "references end"
+
+    %% ------------------------------------------------------------------------
+    %% CROSS-LAYER MAPPING NOTES
+    %% ------------------------------------------------------------------------
+
+    %% Document lifecycle:
+    %% 1. User creates document -> metadata row inserted
+    %% 2. User actions -> events rows appended (event_sequence increments)
+    %% 3. Every 1000 events -> snapshots row created with serialized Document
+    %% 4. Document loaded -> latest snapshot retrieved + subsequent events replayed
+    %% 5. Replay reconstructs Document aggregate from events
+    %%
+    %% Key insight:
+    %% - Persistent layer (metadata, events, snapshots) = source of truth
+    %% - Domain layer (Document, Path, Shape, etc) = transient, reconstructed
+    %% - Changes to domain objects generate events, not direct DB updates
+    %% - Event replay is the ONLY way to reconstruct domain state

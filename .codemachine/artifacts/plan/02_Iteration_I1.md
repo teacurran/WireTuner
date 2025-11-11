@@ -1,187 +1,142 @@
-# Iteration 1: Foundation & Setup
+<!-- anchor: iteration-plan-overview -->
+## 5. Iteration Plan
 
-**Version:** 1.0
-**Date:** 2025-11-05
+* **Total Iterations Planned:** 5 (Large-scale engagement per classification; each iteration averages 8–10 focused tasks so autonomous agents can collaborate without thrashing shared artifacts.)
+* **Iteration Dependencies:** I1 establishes workspace, persistence, documentation, and CI scaffolds consumed by I2–I5. I2 depends on I1 outputs for vector engine + rendering. I3 builds on I2 geometry plus I1 tooling interfaces. I4 requires mature tool/event layers from I1–I3 to deliver undo/redo and direct manipulation. I5 reuses all prior iterations for save/load, import/export, and parity validation. Iteration sequencing also enforces artifact readiness (component/sequence diagrams, schema docs) before code-level work ramps up.
 
----
+<!-- anchor: iteration-1-plan -->
+### Iteration 1: Foundation & Event Core Enablement
 
-<!-- anchor: iteration-1-overview -->
-### Iteration 1: Foundation & Setup
-
-<!-- anchor: iteration-1-metadata -->
-*   **Iteration ID:** `I1`
-*   **Goal:** Establish project infrastructure, initialize Flutter project, integrate SQLite, and document event sourcing architecture
-*   **Prerequisites:** None (starting point)
-
-<!-- anchor: iteration-1-tasks -->
-*   **Tasks:**
+* **Iteration ID:** `I1`
+* **Goal:** Stand up the Flutter workspace, melos packages, SQLite-backed event store skeleton, ADRs, and baseline documentation/diagrams so downstream agents share a consistent contract.
+* **Prerequisites:** None.
 
 <!-- anchor: task-i1-t1 -->
-*   **Task 1.1:**
-    *   **Task ID:** `I1.T1`
-    *   **Description:** Initialize Flutter desktop project with proper directory structure, configure analysis_options.yaml for strict linting, set up pubspec.yaml with initial dependencies (sqflite_common_ffi, provider, logger, freezed, vector_math), and create basic main.dart entry point. Configure macOS and Windows build targets. Create README.md with project overview.
-    *   **Agent Type Hint:** `SetupAgent`
-    *   **Inputs:**
-        *   Project plan Section 3 (Directory Structure)
-        *   Technology stack requirements (Flutter 3.16+, Dart 3.2+)
-        *   Linting rules from architecture blueprint (analysis_options.yaml recommendations)
-    *   **Input Files:** []
-    *   **Target Files:**
-        *   `pubspec.yaml`
-        *   `lib/main.dart`
-        *   `lib/app.dart`
-        *   `analysis_options.yaml`
-        *   `README.md`
-        *   `.gitignore`
-        *   `macos/` (Flutter-generated)
-        *   `windows/` (Flutter-generated)
-    *   **Deliverables:**
-        *   Working Flutter project that compiles and runs on macOS/Windows
-        *   Configured dependencies in pubspec.yaml
-        *   Strict linting rules enforced
-        *   Basic app widget with placeholder UI
-        *   README documenting project setup
-    *   **Acceptance Criteria:**
-        *   `flutter pub get` succeeds without errors
-        *   `flutter analyze` passes with zero issues
-        *   `flutter run -d macos` launches application window
-        *   `flutter run -d windows` launches application window (if on Windows)
-        *   All required dependencies listed in pubspec.yaml
-        *   Directory structure matches plan Section 3
-    *   **Dependencies:** None
-    *   **Parallelizable:** No (foundation for all other tasks)
+* **Task 1.1:**
+    * **Task ID:** `I1.T1`
+    * **Description:** Initialize the `wiretuner-app` Flutter/melos workspace, create core packages (app_shell, event_core, vector_engine stubs), and wire shared linting plus formatting configs aligned with Section 3.
+    * **Agent Type Hint:** `SetupAgent`
+    * **Inputs:** Section 1 overview, Directory blueprint (Section 3), Decisions 1 & 2 for tooling expectations.
+    * **Input Files:** [`README.md`, `docs/reference/architecture-decisions.md`]
+    * **Target Files:** [`pubspec.yaml`, `analysis_options.yaml`, `packages/app_shell/pubspec.yaml`, `packages/event_core/pubspec.yaml`, `packages/vector_engine/pubspec.yaml`, `tools/melos_workspace.yaml`]
+    * **Deliverables:** Bootstrapped Flutter workspace with melos config, lint rules, placeholder packages compiling under `flutter analyze`, and a README section outlining workspace commands.
+    * **Acceptance Criteria:** `melos bootstrap` succeeds; `flutter analyze` produces zero errors; workspace README snippet links to plan anchors; no platform-specific code yet.
+    * **Dependencies:** None.
+    * **Parallelizable:** Yes (isolated from other tasks).
 
 <!-- anchor: task-i1-t2 -->
-*   **Task 1.2:**
-    *   **Task ID:** `I1.T2`
-    *   **Description:** Generate PlantUML Component Diagram (C4 Level 3) showing the major subsystems: UI Layer, Canvas Renderer, Tool System, Event Sourcing Core, Vector Engine, Persistence Layer, and Import/Export Services. Diagram should visualize dependencies and data flow between components. Save as `docs/diagrams/component_overview.puml`.
-    *   **Agent Type Hint:** `DocumentationAgent` or `DiagrammingAgent`
-    *   **Inputs:**
-        *   Architecture blueprint Section 3.5 (Component Diagrams)
-        *   Plan Section 2 (Core Architecture - Key Components)
-    *   **Input Files:** []
-    *   **Target Files:**
-        *   `docs/diagrams/component_overview.puml`
-    *   **Deliverables:**
-        *   PlantUML Component Diagram file (C4 syntax)
-        *   Diagram renders without syntax errors
-        *   All major components from architecture blueprint included
-    *   **Acceptance Criteria:**
-        *   PlantUML file validates (can be rendered at plantuml.com or with local tool)
-        *   Diagram accurately reflects component relationships described in architecture blueprint
-        *   All components labeled with technology (e.g., "Flutter Widgets", "SQLite", "Dart Service")
-        *   Dependencies between components shown with directional arrows
-    *   **Dependencies:** `I1.T1` (needs docs/ directory created)
-    *   **Parallelizable:** Yes (independent of code tasks)
+* **Task 1.2:**
+    * **Task ID:** `I1.T2`
+    * **Description:** Produce the PlantUML component diagram capturing UI shell, tool framework, event recorder/replayer, vector engine, persistence, and import/export boundaries; ensure legend + numbering align with Section 2 terminology.
+    * **Agent Type Hint:** `DiagrammingAgent`
+    * **Inputs:** Section 2 core architecture, Decisions 1–7, workspace structure from `I1.T1`.
+    * **Input Files:** [`docs/reference/architecture-decisions.md`, `docs/reference/system_architecture_blueprint.md`]
+    * **Target Files:** [`docs/diagrams/component_overview.puml`]
+    * **Deliverables:** PlantUML diagram plus short legend comment; referenced link added to README diagrams section and manifest stub.
+    * **Acceptance Criteria:** Diagram renders without syntax errors (`plantuml -check`), matches components listed in Section 2, uses anchors, and includes version/date metadata.
+    * **Dependencies:** `I1.T1`.
+    * **Parallelizable:** No (downstream tasks rely on completed diagram).
 
 <!-- anchor: task-i1-t3 -->
-*   **Task 1.3:**
-    *   **Task ID:** `I1.T3`
-    *   **Description:** Generate PlantUML Sequence Diagrams for 5 critical event flows: (1) Creating a path with the Pen Tool, (2) Loading a document (event replay), (3) Undo operation (event navigation), (4) Dragging an anchor point (50ms sampling), (5) Exporting to SVG. Save as `docs/diagrams/event_sourcing_sequences.puml`. Each diagram should show interactions between User, UI components, Event Recorder, Event Store, Event Replayer, Document State, and Canvas Renderer.
-    *   **Agent Type Hint:** `DocumentationAgent` or `DiagrammingAgent`
-    *   **Inputs:**
-        *   Architecture blueprint Section 4.4 (Interaction Flows - Sequence Diagrams)
-        *   Plan Section 2.1 (Communication Patterns)
-    *   **Input Files:** []
-    *   **Target Files:**
-        *   `docs/diagrams/event_sourcing_sequences.puml`
-    *   **Deliverables:**
-        *   PlantUML file with 5 sequence diagrams
-        *   Diagrams render without syntax errors
-        *   Each diagram accurately represents the workflow described in architecture blueprint
-    *   **Acceptance Criteria:**
-        *   PlantUML file validates and renders correctly
-        *   All 5 workflows covered: pen tool creation, document load, undo, drag, SVG export
-        *   Sequence of method calls/events matches architecture specifications
-        *   Actors, components, and messages clearly labeled
-    *   **Dependencies:** `I1.T1` (needs docs/ directory)
-    *   **Parallelizable:** Yes (independent, can run in parallel with I1.T2)
+* **Task 1.3:**
+    * **Task ID:** `I1.T3`
+    * **Description:** Define event recorder, sampler, dispatcher, and snapshot manager interfaces (Dart abstract classes) plus stub implementations that log calls for future iterations; include dependency injection hooks for SQLite + metrics.
+    * **Agent Type Hint:** `BackendAgent`
+    * **Inputs:** Section 2 communication patterns, Decision 1 sampling rules, Task `I1.T2` diagram for boundaries.
+    * **Input Files:** [`packages/event_core/lib/event_core.dart`, `docs/reference/architecture-decisions.md`]
+    * **Target Files:** [`packages/event_core/lib/src/recorder.dart`, `packages/event_core/lib/src/replayer.dart`, `packages/event_core/lib/src/snapshot_manager.dart`, `packages/event_core/lib/event_core.dart`, `packages/event_core/test/unit/event_core_interfaces_test.dart`]
+    * **Deliverables:** Interface definitions with doc comments, dependency injection hooks, TODO markers referencing future tasks, and a unit test skeleton verifying interface registration.
+    * **Acceptance Criteria:** `dart test packages/event_core/test/unit/event_core_interfaces_test.dart` passes; recorder enforces constructor params for sampler + SQLite gateway; code documented for agents; coverage instrumentation noted.
+    * **Dependencies:** `I1.T1`.
+    * **Parallelizable:** Yes (after workspace exists).
 
 <!-- anchor: task-i1-t4 -->
-*   **Task 1.4:**
-    *   **Task ID:** `I1.T4`
-    *   **Description:** Integrate SQLite into the Flutter project using `sqflite_common_ffi` package. Create `lib/infrastructure/persistence/database_provider.dart` to manage SQLite connection lifecycle (open, close, transaction management). Implement initialization logic to create database file in application support directory. Write unit tests to verify database connection succeeds on both macOS and Windows.
-    *   **Agent Type Hint:** `BackendAgent`
-    *   **Inputs:**
-        *   Architecture blueprint Section 3.2 (Technology Stack - SQLite)
-        *   Plan Section 2 (Database: SQLite via sqflite_common_ffi)
-        *   Ticket T002 (SQLite Integration)
-    *   **Input Files:**
-        *   `pubspec.yaml` (from I1.T1)
-    *   **Target Files:**
-        *   `lib/infrastructure/persistence/database_provider.dart`
-        *   `test/infrastructure/persistence/database_provider_test.dart`
-    *   **Deliverables:**
-        *   DatabaseProvider class with open(), close(), getDatabase() methods
-        *   Database file created in correct application support directory
-        *   Unit tests confirming database opens successfully
-        *   Error handling for database initialization failures
-    *   **Acceptance Criteria:**
-        *   `flutter test test/infrastructure/persistence/database_provider_test.dart` passes
-        *   Database file created at correct path (~/Library/Application Support/WireTuner/ on macOS, %APPDATA%\WireTuner\ on Windows)
-        *   No hardcoded paths; uses platform-specific path resolution
-        *   Connection can be opened and closed without errors
-    *   **Dependencies:** `I1.T1` (needs pubspec.yaml with sqflite_common_ffi dependency)
-    *   **Parallelizable:** No (needed by I1.T5)
+* **Task 1.4:**
+    * **Task ID:** `I1.T4`
+    * **Description:** Establish SQLite integration using `sqflite_common_ffi`, including initialization service, WAL pragma, migration stub applying the base schema for `events`, `snapshots`, `metadata`, and connection pooling for multi-document windows.
+    * **Agent Type Hint:** `DatabaseAgent`
+    * **Inputs:** Section 2 data model overview, Decisions 1 & 2, Task `I1.T3` interfaces.
+    * **Input Files:** [`packages/io_services/lib/src/sqlite_gateway.dart`, `docs/reference/system_architecture_blueprint.md`, `docs/reference/architecture-decisions.md`]
+    * **Target Files:** [`packages/io_services/lib/src/sqlite_gateway.dart`, `packages/io_services/lib/src/migrations/base_schema.sql`, `packages/io_services/test/sqlite_gateway_test.dart`, `packages/io_services/lib/io_services.dart`]
+    * **Deliverables:** SQLite gateway with connection factory, migration runner, config for file-based/in-memory DBs, and tests validating table creation, WAL toggling, and multi-window handles.
+    * **Acceptance Criteria:** Tests run on macOS & Windows targets (CI stub); schema matches ERD placeholders; connection errors bubble with actionable messages; SQL script documented.
+    * **Dependencies:** `I1.T3`.
+    * **Parallelizable:** No (touches shared persistence code).
 
 <!-- anchor: task-i1-t5 -->
-*   **Task 1.5:**
-    *   **Task ID:** `I1.T5`
-    *   **Description:** Create SQLite schema for event sourcing: define `metadata`, `events`, and `snapshots` tables as specified in architecture blueprint Section 3.6 (Data Model ERD). Implement SQL DDL in `lib/infrastructure/persistence/schema.dart`. Add migration logic to DatabaseProvider to create tables on first run. Write unit tests to verify schema creation.
-    *   **Agent Type Hint:** `DatabaseAgent`
-    *   **Inputs:**
-        *   Architecture blueprint Section 3.6 (Data Model ERD - SQLite Tables)
-        *   Ticket T002 (SQLite Integration)
-    *   **Input Files:**
-        *   `lib/infrastructure/persistence/database_provider.dart` (from I1.T4)
-    *   **Target Files:**
-        *   `lib/infrastructure/persistence/schema.dart`
-        *   `lib/infrastructure/persistence/database_provider.dart` (update with migration logic)
-        *   `test/infrastructure/persistence/schema_test.dart`
-    *   **Deliverables:**
-        *   SQL DDL for metadata, events, snapshots tables
-        *   Migration logic executed on database initialization
-        *   Indexes on (document_id, event_sequence) for events table
-        *   Unit tests confirming tables created with correct schema
-    *   **Acceptance Criteria:**
-        *   `flutter test test/infrastructure/persistence/schema_test.dart` passes
-        *   Database schema matches ERD in architecture blueprint
-        *   Indexes created for efficient event replay queries
-        *   PRAGMA journal_mode=WAL enabled for crash resistance
-        *   Schema version tracking for future migrations
-    *   **Dependencies:** `I1.T4` (needs DatabaseProvider)
-    *   **Parallelizable:** No (sequential with I1.T4)
+* **Task 1.5:**
+    * **Task ID:** `I1.T5`
+    * **Description:** Author the Mermaid sequence diagram showing pointer input → sampler → event recorder → SQLite → snapshot manager → replayer → Provider notification flow, aligning with Decision 1 KPIs and logging touchpoints.
+    * **Agent Type Hint:** `DiagrammingAgent`
+    * **Inputs:** Section 2 communication patterns, Tasks `I1.T3`–`I1.T4` outputs.
+    * **Input Files:** [`docs/diagrams/component_overview.puml`, `docs/reference/architecture-decisions.md`]
+    * **Target Files:** [`docs/diagrams/event_flow_sequence.mmd`]
+    * **Deliverables:** Sequence diagram with participants, notes for sampling intervals, log/metrics markers, and replay performance annotations.
+    * **Acceptance Criteria:** Mermaid preview validates; diagram referenced in Section 2.1 + README; anchors inserted for manifest linking; includes latency targets.
+    * **Dependencies:** `I1.T2`, `I1.T3`, `I1.T4`.
+    * **Parallelizable:** No (depends on prior assets).
 
 <!-- anchor: task-i1-t6 -->
-*   **Task 1.6:**
-    *   **Task ID:** `I1.T6`
-    *   **Description:** Document event sourcing architecture design in `docs/adr/003-event-sourcing-architecture.md` (Architectural Decision Record format). Cover rationale for 50ms sampling rate, snapshot frequency (1000 events), event payload format (JSON), and immutability patterns. Reference relevant sections from architecture blueprint. This fulfills Ticket T003.
-    *   **Agent Type Hint:** `DocumentationAgent`
-    *   **Inputs:**
-        *   Architecture blueprint Section 4.1 (Design Rationale - Event Sourcing decisions)
-        *   Ticket T003 (Event Sourcing Architecture Design)
-        *   Plan Section 2 (Core Architecture - Event Sourcing Foundation)
-    *   **Input Files:** []
-    *   **Target Files:**
-        *   `docs/adr/003-event-sourcing-architecture.md`
-    *   **Deliverables:**
-        *   ADR document in markdown format
-        *   Covers: context, decision, rationale, consequences, alternatives considered
-        *   References architecture blueprint sections
-    *   **Acceptance Criteria:**
-        *   ADR follows standard format (title, status, context, decision, consequences)
-        *   Explains 50ms sampling decision with rationale
-        *   Documents snapshot strategy (frequency, compression, garbage collection)
-        *   Describes event payload format (JSON) and schema evolution approach
-        *   Lists alternatives considered (no sampling, time-based snapshots, binary encoding)
-    *   **Dependencies:** `I1.T1` (needs docs/ directory)
-    *   **Parallelizable:** Yes (can run in parallel with code tasks)
+* **Task 1.6:**
+    * **Task ID:** `I1.T6`
+    * **Description:** Draft the event schema reference covering UUID IDs, RFC3339 microsecond timestamps, payload envelope, sampling metadata, undo grouping markers, and collaboration-ready fields; include JSON examples for pen, selection, and shape events.
+    * **Agent Type Hint:** `DocumentationAgent`
+    * **Inputs:** Section 2.1 artifact list, Decisions 1, 3, 7, Tasks `I1.T3`–`I1.T5`.
+    * **Input Files:** [`docs/reference/architecture-decisions.md`, `docs/diagrams/event_flow_sequence.mmd`]
+    * **Target Files:** [`docs/reference/event_schema.md`]
+    * **Deliverables:** Markdown spec with table of fields, JSON snippets, sampling validation checklist, and glossary callouts; cross-linked from README + manifest.
+    * **Acceptance Criteria:** Includes at least three event types with required/optional fields, notes sampling intervals + snapshot cadence, references timestamp precision, and passes markdown lint.
+    * **Dependencies:** `I1.T3`, `I1.T5`.
+    * **Parallelizable:** Yes (after dependencies satisfied).
 
----
+<!-- anchor: task-i1-t7 -->
+* **Task 1.7:**
+    * **Task ID:** `I1.T7`
+    * **Description:** Bootstrap CI workflows covering `flutter analyze`, `dart test`, diagram syntax checks, and SQLite smoke tests on macOS + Windows; include caching for `pub get` and PlantUML rendering hook.
+    * **Agent Type Hint:** `DevOpsAgent`
+    * **Inputs:** Section 2 deployment notes, Task `I1.T1` workspace, artifact paths from `I1.T2`/`I1.T5`.
+    * **Input Files:** [`scripts/ci/README.md`, `docs/diagrams/component_overview.puml`, `docs/diagrams/event_flow_sequence.mmd`]
+    * **Target Files:** [`scripts/ci/run_checks.sh`, `.github/workflows/ci.yml`, `scripts/ci/diagram_check.sh`]
+    * **Deliverables:** CI pipeline definition with parallel jobs (lint/tests/diagram validation) and documentation for running locally, plus badge snippet for README.
+    * **Acceptance Criteria:** Workflow passes using `act` or dry-run; includes matrix for macOS + Windows; diagram check fails on syntax errors; README shows CI badge placeholder.
+    * **Dependencies:** `I1.T1`, `I1.T2`, `I1.T5`.
+    * **Parallelizable:** Yes (post prerequisites).
 
-**Iteration 1 Summary:**
-*   **Total Tasks:** 6
-*   **Estimated Duration:** 4-5 days
-*   **Critical Path:** I1.T1 → I1.T4 → I1.T5 (sequential database setup)
-*   **Parallelizable Work:** I1.T2, I1.T3, I1.T6 (documentation tasks can run alongside code tasks)
-*   **Deliverables:** Working Flutter project, SQLite integration, database schema, architecture diagrams, ADR documentation
+<!-- anchor: task-i1-t8 -->
+* **Task 1.8:**
+    * **Task ID:** `I1.T8`
+    * **Description:** Implement structured logging + performance counters for event core (frame time placeholders, event write latency, replay duration) using `logger` and wiring toggles for debug/release plus log rotation guidance.
+    * **Agent Type Hint:** `BackendAgent`
+    * **Inputs:** Decisions 1 & 6 performance targets, Task `I1.T3` interfaces, Section 6 verification preview (draft), CI scripts from `I1.T7` for log artifact capture.
+    * **Input Files:** [`packages/event_core/lib/src/recorder.dart`, `packages/event_core/lib/src/replayer.dart`, `docs/reference/event_schema.md`]
+    * **Target Files:** [`packages/event_core/lib/src/metrics.dart`, `packages/event_core/lib/src/recorder.dart`, `packages/event_core/lib/src/replayer.dart`, `packages/event_core/test/metrics_test.dart`, `docs/reference/logging_strategy.md`]
+    * **Deliverables:** Metrics helper exposing timers/counters, recorder instrumentation hooks, tests validating metric emission, and a logging strategy note cross-linking to Section 6.
+    * **Acceptance Criteria:** Metrics toggled via config; tests verify timers record durations; logging note lists file paths + rotation policy; README references new doc.
+    * **Dependencies:** `I1.T3`, `I1.T6`.
+    * **Parallelizable:** Yes (subject to dependencies).
+
+<!-- anchor: task-i1-t9 -->
+* **Task 1.9:**
+    * **Task ID:** `I1.T9`
+    * **Description:** Capture ADR-001 documenting the hybrid state + history approach (Decision 1) and ADR-002 summarizing multi-window assumptions (Decision 2) so future deviations remain traceable.
+    * **Agent Type Hint:** `DocumentationAgent`
+    * **Inputs:** Decisions 1 & 2, Tasks `I1.T3`–`I1.T5` for implemented reality, Section 4 directives.
+    * **Input Files:** [`docs/reference/architecture-decisions.md`]
+    * **Target Files:** [`docs/adr/ADR-001-hybrid-state-history.md`, `docs/adr/ADR-002-multi-window.md`]
+    * **Deliverables:** Two ADR markdown files with context/problem/decision/consequences plus status set to "Accepted" and backlinks to blueprint sections.
+    * **Acceptance Criteria:** ADR template followed; links to plan anchors; version + date recorded; README ADR table updated.
+    * **Dependencies:** `I1.T3`, `I1.T4`, `I1.T2`.
+    * **Parallelizable:** Yes (after dependencies).
+
+<!-- anchor: task-i1-t10 -->
+* **Task 1.10:**
+    * **Task ID:** `I1.T10`
+    * **Description:** Add developer-experience tooling: VS Code + IntelliJ run configurations, `justfile` or `makefile` with common commands, and documentation on using PlantUML/Mermaid CLI locally to keep contributors aligned.
+    * **Agent Type Hint:** `SetupAgent`
+    * **Inputs:** Task `I1.T1` workspace, `I1.T7` CI commands, Section 4 directive #2 (single atomic writes) for scripting guidance.
+    * **Input Files:** [`README.md`, `scripts/ci/run_checks.sh`]
+    * **Target Files:** [`.vscode/launch.json`, `.vscode/tasks.json`, `justfile` (or `Makefile`), `docs/reference/dev_workflow.md`]
+    * **Deliverables:** Editor configs for lint/test/diagram preview commands, scripted shortcuts mirroring CI, and developer workflow doc describing atomic write expectations.
+    * **Acceptance Criteria:** Configurations run without manual tweaks; README links to workflow doc; `just test`/`just diagrams` commands succeed on macOS + Windows shells.
+    * **Dependencies:** `I1.T1`, `I1.T7`.
+    * **Parallelizable:** Yes (post dependencies).

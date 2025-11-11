@@ -1,0 +1,41 @@
+name: app_shell
+description: Flutter UI shell and window management for WireTuner
+publish_to: 'none'
+version: 0.1.0
+
+environment:
+  sdk: '>=3.2.0 <4.0.0'
+  flutter: '>=3.16.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  # Core application
+  wiretuner:
+    path: ../../
+
+  # Event sourcing core
+  event_core:
+    path: ../event_core
+
+  # IO services for load/save
+  io_services:
+    path: ../io_services
+
+  # State management
+  provider: ^6.0.0
+
+  # File picker for Save As dialogs
+  file_picker: ^6.0.0
+
+  # Logging
+  logger: ^2.0.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^3.0.0
+
+flutter:
+  uses-material-design: true

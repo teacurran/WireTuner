@@ -1,0 +1,276 @@
+---
+title: Event Sourcing Lifecycle - Complete Flow from User Input to Replay
+description: |
+  This diagram illustrates the complete event sourcing lifecycle in WireTuner,
+  showing how events flow through the system from initial user interaction
+  through recording, sampling, persistence, snapshot management, and replay.
+version: 1.0
+date: 2025-11-08
+references:
+  - Section 2.1 Communication Patterns
+  - ADR-001 Event Sourcing Architecture
+  - Decision 1: Event Sourcing & Document State Management
+---
+
+%% ============================================================================
+%% anchor: event-flow-sequence
+%% ============================================================================
+%% This sequence diagram demonstrates the pointer input → sampler → recorder →
+%% SQLite → snapshot manager → replayer → Provider notification flow, aligned
+%% with Decision 1 KPIs and logging touchpoints.
+%%
+%% Key Performance Indicators (Decision 1):
+%% - Document load time: <100ms for final state (independent of history size)
+%% - History replay: Target 5K events/second playback rate
+%% - Snapshot cadence: Every 500 events
+%% - Sampling interval: 50ms for high-frequency input
+%% - Replay section latency: <100ms (with snapshots every 500 events)
+%% ============================================================================
+
+sequenceDiagram
+    autonumber
+
+    participant User
+    participant Canvas as Canvas Widget
+    participant ToolMgr as Tool Manager
+    participant Tool as Active Tool<br/>(Pen/Selection/etc.)
+
+    box LightBlue Event Recording & Sampling
+        participant Sampler as Event Sampler
+        participant Recorder as Event Recorder
+    end
+
+    box LightGreen Event Processing
+        participant Dispatcher as Event Dispatcher
+        participant Handlers as Event Handler<br/>Registry
+        participant Doc as Document State<br/>(Immutable)
+    end
+
+    box LightYellow Persistence Layer
+        participant Repo as SQLite Repository
+        participant EventStore as Event Store
+        participant SnapMgr as Snapshot Manager
+        participant SnapStore as Snapshot Store
+    end
+
+    participant Renderer as Canvas Renderer
+
+    %% ========================================================================
+    %% PHASE 1 & 2: EVENT RECORDING AND SAMPLING
+    %% ========================================================================
+
+    Note over User,Renderer: PHASE 1 & 2: EVENT RECORDING AND SAMPLING
+
+    User->>Canvas: User interaction<br/>(click, drag, keyboard)
+    Canvas->>ToolMgr: onPointerDown/Move/Up(point)
+    ToolMgr->>Tool: onPointerDown/Move/Up(point)
+
+    alt High-frequency input (e.g., mouse drag)
+        Tool->>Sampler: recordMove(objectId, position, timestamp)
+
+        alt Within 50ms of last sample
+            Sampler->>Sampler: Buffer movement<br/>(throttle to 50ms)
+            Note right of Sampler: LOG: Sampling throttle<br/>METRIC: Buffered event count<br/><br/>Prevents event flood.<br/>Buffers intermediate positions<br/>until 50ms threshold reached.
+        else 50ms elapsed since last sample
+            Sampler->>Recorder: recordEvent(MoveAnchorEvent/MoveObjectEvent)
+            Note right of Sampler: LOG: Sampled event created<br/>METRIC: Sampling reduction ratio<br/><br/>Sampling reduces 2-second drag<br/>from ~200 events to ~40 events<br/>(5x storage reduction)
+        end
+    else Discrete input (e.g., single click)
+        Tool->>Recorder: recordEvent(CreatePathEvent/AddAnchorEvent/etc.)
+        Note right of Tool: LOG: Discrete event created<br/>METRIC: Event type distribution
+    end
+
+    %% ========================================================================
+    %% PHASE 3: EVENT DISPATCH AND APPLICATION
+    %% ========================================================================
+
+    Note over User,Renderer: PHASE 3: EVENT DISPATCH AND APPLICATION
+
+    Recorder->>Recorder: Assign sequence number<br/>(monotonic counter)
+    Note right of Recorder: LOG: Event sequence assigned<br/>METRIC: Total event count
+
+    Recorder->>Dispatcher: dispatch(event)
+    Dispatcher->>Handlers: lookupHandler(event.type)
+    Handlers-->>Dispatcher: Handler function
+    Dispatcher->>Doc: handler(currentDocument, event)
+
+    Note right of Doc: All domain models are immutable.<br/>Event application is pure function:<br/>(State, Event) → NewState<br/><br/>Example: AddAnchorEvent<br/>1. Get path by ID from current doc<br/>2. Create new Path with added anchor<br/>3. Return new Document with updated path<br/><br/>No in-place mutations.
+
+    Doc->>Doc: Create new immutable state
+    Doc-->>Dispatcher: New Document state
+    Dispatcher-->>Recorder: Event applied successfully
+
+    Note right of Dispatcher: LOG: Event applied<br/>METRIC: Event processing latency
+
+    %% ========================================================================
+    %% PHASE 4: EVENT PERSISTENCE
+    %% ========================================================================
+
+    Note over User,Renderer: PHASE 4: EVENT PERSISTENCE
+
+    Recorder->>Repo: insertEvent(event)
+    Repo->>Repo: Serialize event to JSON
+    Note right of Repo: LOG: Event serialization start<br/>METRIC: Serialization time
+
+    Repo->>EventStore: INSERT INTO events<br/>(event_sequence, event_type,<br/>event_payload, created_at)
+    EventStore->>EventStore: SQLite transaction<br/>(WAL mode for durability)
+
+    alt Insert successful
+        EventStore-->>Repo: Success
+        Repo-->>Recorder: Event persisted (sequence #N)
+        Note right of Repo: LOG: Event persisted<br/>METRIC: Write latency<br/>KPI: <100ms aggregate latency
+    else Disk full error
+        EventStore-->>Repo: SQLITE_FULL error
+        Repo->>Repo: Retry with backoff<br/>(50ms, 100ms, 200ms)
+        Note right of Repo: LOG: Persistence retry<br/>METRIC: Retry attempt count
+
+        alt Retry successful
+            Repo-->>Recorder: Event persisted
+            Note right of Repo: LOG: Retry successful
+        else All retries failed
+            Repo-->>Recorder: Error: Disk full
+            Recorder->>User: Surface error:<br/>"Cannot save - disk full"
+            Note right of Recorder: LOG: Critical - disk full<br/>METRIC: Error count<br/><br/>Enter read-only mode,<br/>allow export to alternate location
+        end
+    end
+
+    %% ========================================================================
+    %% UI UPDATE
+    %% ========================================================================
+
+    Note over User,Renderer: UI UPDATE (Provider Pattern)
+
+    Recorder->>Canvas: notifyListeners()<br/>(Flutter Provider pattern)
+    Canvas->>Renderer: build() → paint(NewDocument)
+    Renderer-->>User: Display updated canvas
+
+    Note right of Canvas: LOG: UI rebuild triggered<br/>METRIC: Frame render time<br/>TARGET: 60 FPS (16.67ms/frame)
+
+    %% ========================================================================
+    %% PHASE 5: SNAPSHOT MANAGEMENT (Every 500 Events)
+    %% ========================================================================
+
+    Note over User,Renderer: PHASE 5: SNAPSHOT MANAGEMENT (Every 500 Events - Decision 1)
+
+    alt Event count milestone (500, 1000, 1500...)
+        Recorder->>SnapMgr: onEventMilestone(sequence: N)
+        Note right of Recorder: LOG: Snapshot trigger<br/>METRIC: Events since last snapshot
+
+        SnapMgr->>Doc: getCurrentDocument()
+        Doc-->>SnapMgr: Current document state
+
+        SnapMgr->>SnapMgr: Serialize document to JSON
+        Note right of SnapMgr: LOG: Snapshot serialization start<br/>METRIC: Serialization time
+
+        SnapMgr->>SnapMgr: Compress with gzip<br/>(~10:1 compression)
+        Note right of SnapMgr: LOG: Compression complete<br/>METRIC: Compression ratio
+
+        SnapMgr->>Repo: createSnapshot(eventSequence, compressedBlob)
+        Repo->>SnapStore: INSERT INTO snapshots<br/>(event_sequence, snapshot_data)
+
+        alt Snapshot creation successful
+            SnapStore-->>Repo: Success
+            Repo-->>SnapMgr: Snapshot created
+            Note right of SnapMgr: LOG: Snapshot persisted<br/>METRIC: Snapshot size<br/>KPI: <25ms total latency<br/>Typical size: ~10-50KB<br/>Keeps 10 most recent snapshots
+        else Disk full / Serialization error
+            SnapStore-->>Repo: Error
+            Repo-->>SnapMgr: Snapshot failed
+            SnapMgr->>SnapMgr: Log warning, skip snapshot
+            Note right of SnapMgr: LOG: Warning - snapshot failed<br/>METRIC: Snapshot failure count<br/><br/>Snapshots are optimization,<br/>not critical path.<br/>Continue event recording.
+        end
+    end
+
+    %% ========================================================================
+    %% PHASE 6: DOCUMENT LOAD (Event Replay)
+    %% ========================================================================
+
+    Note over User,Renderer: PHASE 6: DOCUMENT LOAD (Event Replay - Decision 1 KPIs)
+
+    User->>Canvas: Open .wiretuner file
+    Canvas->>Repo: loadDocument(filePath)
+
+    Note right of Repo: LOG: Document load start<br/>METRIC: Load operation start time<br/>KPI: <100ms total load time
+
+    Repo->>EventStore: SELECT MAX(event_sequence)<br/>FROM events
+    EventStore-->>Repo: maxSequence = N
+
+    Repo->>SnapStore: SELECT snapshot_data, event_sequence<br/>FROM snapshots<br/>WHERE event_sequence <= N<br/>ORDER BY event_sequence DESC<br/>LIMIT 1
+    SnapStore-->>Repo: Snapshot at sequence M,<br/>compressed BLOB
+
+    Note right of Repo: LOG: Snapshot retrieved<br/>METRIC: Snapshot query time
+
+    Repo->>Repo: Decompress snapshot<br/>(gzip → JSON)
+    Repo->>Repo: Deserialize JSON → Document
+
+    Note right of Repo: LOG: Snapshot deserialized<br/>METRIC: Decompression time
+
+    Repo->>EventStore: SELECT * FROM events<br/>WHERE event_sequence > M<br/>ORDER BY event_sequence ASC
+    EventStore-->>Repo: Events M+1 to N<br/>(up to 500 events)
+
+    Note right of Repo: LOG: Events retrieved for replay<br/>METRIC: Event count to replay<br/>KPI: Max 500 events between snapshots
+
+    loop For each event (M+1 to N)
+        Repo->>Dispatcher: dispatch(event)
+        Dispatcher->>Handlers: lookupHandler(event.type)
+        Dispatcher->>Doc: handler(document, event)
+        Doc->>Doc: Apply event → New state
+        Doc-->>Dispatcher: Updated document
+    end
+
+    Note right of Repo: LOG: Replay complete<br/>METRIC: Replay latency<br/>KPI: 5K events/sec playback rate<br/><br/>Typical: Snapshot + 100-500 events<br/>Worst case: 500 events between snapshots<br/><br/>Optimization: Viewport culling,<br/>lazy rendering during replay
+
+    Repo-->>Canvas: Final document state
+    Canvas->>Renderer: paint(Document)
+    Renderer-->>User: Display loaded document
+
+    Note right of Canvas: LOG: Document load complete<br/>METRIC: Total load time<br/>KPI: <100ms end-to-end
+
+    %% ========================================================================
+    %% PHASE 6B: UNDO/REDO (Event Navigation / Time Travel)
+    %% ========================================================================
+
+    Note over User,Renderer: PHASE 6B: UNDO/REDO (Event Navigation / Time Travel)
+
+    User->>Canvas: Press Cmd+Z (Undo)
+    Canvas->>Recorder: undo()
+
+    Note right of Recorder: LOG: Undo triggered<br/>METRIC: Undo operation count
+
+    Recorder->>Recorder: currentSequence = N<br/>targetSequence = N - 1
+
+    Recorder->>SnapStore: SELECT MAX(event_sequence)<br/>FROM snapshots<br/>WHERE event_sequence <= (N-1)
+    SnapStore-->>Recorder: snapshotSequence = M
+
+    Recorder->>SnapStore: SELECT snapshot_data<br/>FROM snapshots<br/>WHERE event_sequence = M
+    SnapStore-->>Recorder: Snapshot BLOB
+
+    Recorder->>Recorder: Deserialize snapshot<br/>→ Base Document
+
+    Recorder->>EventStore: SELECT * FROM events<br/>WHERE event_sequence > M<br/>AND event_sequence <= (N-1)<br/>ORDER BY event_sequence ASC
+    EventStore-->>Recorder: Events M+1 to N-1
+
+    loop For each event (M+1 to N-1)
+        Recorder->>Dispatcher: dispatch(event)
+        Dispatcher->>Doc: applyEvent(event)
+        Doc->>Doc: Create new immutable state
+    end
+
+    Recorder->>Canvas: setDocument(documentAtN-1,<br/>currentSequence: N-1)
+    Canvas->>Renderer: paint(Document)
+    Renderer-->>User: Display document with<br/>last action undone
+
+    Note right of Recorder: LOG: Undo complete<br/>METRIC: Undo latency<br/>KPI: <100ms<br/>(typically < 100 events from cache)<br/><br/>Undo/Redo is time travel<br/>to specific sequence number.<br/><br/>Redo: Navigate to N+1
+
+%% ============================================================================
+%% ERROR HANDLING ANNOTATIONS
+%% ============================================================================
+
+Note over EventStore: **Error Handling:**<br/>- Disk Full: Retry with backoff, enter read-only mode<br/>- Corruption: Integrity check on startup, validate JSON<br/>- Missing Events: Detect sequence gaps, surface error<br/><br/>LOG: All errors logged with context<br/>METRIC: Error counts by type
+
+Note over SnapStore: **Error Handling:**<br/>- Snapshot Corruption: Fallback to previous snapshot<br/>- Decompression Error: Warn user, attempt partial recovery<br/>- Missing Snapshot: Replay from document start (slower)<br/><br/>LOG: All errors logged with context<br/>METRIC: Recovery success rate
+
+%% ============================================================================
+%% LOGGING & METRICS SUMMARY (Decision 1 KPIs)
+%% ============================================================================
+
+Note over User,Renderer: **LOGGING & METRICS SUMMARY**<br/><br/>**Logging Touchpoints:**<br/>- Event sampler (throttle, creation)<br/>- Event recorder (sequence, persistence)<br/>- Event dispatcher (application, latency)<br/>- SQLite operations (writes, reads, errors)<br/>- Snapshot manager (creation, compression)<br/>- Replay engine (load, undo/redo)<br/>- UI updates (frame render)<br/><br/>**Key Metrics:**<br/>- Event counts (total, by type, sampled vs discrete)<br/>- Latencies (persistence, replay, undo, render)<br/>- Storage (event sizes, snapshot sizes, compression ratios)<br/>- Errors (by type, retry counts, recovery success)<br/><br/>**Decision 1 KPIs:**<br/>- Document load: <100ms (final state only)<br/>- History replay: 5K events/sec<br/>- Snapshot cadence: Every 500 events<br/>- Replay section latency: <100ms<br/>- Snapshot creation: <25ms<br/>- Sampling interval: 50ms

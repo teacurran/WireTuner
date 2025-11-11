@@ -7,10 +7,20 @@
 *.swp
 .DS_Store
 .atom/
+.build/
 .buildlog/
 .history
 .svn/
+.swiftpm/
 migrate_working_dir/
+node_modules/
+
+# Codemachine artifacts
+.codemachine/memory/
+.codemachine/logs/
+.codemachine/prompts/
+.codemachine/agents/
+.codemachine/template.json
 
 # IntelliJ related
 *.iml
@@ -33,6 +43,7 @@ migrate_working_dir/
 .pub-cache/
 .pub/
 /build/
+packages/**/build/
 
 # Symbolication related
 app.*.symbols
@@ -60,3 +71,16 @@ app.*.map.json
 
 # Test coverage reports
 coverage/
+.codemachine/logs
+.codemachine/memory
+.codemachine/prompts
+.codemachine/agents
+
+# Documentation media (large files - added per I3.T11)
+# Exclude large screenshots/GIFs (>1 MB) from version control
+# docs/assets/screenshots/*.png
+# docs/assets/gifs/*.gif
+# Uncomment above lines if binary assets exceed 1 MB
+# Note: Keep placeholder READMEs tracked
+# !docs/assets/screenshots/README.md
+# !docs/assets/gifs/README.md

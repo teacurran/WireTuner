@@ -78,27 +78,6 @@ enum SegmentType {
 /// ```
 @immutable
 class Segment {
-  /// Index of the start anchor in the path's anchor list.
-  ///
-  /// This index must be valid (within bounds) for the path that owns
-  /// this segment. The start anchor defines:
-  /// - The starting point of the segment (anchor.position)
-  /// - For Bezier curves: control point 1 (anchor.handleOut)
-  final int startAnchorIndex;
-
-  /// Index of the end anchor in the path's anchor list.
-  ///
-  /// This index must be valid (within bounds) for the path that owns
-  /// this segment. The end anchor defines:
-  /// - The ending point of the segment (anchor.position)
-  /// - For Bezier curves: control point 2 (anchor.handleIn)
-  final int endAnchorIndex;
-
-  /// The type of segment (line, bezier, or arc).
-  ///
-  /// Determines how the segment is rendered between the start and end anchors.
-  final SegmentType segmentType;
-
   /// Creates a segment connecting two anchors.
   ///
   /// The [startAnchorIndex] and [endAnchorIndex] must be valid indices
@@ -161,6 +140,27 @@ class Segment {
         endAnchorIndex: endIndex,
         segmentType: SegmentType.bezier,
       );
+
+  /// Index of the start anchor in the path's anchor list.
+  ///
+  /// This index must be valid (within bounds) for the path that owns
+  /// this segment. The start anchor defines:
+  /// - The starting point of the segment (anchor.position)
+  /// - For Bezier curves: control point 1 (anchor.handleOut)
+  final int startAnchorIndex;
+
+  /// Index of the end anchor in the path's anchor list.
+  ///
+  /// This index must be valid (within bounds) for the path that owns
+  /// this segment. The end anchor defines:
+  /// - The ending point of the segment (anchor.position)
+  /// - For Bezier curves: control point 2 (anchor.handleIn)
+  final int endAnchorIndex;
+
+  /// The type of segment (line, bezier, or arc).
+  ///
+  /// Determines how the segment is rendered between the start and end anchors.
+  final SegmentType segmentType;
 
   /// Whether this is a line segment.
   ///
