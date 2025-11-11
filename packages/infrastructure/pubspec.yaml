@@ -35,7 +35,7 @@ dependencies:
   logger: ^2.0.0
 
   # Redis client for PDF export queue
-  resp_client: ^1.4.0
+  resp_client: ^1.2.0
 
   # UUID generation for job IDs
   uuid: ^4.0.0

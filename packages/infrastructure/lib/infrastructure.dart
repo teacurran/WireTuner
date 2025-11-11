@@ -7,6 +7,7 @@
 /// - SQLite event store implementation
 /// - File I/O operations (.wiretuner file format)
 /// - SVG import/export services
+/// - AI (Adobe Illustrator) import services
 /// - PDF export services
 /// - Event persistence and snapshot management
 /// - Collaboration client for real-time editing
@@ -20,3 +21,4 @@
 library infrastructure;
 
 export 'collaboration/collaboration_client.dart';
+export 'import/ai_importer.dart';

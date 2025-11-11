@@ -411,6 +411,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "3.0.2"
+  resp_client:
+    dependency: transitive
+    description:
+      name: resp_client
+      sha256: cbff9c69a913a512439fec90c3ed8d6e3d2d01e4fae9b501df26be17cb709272
+      url: "https://pub.dev"
+    source: hosted
+    version: "1.2.0"
   shared_preferences:
     dependency: "direct main"
     description:
