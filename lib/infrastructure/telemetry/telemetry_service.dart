@@ -1,5 +1,8 @@
 import 'package:flutter/foundation.dart';
 import 'package:wiretuner/presentation/canvas/viewport/viewport_state.dart';
+import 'telemetry_config.dart';
+import 'structured_log_schema.dart';
+import 'otlp_exporter.dart';
 
 /// Service for collecting and logging telemetry data.
 ///
@@ -31,22 +34,40 @@ import 'package:wiretuner/presentation/canvas/viewport/viewport_state.dart';
 /// final avgFps = telemetry.averageFps;
 /// telemetry.printSummary();
 /// ```
-class TelemetryService {
+class TelemetryService with TelemetryGuard {
   /// Creates a telemetry service.
   ///
-  /// [enabled] controls whether metrics are recorded (default: debug mode).
+  /// [config] provides centralized telemetry configuration with opt-out enforcement.
+  /// [exporter] handles OTLP export to remote collector (optional).
   /// [verbose] controls whether each metric is logged (default: false).
   /// [fpsWarningThreshold] sets the FPS threshold for warnings (default: 55).
   /// [maxMetricsHistory] limits the metrics history size (default: 1000).
   TelemetryService({
-    bool? enabled,
+    TelemetryConfig? config,
+    OTLPExporter? exporter,
     this.verbose = false,
     this.fpsWarningThreshold = 55.0,
     this.maxMetricsHistory = 1000,
-  }) : enabled = enabled ?? kDebugMode;
+  })  : _config = config ?? TelemetryConfig.disabled(),
+        _exporter = exporter,
+        _logBuilder = StructuredLogBuilder(
+          component: 'TelemetryService',
+        ) {
+    // Listen for config changes
+    _config.addListener(_onConfigChanged);
+  }
+
+  final TelemetryConfig _config;
+  final OTLPExporter? _exporter;
+  final StructuredLogBuilder _logBuilder;
+
+  @override
+  TelemetryConfig get telemetryConfig => _config;
 
   /// Whether telemetry logging is enabled.
-  bool enabled;
+  ///
+  /// Delegates to TelemetryConfig for centralized opt-out enforcement.
+  bool get enabled => _config.enabled;
 
   /// Whether to print verbose logs for each metric.
   final bool verbose;
@@ -59,6 +80,18 @@ class TelemetryService {
 
   /// Maximum number of metrics to keep in memory.
   final int maxMetricsHistory;
+
+  /// Handles telemetry config changes (opt-out).
+  void _onConfigChanged() {
+    if (!_config.enabled) {
+      // Clear buffers immediately on opt-out
+      clear();
+
+      if (kDebugMode) {
+        debugPrint('[TelemetryService] Telemetry disabled, metrics cleared');
+      }
+    }
+  }
 
   /// Records a viewport telemetry metric.
   ///
@@ -75,17 +108,58 @@ class TelemetryService {
       _viewportMetrics.removeAt(0);
     }
 
-    // Log if verbose
+    // Log if verbose (structured logging)
     if (verbose) {
-      debugPrint('[Telemetry] $metric');
+      final log = _logBuilder.debug(
+        message: 'Viewport metric recorded: ${metric.eventType}',
+        eventType: 'ViewportMetric',
+        latencyMs: metric.fps > 0 ? (1000 / metric.fps).round() : null,
+        metadata: {
+          'fps': metric.fps,
+          'eventType': metric.eventType,
+          'panDelta': metric.panDelta?.toString(),
+          'zoomLevel': metric.zoomLevel,
+        },
+      );
+      debugPrint(log.toJsonString());
     }
 
-    // Warn on poor performance
+    // Warn on poor performance (structured logging)
     if (metric.fps > 0 && metric.fps < fpsWarningThreshold) {
-      debugPrint(
-        '[Telemetry] Performance warning: FPS ${metric.fps.toStringAsFixed(1)} '
-        'below threshold $fpsWarningThreshold',
+      final log = _logBuilder.warn(
+        message:
+            'Performance warning: FPS ${metric.fps.toStringAsFixed(1)} below threshold $fpsWarningThreshold',
+        eventType: 'PerformanceWarning',
+        metadata: {
+          'fps': metric.fps,
+          'threshold': fpsWarningThreshold,
+          MetricsCatalog.renderFps: metric.fps,
+        },
       );
+      debugPrint(log.toJsonString());
+    }
+
+    // Export to OTLP if configured and sampling allows
+    if (_exporter != null && shouldSample()) {
+      _exportMetric(metric);
+    }
+  }
+
+  /// Exports a viewport metric via OTLP.
+  void _exportMetric(ViewportTelemetry metric) {
+    try {
+      final sample = PerformanceSamplePayload.fromViewportTelemetry(
+        fps: metric.fps,
+        frameTimeMs: metric.fps > 0 ? 1000 / metric.fps : 0,
+        platform: defaultTargetPlatform.name,
+        telemetryOptIn: _config.enabled,
+      );
+
+      _exporter?.recordPerformanceSample(sample);
+    } catch (e) {
+      if (kDebugMode) {
+        debugPrint('[TelemetryService] Failed to export metric: $e');
+      }
     }
   }
 
@@ -177,6 +251,12 @@ class TelemetryService {
   /// Clears all recorded metrics.
   void clear() {
     _viewportMetrics.clear();
+  }
+
+  /// Disposes resources.
+  void dispose() {
+    _config.removeListener(_onConfigChanged);
+    _exporter?.dispose();
   }
 
   /// Returns a read-only view of recent metrics.
