@@ -1,0 +1,207 @@
+' =========================================================================
+' Pen Tool Path Creation with Event Sourcing - Sequence Diagram
+' =========================================================================
+' Purpose: Documents the complete interaction flow for pen tool path creation,
+'          showing how pointer gestures are converted into immutable events
+'          with 200ms sampling, event persistence, and real-time rendering.
+'
+' Related Specs:
+'   - Architecture Blueprint Section 3.7.3.1 (Flow A)
+'   - ADR-001 (Hybrid State + History)
+'   - ADR-0004 (Undo Depth Configuration)
+'   - FR-025 (Tool activation and sampling)
+'   - FR-028 (Grid snapping)
+'   - NFR-PERF-004 (Cursor latency)
+'
+' Date: 2025-11-11
+' =========================================================================
+
+@startuml pen_flow
+title Pen Tool Path Creation with Event Sourcing
+
+' =========================================================================
+' Participants
+' =========================================================================
+
+actor Designer as "User"
+
+box "UI Layer" #FFFDE7
+  participant DesktopShell
+  participant ToolingFramework
+end box
+
+box "Event Pipeline" #FCE4EC
+  participant InteractionEngine
+  participant RenderingPipeline
+end box
+
+box "Persistence Layer" #E3F2FD
+  participant EventStoreService
+  participant SnapshotManager
+  participant TelemetryService
+end box
+
+' =========================================================================
+' Tool Activation
+' =========================================================================
+
+Designer -> DesktopShell: Hover toolbar
+DesktopShell -> ToolingFramework: queryActiveTool()
+ToolingFramework --> DesktopShell: SelectionTool
+
+Designer -> DesktopShell: Click Pen Tool icon
+DesktopShell -> ToolingFramework: activateTool("pen")
+ToolingFramework -> InteractionEngine: registerPointerHandlers(penConfig)
+
+InteractionEngine -> TelemetryService: log(tool="pen", action="activation")
+TelemetryService --> InteractionEngine: ack
+
+note right of InteractionEngine
+  Tool activation triggers telemetry
+  per FR-025 monitoring requirements
+end note
+
+' =========================================================================
+' Pointer Down - Operation Start
+' =========================================================================
+
+group Pointer down starts operation
+  Designer -> DesktopShell: PointerDown(canvasPosition)
+  DesktopShell -> ToolingFramework: dispatchPointerDown(event)
+  ToolingFramework -> InteractionEngine: startPath(position, modifiers)
+
+  InteractionEngine -> EventStoreService: record(CreatePathEvent)
+  EventStoreService --> InteractionEngine: eventId + sequence
+
+  InteractionEngine -> RenderingPipeline: pushPreview(anchors=1)
+  RenderingPipeline --> InteractionEngine: previewReady
+
+  InteractionEngine -> TelemetryService: log(metric="event.latency")
+  TelemetryService --> InteractionEngine: ack
+end
+
+note over EventStoreService
+  CreatePathEvent marks the start of a new
+  undo operation boundary per ADR-0004
+end note
+
+' =========================================================================
+' Anchor Sampling Loop (200ms intervals)
+' =========================================================================
+
+loop Anchor sampling every 200ms
+  Designer -> DesktopShell: Drag pointer
+  DesktopShell -> ToolingFramework: pointerMove(sample)
+  ToolingFramework -> InteractionEngine: updateAnchor(sample)
+
+  InteractionEngine -> RenderingPipeline: updatePreviewBezier(sample)
+  RenderingPipeline --> InteractionEngine: previewFrame
+
+  InteractionEngine -> EventStoreService: record(path.anchor.moved candidate)
+  EventStoreService --> InteractionEngine: conditionalAck
+
+  InteractionEngine -> TelemetryService: log(metric="sampling.overhead")
+  TelemetryService --> InteractionEngine: ack
+end
+
+note right of InteractionEngine
+  200ms sampling interval prevents storage bloat
+  while maintaining perceptual smoothness.
+
+  Sampling threshold configurable via
+  ConfigurationService per ADR-001.
+end note
+
+' =========================================================================
+' Modifier Key Handling (Grid Snap)
+' =========================================================================
+
+group Modifier toggles
+  Designer -> DesktopShell: Press Shift
+  DesktopShell -> ToolingFramework: propagateModifier(shift=true)
+  ToolingFramework -> InteractionEngine: enableGridSnap(screenStep=10px)
+
+  InteractionEngine -> RenderingPipeline: showSnapGuide()
+  RenderingPipeline --> InteractionEngine: guideVisible
+end
+
+note over RenderingPipeline
+  Grid snapping enforces FR-028
+  screen-space snap requirements.
+
+  Snap state persists in events
+  for deterministic replay.
+end note
+
+' =========================================================================
+' Pointer Up - Path Completion
+' =========================================================================
+
+group Pointer up closes path or continues
+  Designer -> DesktopShell: PointerUp()
+  DesktopShell -> ToolingFramework: dispatchPointerUp
+  ToolingFramework -> InteractionEngine: finalizeSegment()
+
+  InteractionEngine -> EventStoreService: record(path.anchor.added)
+  InteractionEngine -> EventStoreService: recordIfClose(FinishPathEvent)
+  EventStoreService --> InteractionEngine: sequences
+
+  InteractionEngine -> RenderingPipeline: commitPath()
+  RenderingPipeline --> InteractionEngine: commitComplete
+
+  InteractionEngine -> TelemetryService: log(metric="operation.duration")
+  TelemetryService --> InteractionEngine: ack
+
+  InteractionEngine -> SnapshotManager: notifyEventDelta(delta=3)
+  SnapshotManager --> InteractionEngine: thresholdPending
+end
+
+note over SnapshotManager
+  SnapshotManager tracks event deltas.
+  Snapshot creation triggers every
+  1000 events per ADR-001.
+end note
+
+' =========================================================================
+' Operation Boundary Detection
+' =========================================================================
+
+alt Idle boundary elapsed (>200ms)
+  InteractionEngine -> EventStoreService: record(operation.ended)
+  EventStoreService --> InteractionEngine: idleBoundaryAck
+
+  note right of EventStoreService
+    Operation boundary marks undo grouping.
+    200ms idle threshold prevents aggressive
+    fragmentation of user gestures.
+  end note
+else Continued drawing
+  InteractionEngine -> EventStoreService: keepOperationOpen()
+
+  note right of InteractionEngine
+    User continues drawing additional
+    segments within same operation.
+  end note
+end
+
+' =========================================================================
+' Summary Notes
+' =========================================================================
+
+note right of InteractionEngine
+  **Undo Grouping:**
+  Undo grouping obeys 200ms idle threshold.
+  Grid snapping status travels with each event
+  so replays mirror the same modifier semantics.
+
+  **Performance Monitoring:**
+  Cursor latency and sampling overhead get persisted
+  for NFR-PERF-004 validation and dashboard surfacing.
+
+  **Event Sourcing:**
+  All events stored immutably in EventStoreService.
+  RenderingPipeline paints previews from incremental
+  Document deltas for live feedback.
+end note
+
+@enduml

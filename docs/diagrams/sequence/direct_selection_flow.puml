@@ -1,0 +1,222 @@
+' =========================================================================
+' Direct Selection Drag with Collaboration Broadcast - Sequence Diagram
+' =========================================================================
+' Purpose: Documents the anchor drag interaction with real-time collaboration,
+'          showing how direct selection events are persisted, transformed via
+'          OT, and broadcast to remote peers while maintaining local responsiveness.
+'
+' Related Specs:
+'   - Architecture Blueprint Section 3.7.3.4 (Flow D)
+'   - ADR-001 (Hybrid State + History)
+'   - FR-024 (Anchor visibility)
+'   - FR-028 (Screen-space snapping)
+'   - FR-050 (Collaboration)
+'
+' Date: 2025-11-11
+' =========================================================================
+
+@startuml direct_selection_flow
+title Direct Selection Drag with Collaboration Broadcast
+
+' =========================================================================
+' Participants
+' =========================================================================
+
+actor Lead as "User"
+
+box "UI Layer" #FFFDE7
+  participant DesktopShell
+  participant ToolingFramework
+end box
+
+box "Event Pipeline" #FCE4EC
+  participant InteractionEngine
+  participant RenderingPipeline
+end box
+
+box "Persistence & Background" #E3F2FD
+  participant EventStoreService
+  participant BackgroundWorkerPool
+  participant TelemetryService
+end box
+
+box "Collaboration Layer" #E8F5E9
+  participant CollaborationGateway
+end box
+
+' =========================================================================
+' Tool Activation - Direct Selection Mode
+' =========================================================================
+
+Lead -> DesktopShell: Select Direct Selection Tool
+DesktopShell -> ToolingFramework: activateTool("directSelection")
+ToolingFramework -> InteractionEngine: registerPointerHandlers(mode="anchors")
+
+InteractionEngine -> RenderingPipeline: showAnchors(mode=document.anchorVisibilityMode)
+RenderingPipeline --> InteractionEngine: overlayReady
+
+note right of RenderingPipeline
+  Anchor visibility mode determined by
+  user settings per FR-024.
+
+  Supports: always, selected-only, hover
+end note
+
+' =========================================================================
+' Drag Initiation
+' =========================================================================
+
+group Drag initiation
+  Lead -> DesktopShell: PointerDown(anchor)
+  DesktopShell -> ToolingFramework: dispatchPointerDown
+  ToolingFramework -> InteractionEngine: beginAnchorDrag(anchorId)
+
+  InteractionEngine -> EventStoreService: record(path.anchor.moved start)
+  EventStoreService --> InteractionEngine: eventSequence
+
+  InteractionEngine -> CollaborationGateway: submitEvent(startPayload)
+  CollaborationGateway --> InteractionEngine: otAck(sequence)
+
+  InteractionEngine -> TelemetryService: log(metric="drag.start")
+  TelemetryService --> InteractionEngine: ack
+end
+
+note over CollaborationGateway
+  Collaboration events include document
+  role (owner, editor, viewer) for
+  operation authorization per FR-050.
+end note
+
+' =========================================================================
+' Sampled Movement Loop
+' =========================================================================
+
+loop Sampled movement every samplingInterval
+  Lead -> DesktopShell: Drag pointer
+  DesktopShell -> ToolingFramework: pointerMove(sample)
+  ToolingFramework -> InteractionEngine: updateAnchor(sample)
+
+  InteractionEngine -> RenderingPipeline: updateAnchorPreview(sample)
+  RenderingPipeline --> InteractionEngine: previewFrame
+
+  InteractionEngine -> BackgroundWorkerPool: enqueueSampleSerialization(sample)
+  BackgroundWorkerPool --> InteractionEngine: sampleSerialized
+
+  InteractionEngine -> EventStoreService: record(path.anchor.moved sample)
+  EventStoreService --> InteractionEngine: sampleSequence
+
+  InteractionEngine -> CollaborationGateway: submitEvent(samplePayload)
+  CollaborationGateway -> CollaborationGateway: applyOTTransform()
+  CollaborationGateway --> InteractionEngine: broadcastAck
+
+  InteractionEngine -> TelemetryService: log(metric="sampling.interval")
+  TelemetryService --> InteractionEngine: ack
+end
+
+note right of BackgroundWorkerPool
+  Sample serialization offloaded to worker
+  pool to prevent UI thread blocking on
+  large drag operations.
+
+  Sampling interval defaults to 200ms,
+  configurable via SettingsService.
+end note
+
+' =========================================================================
+' Modifier Snapping (Shift Key)
+' =========================================================================
+
+group Modifier snapping
+  Lead -> DesktopShell: Hold Shift
+  DesktopShell -> ToolingFramework: modifierUpdate(shift=true)
+  ToolingFramework -> InteractionEngine: enforceScreenSpaceSnap(step=10px)
+
+  InteractionEngine -> RenderingPipeline: drawSnapGuide()
+  RenderingPipeline --> InteractionEngine: snapGuideActive
+end
+
+note over RenderingPipeline
+  Screen-space snapping enforces FR-028
+  with 10px grid step.
+
+  Snap guides rendered as overlay to
+  provide immediate visual feedback.
+end note
+
+' =========================================================================
+' Drag Completion
+' =========================================================================
+
+group Drag completion
+  Lead -> DesktopShell: PointerUp
+  DesktopShell -> ToolingFramework: dispatchPointerUp
+  ToolingFramework -> InteractionEngine: endAnchorDrag()
+
+  InteractionEngine -> EventStoreService: record(path.anchor.moved end)
+  EventStoreService --> InteractionEngine: finalSequence
+
+  InteractionEngine -> CollaborationGateway: submitEvent(endPayload)
+  CollaborationGateway --> InteractionEngine: otAck
+
+  InteractionEngine -> TelemetryService: log(metric="drag.duration")
+  TelemetryService --> InteractionEngine: ack
+
+  InteractionEngine -> BackgroundWorkerPool: flushSampleQueue(anchorId)
+  BackgroundWorkerPool --> InteractionEngine: flushed
+end
+
+note over EventStoreService
+  Drag end event marks operation boundary.
+  Forms single undo unit with all samples
+  captured during the drag gesture.
+end note
+
+' =========================================================================
+' Remote Propagation
+' =========================================================================
+
+group Remote propagation
+  CollaborationGateway -> EventStoreService: appendRemoteEvent(transformed)
+  EventStoreService --> CollaborationGateway: storedForAnalytics
+
+  CollaborationGateway -> TelemetryService: log(metric="ot.conflict", value=0|n)
+  TelemetryService --> CollaborationGateway: ack
+
+  CollaborationGateway -> DesktopShell: broadcast(selection.sync)
+  DesktopShell -> RenderingPipeline: applyRemoteSelectionHighlights()
+  RenderingPipeline --> DesktopShell: highlightsApplied
+end
+
+note over CollaborationGateway
+  **OT Transform:**
+  Operational Transform resolves concurrent
+  edits to maintain causal consistency.
+
+  **Conflict Tracking:**
+  OT conflicts tracked in telemetry for
+  FR-050 analytics (collaboration UX quality).
+end note
+
+' =========================================================================
+' Summary Notes
+' =========================================================================
+
+note over InteractionEngine
+  **Selection Isolation:**
+  Selection state remains per artboard;
+  remote events targeting other artboards
+  are ignored by this window but still
+  persist in the event log.
+
+  **Performance:**
+  Drag metrics, OT conflicts, and snapping
+  usage feed analytics that validate
+  FR-028 and FR-050 adoption.
+
+  **Event Replay:**
+  All sampled positions stored in event log
+  enable high-fidelity replay during timeline
+  scrubbing or collaboration playback.
+end note
+
+@enduml

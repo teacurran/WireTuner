@@ -195,6 +195,12 @@
 <!-- anchor: key-interaction-flows -->
 #### 3.7.3 Key Interaction Flows
 
+> **Note:** Detailed PlantUML sequence diagrams for these flows are available in [`docs/diagrams/sequence/`](../../../docs/diagrams/sequence/), including:
+> - [`pen_flow.puml`](../../../docs/diagrams/sequence/pen_flow.puml) - Pen tool path creation with event sourcing
+> - [`direct_selection_flow.puml`](../../../docs/diagrams/sequence/direct_selection_flow.puml) - Direct selection drag with collaboration
+> - [`save_snapshot_flow.puml`](../../../docs/diagrams/sequence/save_snapshot_flow.puml) - Save and snapshot coordination
+> - [`import_flow.puml`](../../../docs/diagrams/sequence/import_flow.puml) - SVG/AI import with background processing
+
 <!-- anchor: flow-a-pen-path -->
 ##### 3.7.3.1 Flow A: Pen Tool Path Creation with Event Sourcing
 - Scenario targets Journey 1, focusing on how DesktopShell, ToolingFramework, and InteractionEngine convert pointer gestures into immutable events.
