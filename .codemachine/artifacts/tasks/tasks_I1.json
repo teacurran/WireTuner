@@ -12,7 +12,7 @@
     "acceptance_criteria": "Melos `bootstrap` succeeds; CI job runs analyze+test on placeholder targets; README documents workspace commands; no lint violations.",
     "dependencies": [],
     "parallelizable": true,
-    "done": false
+    "done": true
   },
   {
     "task_id": "I1.T2",

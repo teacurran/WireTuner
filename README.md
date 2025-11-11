@@ -198,16 +198,32 @@ flutter run -d windows
 
 ## Workspace Structure (Iteration I1+)
 
-WireTuner uses a **melos-managed monorepo** to organize code into reusable packages. The workspace enables independent development, testing, and versioning of core components.
+WireTuner uses a **melos-managed monorepo** to organize code into reusable packages following Clean Architecture principles. The workspace enables independent development, testing, and versioning of core components.
 
-### Package Overview
+### Package Overview (Clean Architecture Boundaries)
 
 ```
 packages/
-├── app_shell/         # Flutter UI shell and window management
-├── event_core/        # Event sourcing infrastructure (recorder, replayer, snapshots)
-└── vector_engine/     # Vector graphics engine (models, geometry, hit testing)
+├── app/               # [NEW] Presentation layer (UI, rendering, interactions)
+├── core/              # [NEW] Domain layer (business logic, immutable models)
+├── infrastructure/    # [NEW] Infrastructure layer (I/O, persistence, import/export)
+├── app_shell/         # [EXISTING] Flutter UI shell and window management
+├── event_core/        # [EXISTING] Event sourcing infrastructure
+├── io_services/       # [EXISTING] SQLite persistence gateway
+├── tool_framework/    # [EXISTING] Tool interaction framework
+└── vector_engine/     # [EXISTING] Vector graphics engine
+
+server/
+└── collaboration-gateway/  # [FUTURE] Backend service (GraphQL + WebSocket)
 ```
+
+**Architecture Mapping:**
+- **`packages/app`** → Presentation Layer (UI, widgets, rendering)
+- **`packages/core`** → Domain Layer (pure business logic, immutable models, events)
+- **`packages/infrastructure`** → Infrastructure Layer (event store, file I/O, SVG/PDF)
+- **`server/collaboration-gateway`** → Backend Service (collaboration, sync, real-time features)
+
+**Note:** The `app`, `core`, `infrastructure`, and `server/collaboration-gateway` packages are placeholder stubs created in Iteration I1 to establish package boundaries. Existing packages (`app_shell`, `event_core`, `io_services`, `tool_framework`, `vector_engine`) contain working implementations and will be progressively migrated to the new structure in future iterations.
 
 ### Workspace Commands
 
@@ -229,12 +245,26 @@ melos run format
 # Check formatting without modifying files
 melos run format:check
 
+# Run code generation (freezed, json_serializable)
+melos run build:runner
+
 # Clean all packages
 melos run clean
 
 # Run pub get in all packages
 melos run get
+
+# Target specific packages with --scope
+melos run test --scope=core
+melos run analyze --scope=app
 ```
+
+**CI Integration:**
+All GitHub Actions workflows use melos commands to ensure consistency across local development and CI environments. The CI pipeline automatically:
+- Activates melos via `dart pub global activate melos`
+- Bootstraps the workspace with `melos bootstrap`
+- Runs analysis with `melos run analyze` (enforces --fatal-infos --fatal-warnings)
+- Executes tests with `melos run test` across all packages
 
 For detailed workspace architecture, see [.codemachine/artifacts/plan/01_Plan_Overview_and_Setup.md#directory-structure](.codemachine/artifacts/plan/01_Plan_Overview_and_Setup.md#directory-structure).
 

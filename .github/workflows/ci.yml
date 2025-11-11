@@ -44,15 +44,18 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-pub-
 
-      - name: Get dependencies
-        run: flutter pub get
+      - name: Install Melos
+        run: dart pub global activate melos
+
+      - name: Bootstrap workspace
+        run: melos bootstrap
 
       - name: Run code generation (if needed)
-        run: flutter pub run build_runner build --delete-conflicting-outputs || echo "No code generation needed"
+        run: melos run build:runner || echo "No code generation needed"
         shell: bash
 
       - name: Run analyzer
-        run: flutter analyze --fatal-infos --fatal-warnings
+        run: melos run analyze
 
       - name: Check formatting
         run: dart format --set-exit-if-changed lib/ test/
@@ -89,15 +92,18 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-pub-
 
-      - name: Get dependencies
-        run: flutter pub get
+      - name: Install Melos
+        run: dart pub global activate melos
+
+      - name: Bootstrap workspace
+        run: melos bootstrap
 
       - name: Run code generation (if needed)
-        run: flutter pub run build_runner build --delete-conflicting-outputs || echo "No code generation needed"
+        run: melos run build:runner || echo "No code generation needed"
         shell: bash
 
       - name: Run unit and widget tests
-        run: flutter test --exclude-tags=integration
+        run: melos run test
 
       - name: Run integration tests
         run: flutter test test/integration/
@@ -204,11 +210,14 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-pub-
 
-      - name: Get dependencies
-        run: flutter pub get
+      - name: Install Melos
+        run: dart pub global activate melos
+
+      - name: Bootstrap workspace
+        run: melos bootstrap
 
       - name: Run code generation (if needed)
-        run: flutter pub run build_runner build --delete-conflicting-outputs || echo "No code generation needed"
+        run: melos run build:runner || echo "No code generation needed"
         shell: bash
 
       - name: Build for platform (debug)
