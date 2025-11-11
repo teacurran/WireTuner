@@ -2,7 +2,7 @@
   "$schema": "http://json-schema.org/draft-07/schema#",
   "$id": "https://wiretuner.dev/schemas/snapshot.schema.json",
   "title": "WireTuner Snapshot Schema",
-  "description": "JSON Schema for WireTuner document state snapshots created during event sourcing replay. Snapshots are captured every 1000 events (adaptive cadence) to enable fast document loading without full event replay. Schema Version: 1.0.0",
+  "description": "JSON Schema for WireTuner document state snapshots created during event sourcing replay. Snapshots are captured every 500 events (base interval per ADR-0003) with adaptive cadence multipliers and timer-based triggers (10-minute rule) to enable fast document loading without full event replay. Schema Version: 1.0.0",
   "type": "object",
   "required": [
     "snapshotId",
@@ -67,8 +67,8 @@
         },
         "baseInterval": {
           "type": "integer",
-          "description": "Base snapshot interval configuration (WIRETUNER_SNAPSHOT_BASE_INTERVAL)",
-          "default": 1000
+          "description": "Base snapshot interval configuration (WIRETUNER_SNAPSHOT_BASE_INTERVAL). Default per ADR-0003 is 500 events.",
+          "default": 500
         },
         "burstMultiplier": {
           "type": "number",
