@@ -30,6 +30,13 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "0.3.2+1"
+  app:
+    dependency: "direct main"
+    description:
+      path: "packages/app"
+      relative: true
+    source: path
+    version: "0.1.0"
   app_shell:
     dependency: "direct main"
     description:
@@ -229,6 +236,13 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "3.1.2"
+  core:
+    dependency: transitive
+    description:
+      path: "packages/core"
+      relative: true
+    source: path
+    version: "0.1.0"
   crypto:
     dependency: "direct dev"
     description:
@@ -413,6 +427,13 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "4.3.0"
+  infrastructure:
+    dependency: transitive
+    description:
+      path: "packages/infrastructure"
+      relative: true
+    source: path
+    version: "0.1.0"
   integration_test:
     dependency: "direct dev"
     description: flutter

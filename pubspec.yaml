@@ -12,6 +12,8 @@ dependencies:
     sdk: flutter
 
   # Local packages
+  app:
+    path: packages/app
   app_shell:
     path: packages/app_shell
   event_core:

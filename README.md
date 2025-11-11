@@ -344,6 +344,33 @@ flutter analyze
 flutter format lib/ test/
 ```
 
+### Design Token Management
+
+WireTuner uses a centralized design token system defined in `docs/ui/tokens.md`. To regenerate Dart theme code from tokens:
+
+```bash
+# Run the design token exporter CLI
+dart tools/design-token-exporter/cli.dart
+```
+
+This validates the token definitions and confirms that generated files (`packages/app/lib/theme/tokens.dart` and `packages/app/lib/theme/theme_data.dart`) are up to date.
+
+**Token usage in code:**
+```dart
+// Access tokens via BuildContext extension
+final tokens = context.tokens;
+final bgColor = tokens.surface.base;
+final spacing = tokens.spacing.spacing8;
+
+// Use typography tokens
+Text(
+  'Hello',
+  style: tokens.typography.md.toTextStyle(color: tokens.text.primary),
+);
+```
+
+See `docs/ui/tokens.md` for the complete token registry documentation.
+
 ## Event Sourcing Architecture
 
 WireTuner uses event sourcing as its core architectural pattern:

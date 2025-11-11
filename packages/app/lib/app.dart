@@ -8,6 +8,7 @@
 /// - Rendering pipeline (CustomPainter, canvas operations)
 /// - User interaction handling
 /// - State management with Provider
+/// - Design system and theming
 ///
 /// **Dependencies:**
 /// - Depends on `core` for domain models and business logic
@@ -15,6 +16,10 @@
 ///
 /// **Architecture Layer:** Presentation (outermost layer)
 library app;
+
+// Theme exports
+export 'theme/tokens.dart';
+export 'theme/theme_data.dart';
 
 /// Placeholder export to satisfy pub requirements.
 /// Actual implementation will be added in future iterations.

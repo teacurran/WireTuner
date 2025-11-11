@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import 'package:logger/logger.dart';
 import 'package:event_core/event_core.dart';
 import 'package:app_shell/app_shell.dart';
+import 'package:app/app.dart';
 import 'package:wiretuner/application/services/document_event_applier.dart';
 import 'package:wiretuner/application/services/undo_service.dart';
 import 'package:wiretuner/application/tools/direct_selection/direct_selection_tool.dart';
@@ -43,10 +44,7 @@ class App extends StatelessWidget {
   @override
   Widget build(BuildContext context) => MaterialApp(
         title: 'WireTuner',
-        theme: ThemeData(
-          colorScheme: ColorScheme.fromSeed(seedColor: Colors.blue),
-          useMaterial3: true,
-        ),
+        theme: buildWireTunerTheme(brightness: Brightness.dark),
         home: const _AppInitializer(),
       );
 }
