@@ -380,6 +380,8 @@ class RenderMetrics {
     required this.objectsRendered,
     required this.objectsCulled,
     required this.cacheSize,
+    this.snapshotDurationMs,
+    this.replayRateEventsPerSec,
   });
 
   /// Total frame rendering time in milliseconds.
@@ -394,8 +396,36 @@ class RenderMetrics {
   /// Current path cache size.
   final int cacheSize;
 
+  /// Duration of last snapshot operation in milliseconds.
+  /// Null if no snapshot has been created yet.
+  final double? snapshotDurationMs;
+
+  /// Event replay rate in events per second.
+  /// Null if no replay activity.
+  final double? replayRateEventsPerSec;
+
   /// Frames per second estimate (1000 / frameTimeMs).
   double get fps => 1000.0 / frameTimeMs;
+
+  /// Creates a copy with updated values.
+  RenderMetrics copyWith({
+    double? frameTimeMs,
+    int? objectsRendered,
+    int? objectsCulled,
+    int? cacheSize,
+    double? snapshotDurationMs,
+    double? replayRateEventsPerSec,
+  }) {
+    return RenderMetrics(
+      frameTimeMs: frameTimeMs ?? this.frameTimeMs,
+      objectsRendered: objectsRendered ?? this.objectsRendered,
+      objectsCulled: objectsCulled ?? this.objectsCulled,
+      cacheSize: cacheSize ?? this.cacheSize,
+      snapshotDurationMs: snapshotDurationMs ?? this.snapshotDurationMs,
+      replayRateEventsPerSec:
+          replayRateEventsPerSec ?? this.replayRateEventsPerSec,
+    );
+  }
 
   @override
   String toString() {
@@ -404,7 +434,9 @@ class RenderMetrics {
         'fps: ${fps.toStringAsFixed(1)}, '
         'rendered: $objectsRendered, '
         'culled: $objectsCulled, '
-        'cacheSize: $cacheSize'
+        'cacheSize: $cacheSize, '
+        'snapshotDuration: ${snapshotDurationMs?.toStringAsFixed(2) ?? "N/A"}ms, '
+        'replayRate: ${replayRateEventsPerSec?.toStringAsFixed(1) ?? "N/A"} events/sec'
         ')';
   }
 }

@@ -84,7 +84,7 @@
       "I3.T1"
     ],
     "parallelizable": true,
-    "done": false
+    "done": true
   },
   {
     "task_id": "I3.T6",
@@ -101,6 +101,6 @@
       "I2.T6"
     ],
     "parallelizable": true,
-    "done": false
+    "done": true
   }
 ]

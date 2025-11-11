@@ -11,6 +11,10 @@ dependencies:
   flutter:
     sdk: flutter
 
+  # Main wiretuner package
+  wiretuner:
+    path: ../../
+
   # Domain layer
   core:
     path: ../core
@@ -24,6 +28,9 @@ dependencies:
 
   # Logging
   logger: ^2.0.0
+
+  # Preferences
+  shared_preferences: ^2.2.0
 
 dev_dependencies:
   flutter_test:

@@ -296,6 +296,14 @@ class MetricsCatalog {
   /// Snapshot duration in milliseconds metric name.
   static const snapshotDurationMs = 'snapshot.duration_ms';
 
+  /// Snapshot duration in milliseconds metric name (performance monitoring).
+  /// Matches Section 3.6 metrics requirement: performance.snapshot.ms
+  static const snapshotDuration = 'performance.snapshot.ms';
+
+  /// Event replay rate in events per second metric name (performance monitoring).
+  /// Matches Section 3.6 metrics requirement: performance.event.replay.rate
+  static const eventReplayRate = 'performance.event.replay.rate';
+
   /// Count of deferred snapshots metric name.
   static const snapshotDeferredCount = 'snapshot.deferred.count';
 
