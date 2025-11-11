@@ -417,10 +417,11 @@ Before submitting a pull request, ensure:
    - Require UX lead approval for UI drifts
    - Store baseline golden images in repository
 
-3. **Performance Regression Gates**
-   - Nightly performance test suite
+3. **Performance Regression Gates** ✅ **IMPLEMENTED (I5.T4)**
+   - Nightly performance test suite (see [perf_benchmarks.md](perf_benchmarks.md))
    - Trend analysis with ±5% tolerance
    - Block releases on regression
+   - **Status:** Benchmark plan documented; implementation pending I5.T6
 
 4. **PlantUML/Diagram Regeneration**
    - Auto-regenerate diagrams on source changes
@@ -441,6 +442,9 @@ Before submitting a pull request, ensure:
 - [Quality Gate Script](../scripts/devtools/quality_gate.sh)
 - [CI Scripts README](../scripts/ci/README.md)
 - [Verification Strategy](../../.codemachine/artifacts/architecture/03_Verification_and_Glossary.md)
+- **[Verification Matrix](verification_matrix.md)** - Complete FR/NFR → test mapping (I5.T4)
+- **[Performance Benchmarks](perf_benchmarks.md)** - Performance benchmark plan and KPI targets (I5.T4)
+- **[Integration Test Strategy](../../test/integration/README.md)** - Integration test orchestration guide (I5.T4)
 
 ### Task Context
 - **Task ID:** I1.T6
@@ -463,3 +467,4 @@ Before submitting a pull request, ensure:
 | Version | Date | Changes | Author |
 |---------|------|---------|--------|
 | 1.0 | 2025-11-10 | Initial quality gates documentation (I1.T6) | DevOps Team |
+| 1.1 | 2025-11-11 | Added references to verification matrix, benchmark plan, and integration test strategy (I5.T4) | QA Team |
