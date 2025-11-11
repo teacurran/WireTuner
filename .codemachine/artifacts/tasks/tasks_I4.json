@@ -2,195 +2,107 @@
   {
     "task_id": "I4.T1",
     "iteration_id": "I4",
-    "iteration_goal": "Deliver operation-based undo/redo, history browsing, snapshot tuning, direct manipulation polish (drag handles/objects), and multi-window coordination aligned with Decisions 1, 2, and 7.",
-    "description": "Implement operation grouping service that listens to event recorder, detects idle thresholds (200 ms), and emits operation boundaries with descriptions.",
-    "agent_type_hint": "BackendAgent",
-    "inputs": "Decision 7, Task `I1.T3` recorder interfaces, telemetry from `I3.T9`.",
+    "iteration_goal": "Finalize multi-artboard persistence, navigator tabs, per-artboard state isolation, window lifecycle, collaboration gateway MVP, and history replay UI.",
+    "description": "Extend domain + persistence layers for multi-artboard (list of artboards, per-artboard layers, viewport/selection state) with migrations and version bump to v2.0.0.",
+    "agent_type_hint": "DatabaseAgent",
+    "inputs": "FR-029–FR-045, ADR-005.",
     "target_files": [],
     "input_files": [],
-    "deliverables": "Grouping service with configurable idle threshold, tests covering continuous typing vs. paused operations, and doc comments referencing Decision 7.",
-    "acceptance_criteria": "Groups contiguous events correctly; exposes API for manual boundaries; tests cover edge cases; metrics log operations/sec.",
+    "deliverables": "Updated models, migration scripts, ADR, tests covering serialization & replay.",
+    "acceptance_criteria": "Migration converts single artboard docs; events carry artboardId; snapshots validated; version constant bumped.",
     "dependencies": [
-      "I3.T9"
+      "I3.T1",
+      "I3.T3"
     ],
     "parallelizable": false,
-    "done": true
+    "done": false
   },
   {
     "task_id": "I4.T2",
     "iteration_id": "I4",
-    "iteration_goal": "Deliver operation-based undo/redo, history browsing, snapshot tuning, direct manipulation polish (drag handles/objects), and multi-window coordination aligned with Decisions 1, 2, and 7.",
-    "description": "Produce Mermaid timeline diagram illustrating undo/redo navigation across snapshots, operations, and event sequences, including redo-branch invalidation.",
-    "agent_type_hint": "DiagrammingAgent",
-    "inputs": "Task `I4.T1`, Decision 7, Section 2.1 artifact plan.",
+    "iteration_goal": "Finalize multi-artboard persistence, navigator tabs, per-artboard state isolation, window lifecycle, collaboration gateway MVP, and history replay UI.",
+    "description": "Implement navigator thumbnail pipeline (auto-refresh, save-triggered refresh, manual refresh action) with background worker + caching.",
+    "agent_type_hint": "FrontendAgent",
+    "inputs": "FR-039, Section 7.5.",
     "target_files": [],
     "input_files": [],
-    "deliverables": "Timeline showing events vs. operations, snapshot markers, user actions, and notes about performance targets.",
-    "acceptance_criteria": "Diagram renders via Mermaid CLI; includes anchors; referenced in README/manifest; clearly states redo clearing rules.",
+    "deliverables": "Thumbnail worker, caching policy, tests ensuring idle/refresh triggers.",
+    "acceptance_criteria": "Updates after 10s idle or save; manual refresh command; caches per artboard; telemetry emits `thumbnail.refresh.age`.",
     "dependencies": [
       "I4.T1"
     ],
     "parallelizable": true,
-    "done": true
+    "done": false
   },
   {
     "task_id": "I4.T3",
     "iteration_id": "I4",
-    "iteration_goal": "Deliver operation-based undo/redo, history browsing, snapshot tuning, direct manipulation polish (drag handles/objects), and multi-window coordination aligned with Decisions 1, 2, and 7.",
-    "description": "Implement undo/redo navigator service integrating snapshots, operation grouping, and Provider notifications; expose keyboard bindings (Cmd/Ctrl+Z, Shift+Cmd/Ctrl+Z).",
-    "agent_type_hint": "BackendAgent",
-    "inputs": "Tasks `I4.T1`, `I2.T4`, `I2.T10`, `I3.T9`.",
+    "iteration_goal": "Finalize multi-artboard persistence, navigator tabs, per-artboard state isolation, window lifecycle, collaboration gateway MVP, and history replay UI.",
+    "description": "Deliver full history replay UI + ReplayService checkpoint cache, including scrubber, playback controls, speed adjustments, and preview rendering.",
+    "agent_type_hint": "FrontendAgent",
+    "inputs": "ADR-006, Flow J, FR-027.",
     "target_files": [],
     "input_files": [],
-    "deliverables": "Undo navigator with APIs for undo/redo/scrub, provider integration updating UI, tests covering navigation/resets.",
-    "acceptance_criteria": "Undo respects operation boundaries; redo invalidated on new events; tests cover multi-window state separation; logging includes operation names.",
+    "deliverables": "Checkpoint cache, timeline UI, playback logic, tests for seek latency.",
+    "acceptance_criteria": "Checkpoints every 1k events; <50 ms seek target; UI supports 0.5×–10× speeds; telemetry instrumentation added.",
     "dependencies": [
-      "I4.T1",
-      "I2.T4"
+      "I2.T3",
+      "I3.T1"
     ],
     "parallelizable": false,
-    "done": true
+    "done": false
   },
   {
     "task_id": "I4.T4",
     "iteration_id": "I4",
-    "iteration_goal": "Deliver operation-based undo/redo, history browsing, snapshot tuning, direct manipulation polish (drag handles/objects), and multi-window coordination aligned with Decisions 1, 2, and 7.",
-    "description": "Build history panel UI showing chronological operations with thumbnails, search/filter, and scrubber that replays at target 5k events/sec for preview.",
-    "agent_type_hint": "FrontendAgent",
-    "inputs": "Undo navigator, render pipeline, telemetry.",
+    "iteration_goal": "Finalize multi-artboard persistence, navigator tabs, per-artboard state isolation, window lifecycle, collaboration gateway MVP, and history replay UI.",
+    "description": "Implement collaboration gateway MVP (Dart Frog) with WebSocket OT channel, GraphQL presence subscription fallback, Redis pub/sub integration, and client CollaborationClient.",
+    "agent_type_hint": "BackendAgent",
+    "inputs": "ADR-002, Section 7.9.",
     "target_files": [],
     "input_files": [],
-    "deliverables": "History panel widget, thumbnail generator (offscreen render), tests verifying scroll/search, and doc snippet.",
-    "acceptance_criteria": "Panel loads operations lazily; scrubbing updates canvas within budget; thumbnails cached; tests emulate search + navigation.",
+    "deliverables": "WebSocket server, OT transformer library, client integration.",
+    "acceptance_criteria": "Handles ≥10 concurrent editors; OT tests cover anchor/object operations; presence updates propagate; security enforced (JWT validation).",
     "dependencies": [
-      "I4.T3",
-      "I2.T6"
+      "I2.T2",
+      "I3.T1"
     ],
     "parallelizable": false,
-    "done": true
+    "done": false
   },
   {
     "task_id": "I4.T5",
     "iteration_id": "I4",
-    "iteration_goal": "Deliver operation-based undo/redo, history browsing, snapshot tuning, direct manipulation polish (drag handles/objects), and multi-window coordination aligned with Decisions 1, 2, and 7.",
-    "description": "Enhance direct manipulation flows (object dragging, anchor handles) with inertia options, magnetic grid snapping, and event batching to reduce noise while maintaining accuracy.",
+    "iteration_goal": "Finalize multi-artboard persistence, navigator tabs, per-artboard state isolation, window lifecycle, collaboration gateway MVP, and history replay UI.",
+    "description": "Build collaboration UI (presence panel, live cursors, conflict banners) with accessibility cues, latency indicators, and offline fallback messaging.",
     "agent_type_hint": "FrontendAgent",
-    "inputs": "Tools from `I3`, operation grouping, metrics.",
+    "inputs": "Section 6 (presence components), Flow I.",
     "target_files": [],
     "input_files": [],
-    "deliverables": "Snapping service, updated tool logic, tests verifying accuracy + buffered events.",
-    "acceptance_criteria": "Snapping toggles respond instantly; operations aggregated elegantly; tests assert drift <1px; doc updates describe grid settings.",
+    "deliverables": "UI modules, hooking into CollaborationClient events, tests for offline fallback.",
+    "acceptance_criteria": "Presence panel updates in <500 ms; cursors respect color palette; conflict banner actions wired.",
     "dependencies": [
-      "I4.T1",
-      "I3.T4"
+      "I4.T4"
     ],
-    "parallelizable": true,
-    "done": true
+    "parallelizable": false,
+    "done": false
   },
   {
     "task_id": "I4.T6",
     "iteration_id": "I4",
-    "iteration_goal": "Deliver operation-based undo/redo, history browsing, snapshot tuning, direct manipulation polish (drag handles/objects), and multi-window coordination aligned with Decisions 1, 2, and 7.",
-    "description": "Tune snapshot cadence (default 1000 events) via adaptive strategy (dense editing vs. idle) and surface instrumentation showing snapshot queue/backlog.",
-    "agent_type_hint": "BackendAgent",
-    "inputs": "Snapshot serializer, operation grouping metrics, Decision 1.",
-    "target_files": [],
-    "input_files": [],
-    "deliverables": "Adaptive snapshot logic, tests verifying thresholds, reference doc describing heuristics + overrides.",
-    "acceptance_criteria": "Snapshot creation stays under 100 ms; doc explains CLI/env overrides; instrumentation displays queue status in logs.",
-    "dependencies": [
-      "I2.T4",
-      "I1.T8"
-    ],
-    "parallelizable": true,
-    "done": true
-  },
-  {
-    "task_id": "I4.T7",
-    "iteration_id": "I4",
-    "iteration_goal": "Deliver operation-based undo/redo, history browsing, snapshot tuning, direct manipulation polish (drag handles/objects), and multi-window coordination aligned with Decisions 1, 2, and 7.",
-    "description": "Implement multi-window coordination: ensure each document window maintains isolated undo stacks, metrics, and logging context; add window manager tests.",
-    "agent_type_hint": "BackendAgent",
-    "inputs": "Decision 2, undo navigator, workspace shell.",
-    "target_files": [],
-    "input_files": [],
-    "deliverables": "Window manager enhancements, tests verifying isolation, doc describing lifecycle + cleanup hooks.",
-    "acceptance_criteria": "Opening multiple windows duplicates state cleanly; closing window frees resources; doc references Decision 2; tests simulate 3 windows.",
-    "dependencies": [
-      "I4.T3"
-    ],
-    "parallelizable": false,
-    "done": true
-  },
-  {
-    "task_id": "I4.T8",
-    "iteration_id": "I4",
-    "iteration_goal": "Deliver operation-based undo/redo, history browsing, snapshot tuning, direct manipulation polish (drag handles/objects), and multi-window coordination aligned with Decisions 1, 2, and 7.",
-    "description": "Build timeline scrubber keyboard shortcuts + transport controls (play, pause, step forward/back) for history replay, aligning with Decision 1 performance targets.",
+    "iteration_goal": "Finalize multi-artboard persistence, navigator tabs, per-artboard state isolation, window lifecycle, collaboration gateway MVP, and history replay UI.",
+    "description": "Implement window lifecycle manager (Navigator root, artboard windows, close prompts, per-window state persistence) and update platform integrations (QuickLook/Explorer hooks).",
     "agent_type_hint": "FrontendAgent",
-    "inputs": "History panel, undo navigator, event replayer.",
+    "inputs": "Journey 10–18, FR-040, FR-047, FR-048.",
     "target_files": [],
     "input_files": [],
-    "deliverables": "Transport widget, keyboard mapping (J/K/L style), tests verifying playback rates + UI states.",
-    "acceptance_criteria": "Replay hits 5k events/sec target; UI disables controls appropriately; tests cover playback + stepping; user doc updated.",
+    "deliverables": "Window manager, prompts, platform thumbnail generators.",
+    "acceptance_criteria": "Closing Navigator prompts to close document; artboard windows reopen with viewport state; macOS QuickLook & Windows Explorer show thumbnails; tests simulate lifecycle events.",
     "dependencies": [
-      "I4.T4"
+      "I3.T2",
+      "I3.T3"
     ],
     "parallelizable": true,
-    "done": true
-  },
-  {
-    "task_id": "I4.T9",
-    "iteration_id": "I4",
-    "iteration_goal": "Deliver operation-based undo/redo, history browsing, snapshot tuning, direct manipulation polish (drag handles/objects), and multi-window coordination aligned with Decisions 1, 2, and 7.",
-    "description": "Add crash recovery validation: simulate crash mid-operation, relaunch app, ensure last snapshot + events restore state; document recovery steps for users.",
-    "agent_type_hint": "QAAgent",
-    "inputs": "Snapshot manager, undo navigator, CI benchmark harness.",
-    "target_files": [],
-    "input_files": [],
-    "deliverables": "Integration test forcing abrupt termination, QA playbook describing manual validation, metrics summary.",
-    "acceptance_criteria": "Recovery test passes; playbook lists reproduction steps; metrics show <100 ms load time; doc references Decision 1.",
-    "dependencies": [
-      "I4.T6",
-      "I4.T3"
-    ],
-    "parallelizable": false,
-    "done": true
-  },
-  {
-    "task_id": "I4.T10",
-    "iteration_id": "I4",
-    "iteration_goal": "Deliver operation-based undo/redo, history browsing, snapshot tuning, direct manipulation polish (drag handles/objects), and multi-window coordination aligned with Decisions 1, 2, and 7.",
-    "description": "Implement history export/import stubs (JSON) for debugging: allow exporting subsections of event log and re-importing for reproduction, flagged as dev-only feature.",
-    "agent_type_hint": "BackendAgent",
-    "inputs": "Event schema, undo navigator, snapshot serializer.",
-    "target_files": [],
-    "input_files": [],
-    "deliverables": "Export/import API, tests verifying schema compliance, doc describing dev workflow + warnings.",
-    "acceptance_criteria": "Exported JSON validated against schema; import rebuilds state; doc marks feature experimental; CLI command added to `justfile`.",
-    "dependencies": [
-      "I4.T3",
-      "I2.T4"
-    ],
-    "parallelizable": true,
-    "done": true
-  },
-  {
-    "task_id": "I4.T11",
-    "iteration_id": "I4",
-    "iteration_goal": "Deliver operation-based undo/redo, history browsing, snapshot tuning, direct manipulation polish (drag handles/objects), and multi-window coordination aligned with Decisions 1, 2, and 7.",
-    "description": "Update QA + documentation to include undo/redo usage, history panel instructions, troubleshooting tips for timeline playback, and parity verification steps.",
-    "agent_type_hint": "DocumentationAgent",
-    "inputs": "Tasks `I4.T1`–`I4.T10`, existing QA docs, Section 6 verification strategy.",
-    "target_files": [],
-    "input_files": [],
-    "deliverables": "New checklist, README history section, reference doc with screenshots/anchors.",
-    "acceptance_criteria": "Documentation references all relevant anchors; QA checklist includes macOS/Windows shortcuts; Markdown lint passes; manifest updated.",
-    "dependencies": [
-      "I4.T8",
-      "I4.T9"
-    ],
-    "parallelizable": false,
-    "done": true
+    "done": false
   }
 ]
