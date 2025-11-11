@@ -136,7 +136,8 @@ class DirectSelectionTool implements ITool {
   final PathRenderer _pathRenderer;
   final OperationGroupingService? _operationGroupingService;
   // ignore: unused_field
-  final TelemetryService? _telemetryService; // Reserved for future telemetry instrumentation
+  final TelemetryService?
+      _telemetryService; // Reserved for future telemetry instrumentation
   final Logger _logger = Logger();
   final Uuid _uuid = const Uuid();
 
@@ -718,7 +719,6 @@ class DirectSelectionTool implements ITool {
   void _recordEvent(EventBase event) {
     _eventRecorder.recordEvent(event);
   }
-
 }
 
 /// Internal state for drag operations.

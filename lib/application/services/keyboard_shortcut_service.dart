@@ -43,7 +43,8 @@ class KeyboardShortcutService {
   /// - Redo: Cmd+Shift+Z (macOS) or Ctrl+Shift+Z (Windows/Linux)
   static Map<ShortcutActivator, Intent> getShortcuts() {
     final isMacOS = Platform.isMacOS;
-    final modifier = isMacOS ? LogicalKeyboardKey.meta : LogicalKeyboardKey.control;
+    final modifier =
+        isMacOS ? LogicalKeyboardKey.meta : LogicalKeyboardKey.control;
 
     return {
       // Undo: Cmd/Ctrl+Z
@@ -71,7 +72,8 @@ class KeyboardShortcutService {
   static Map<Type, Action<Intent>> getActions({
     required VoidCallback onUndo,
     required VoidCallback onRedo,
-  }) => {
+  }) =>
+      {
         UndoIntent: CallbackAction<UndoIntent>(
           onInvoke: (_) {
             onUndo();

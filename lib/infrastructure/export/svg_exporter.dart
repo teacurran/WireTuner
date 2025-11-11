@@ -248,7 +248,8 @@ class SvgExporter {
     // Start with 'M' (move to first anchor)
     final firstAnchor = path.anchors[0];
     buffer.write(
-        'M ${_fmt(firstAnchor.position.x)} ${_fmt(firstAnchor.position.y)}',);
+      'M ${_fmt(firstAnchor.position.x)} ${_fmt(firstAnchor.position.y)}',
+    );
 
     // Process each segment
     for (final segment in path.segments) {
@@ -274,7 +275,8 @@ class SvgExporter {
         buffer.write(' C ${_fmt(cp1.x)} ${_fmt(cp1.y)},');
         buffer.write(' ${_fmt(cp2.x)} ${_fmt(cp2.y)},');
         buffer.write(
-            ' ${_fmt(endAnchor.position.x)} ${_fmt(endAnchor.position.y)}',);
+          ' ${_fmt(endAnchor.position.x)} ${_fmt(endAnchor.position.y)}',
+        );
       }
     }
 

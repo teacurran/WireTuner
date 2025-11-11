@@ -1,7 +1,7 @@
 # WireTuner
 
-[![CI](https://github.com/YOUR_USERNAME/WireTuner/actions/workflows/ci.yml/badge.svg)](https://github.com/YOUR_USERNAME/WireTuner/actions/workflows/ci.yml)
-[![Release](https://github.com/YOUR_USERNAME/WireTuner/actions/workflows/release.yml/badge.svg)](https://github.com/YOUR_USERNAME/WireTuner/actions/workflows/release.yml)
+[![CI](https://github.com/teacurran/WireTuner/actions/workflows/ci.yml/badge.svg)](https://github.com/teacurran/WireTuner/actions/workflows/ci.yml)
+[![Release](https://github.com/teacurran/WireTuner/actions/workflows/release.yml/badge.svg)](https://github.com/teacurran/WireTuner/actions/workflows/release.yml)
 [![License](https://img.shields.io/badge/license-TBD-blue.svg)](LICENSE)
 
 A professional event-sourced vector drawing application for macOS and Windows built with Flutter.
@@ -51,13 +51,13 @@ WireTuner is a desktop vector drawing application designed with an event-sourcin
 
 | Platform | Download | Requirements |
 |----------|----------|--------------|
-| **macOS** | [WireTuner-0.1.0-macOS.dmg](https://github.com/YOUR_USERNAME/WireTuner/releases) | macOS 10.15 (Catalina) or later<br/>Intel + Apple Silicon supported |
-| **Windows** | [WireTuner-0.1.0-Windows-Setup.exe](https://github.com/YOUR_USERNAME/WireTuner/releases) | Windows 10 version 1809 or later<br/>x64 architecture |
+| **macOS** | [WireTuner-0.1.0-macOS.dmg](https://github.com/teacurran/WireTuner/releases) | macOS 10.15 (Catalina) or later<br/>Intel + Apple Silicon supported |
+| **Windows** | [WireTuner-0.1.0-Windows-Setup.exe](https://github.com/teacurran/WireTuner/releases) | Windows 10 version 1809 or later<br/>x64 architecture |
 
 ### Installation Instructions
 
 #### macOS
-1. Download `WireTuner-0.1.0-macOS.dmg` from [GitHub Releases](https://github.com/YOUR_USERNAME/WireTuner/releases)
+1. Download `WireTuner-0.1.0-macOS.dmg` from [GitHub Releases](https://github.com/teacurran/WireTuner/releases)
 2. Open the DMG file
 3. Drag WireTuner.app to Applications folder
 4. Launch from Applications
@@ -65,7 +65,7 @@ WireTuner is a desktop vector drawing application designed with an event-sourcin
 **Note:** The app is notarized for macOS 10.15+ and signed with a Developer ID certificate.
 
 #### Windows
-1. Download `WireTuner-0.1.0-Windows-Setup.exe` from [GitHub Releases](https://github.com/YOUR_USERNAME/WireTuner/releases)
+1. Download `WireTuner-0.1.0-Windows-Setup.exe` from [GitHub Releases](https://github.com/teacurran/WireTuner/releases)
 2. Run the installer
 3. Follow the installation wizard
 4. Launch from Start Menu or Desktop shortcut
@@ -86,7 +86,7 @@ shasum -a 256 WireTuner-0.1.0-macOS.dmg
 Get-FileHash WireTuner-0.1.0-Windows-Setup.exe -Algorithm SHA256
 ```
 
-Compare the output with the checksums published in the [release notes](https://github.com/YOUR_USERNAME/WireTuner/releases).
+Compare the output with the checksums published in the [release notes](https://github.com/teacurran/WireTuner/releases).
 
 ### Build from Source
 
@@ -681,6 +681,27 @@ Before starting development, ensure your environment meets all requirements:
    - Types: feat, fix, docs, refactor, test, chore
    - Example: `feat(persistence): add event snapshot compression`
 
+### Pull Request Checklist
+
+Before submitting a pull request, ensure all quality gates pass:
+
+- [ ] **Code Formatting:** `dart format lib/ test/` passes with zero violations
+- [ ] **Static Analysis:** `melos run analyze` passes with zero issues (infos/warnings/errors)
+- [ ] **Unit Tests:** `melos run test` shows 100% passing tests
+- [ ] **Quality Gates:** `./scripts/devtools/quality_gate.sh` passes locally
+- [ ] **CI Pipeline:** GitHub Actions shows green checkmarks for all jobs
+- [ ] **Documentation:** Updated if public APIs changed
+- [ ] **FR/NFR Traceability:** PR description links relevant requirement IDs (e.g., "Implements FR-026")
+- [ ] **Platform Parity:** Changes tested on both macOS and Windows (if applicable)
+
+**Quick Quality Check:**
+```bash
+# Run all quality gates locally before pushing
+./scripts/devtools/quality_gate.sh
+```
+
+See [Quality Gates Documentation](docs/qa/quality_gates.md) for detailed gate descriptions and troubleshooting.
+
 ### Continuous Integration
 
 All pull requests are automatically validated via GitHub Actions CI with parallel jobs:
@@ -689,6 +710,7 @@ All pull requests are automatically validated via GitHub Actions CI with paralle
 - **Lint & Analyze** - `flutter analyze` with warnings as errors (macOS + Windows)
 - **Format Check** - `dart format` validation (macOS + Windows)
 - **Tests** - Full test suite + SQLite smoke tests (macOS + Windows)
+- **Quality Gates** - Enforces baseline quality standards via `quality_gate.sh` (macOS + Windows)
 - **Diagram Validation** - PlantUML and Mermaid syntax checks (macOS)
 - **Build Verification** - Debug builds for both platforms
 

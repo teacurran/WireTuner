@@ -114,7 +114,53 @@ jobs:
         shell: bash
         continue-on-error: true
 
-  # Job 3: Diagram Validation (runs in parallel, macOS only for tooling)
+  # Job 3: Quality Gates (enforces baseline quality standards)
+  quality-gates:
+    name: Quality Gates
+    runs-on: ${{ matrix.os }}
+
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-latest, windows-latest]
+        flutter-version: ['3.16.0']
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ matrix.flutter-version }}
+          channel: 'stable'
+          cache: true
+
+      - name: Cache pub dependencies
+        uses: actions/cache@v3
+        with:
+          path: |
+            ${{ runner.os == 'Windows' && '~\AppData\Local\Pub\Cache' || '~/.pub-cache' }}
+            .dart_tool
+          key: ${{ runner.os }}-pub-${{ hashFiles('**/pubspec.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-pub-
+
+      - name: Install Melos
+        run: dart pub global activate melos
+
+      - name: Bootstrap workspace
+        run: melos bootstrap
+
+      - name: Run code generation (if needed)
+        run: melos run build:runner || echo "No code generation needed"
+        shell: bash
+
+      - name: Run quality gate script
+        run: bash scripts/devtools/quality_gate.sh --skip-coverage
+        shell: bash
+
+  # Job 4: Diagram Validation (runs in parallel, macOS only for tooling)
   diagram-validation:
     name: Diagram Validation
     runs-on: macos-latest
@@ -177,10 +223,10 @@ jobs:
         run: bash scripts/ci/diagram_check.sh docs/diagrams
         continue-on-error: false
 
-  # Job 4: Build verification (depends on lint and test passing)
+  # Job 5: Build verification (depends on lint, test, and quality gates passing)
   build:
     name: Build Verification
-    needs: [lint, test]
+    needs: [lint, test, quality-gates]
     runs-on: ${{ matrix.os }}
 
     strategy:
@@ -232,7 +278,7 @@ jobs:
   # Summary job (always runs, reports overall status)
   ci-summary:
     name: CI Summary
-    needs: [lint, test, diagram-validation, build]
+    needs: [lint, test, quality-gates, diagram-validation, build]
     runs-on: ubuntu-latest
     if: always()
 
@@ -241,11 +287,13 @@ jobs:
         run: |
           echo "Lint: ${{ needs.lint.result }}"
           echo "Test: ${{ needs.test.result }}"
+          echo "Quality Gates: ${{ needs.quality-gates.result }}"
           echo "Diagram Validation: ${{ needs.diagram-validation.result }}"
           echo "Build: ${{ needs.build.result }}"
 
           if [ "${{ needs.lint.result }}" != "success" ] || \
              [ "${{ needs.test.result }}" != "success" ] || \
+             [ "${{ needs.quality-gates.result }}" != "success" ] || \
              [ "${{ needs.diagram-validation.result }}" != "success" ] || \
              [ "${{ needs.build.result }}" != "success" ]; then
             echo "❌ CI checks failed"

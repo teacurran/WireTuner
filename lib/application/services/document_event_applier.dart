@@ -39,7 +39,8 @@ class DocumentEventApplier {
     } else if (event is DeleteObjectEvent) {
       _applyDeleteObject(event);
     } else {
-      debugPrint('[DocumentEventApplier] Ignoring unknown event: ${event.eventType}');
+      debugPrint(
+          '[DocumentEventApplier] Ignoring unknown event: ${event.eventType}');
     }
   }
 

@@ -206,7 +206,8 @@ class DocumentPainter extends CustomPainter {
         break;
 
       case ShapeKind.star:
-        _addStarToPath(path, shape.center, shape.radius!, shape.innerRadius!, shape.sides);
+        _addStarToPath(
+            path, shape.center, shape.radius!, shape.innerRadius!, shape.sides);
         break;
     }
 

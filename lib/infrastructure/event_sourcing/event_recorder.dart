@@ -252,7 +252,8 @@ class EventRecorder with ChangeNotifier {
       _bufferedEventTimestamp = null;
 
       // Broadcast event to listeners (for document state updates)
-      _logger.d('Broadcasting event to ${_eventStreamController.hasListener ? "active" : "NO"} listeners');
+      _logger.d(
+          'Broadcasting event to ${_eventStreamController.hasListener ? "active" : "NO"} listeners');
       _eventStreamController.add(event);
 
       // Notify listeners (UI/Provider) about state change

@@ -1,0 +1,212 @@
+// WireTuner Sync API - Prisma Schema
+// This schema defines the database models for the Sync API service,
+// which handles document metadata, event synchronization, and snapshot exchange.
+//
+// Based on: ADR-003 (Event Sourcing Architecture)
+// Related: docs/diagrams/domain_erd.puml, docs/reference/event_schema.md
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================================================
+// PERSISTENT LAYER: Event Sourcing Tables
+// ============================================================================
+
+/// Document metadata table - stores high-level document information
+/// Maps to SQLite `metadata` table in client-side .wiretuner files
+model Document {
+  id              String   @id @default(uuid()) @map("document_id")
+  title           String   @default("Untitled")
+  formatVersion   Int      @default(1) @map("format_version")
+  createdAt       DateTime @default(now()) @map("created_at")
+  modifiedAt      DateTime @updatedAt @map("modified_at")
+  author          String?
+  ownerId         String   @map("owner_id")
+
+  // Relationships
+  events          Event[]
+  snapshots       Snapshot[]
+  collaborationSessions CollaborationSession[]
+  exportJobs      ExportJob[]
+
+  @@map("metadata")
+}
+
+/// Event log table - append-only event sourcing store
+/// Maps to SQLite `events` table in client-side .wiretuner files
+model Event {
+  id              Int      @id @default(autoincrement()) @map("event_id")
+  documentId      String   @map("document_id")
+  eventSequence   Int      @map("event_sequence")
+  eventType       String   @map("event_type")
+  eventPayload    String   @map("event_payload") // JSON-serialized
+  timestamp       DateTime @default(now())
+  userId          String?  @map("user_id")
+  artboardId      String?  @map("artboard_id")
+
+  // Sampling and undo grouping metadata (optional fields)
+  samplingIntervalMs Int?   @map("sampling_interval_ms")
+  undoGroupId        String? @map("undo_group_id")
+
+  // Collaboration fields (future-proofing)
+  sessionId       String?  @map("session_id")
+  deviceId        String?  @map("device_id")
+
+  // Relationships
+  document        Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+
+  @@index([documentId, eventSequence])
+  @@index([documentId, timestamp])
+  @@map("events")
+}
+
+/// Snapshot table - periodic document state captures for fast replay
+/// Maps to SQLite `snapshots` table in client-side .wiretuner files
+model Snapshot {
+  id              Int      @id @default(autoincrement()) @map("snapshot_id")
+  documentId      String   @map("document_id")
+  eventSequence   Int      @map("event_sequence")
+  snapshotData    Bytes    @map("snapshot_data") // gzip-compressed JSON BLOB
+  createdAt       DateTime @default(now()) @map("created_at")
+  compression     String   @default("gzip")
+
+  // Relationships
+  document        Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+
+  @@index([documentId, eventSequence])
+  @@map("snapshots")
+}
+
+// ============================================================================
+// COLLABORATION LAYER: Multi-User Editing Support
+// ============================================================================
+
+/// Collaboration session for multi-user editing (future feature)
+model CollaborationSession {
+  id              String   @id @default(uuid())
+  documentId      String   @map("document_id")
+  sessionName     String   @map("session_name")
+  ownerId         String   @map("owner_id")
+  createdAt       DateTime @default(now()) @map("created_at")
+  activatedAt     DateTime? @map("activated_at")
+  deactivatedAt   DateTime? @map("deactivated_at")
+
+  // Relationships
+  document        Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+
+  @@index([documentId])
+  @@map("collaboration_sessions")
+}
+
+// ============================================================================
+// EXPORT & JOBS LAYER: Background Processing
+// ============================================================================
+
+/// Export job tracking for SVG-to-PDF and other conversion workflows
+model ExportJob {
+  id              String   @id @default(uuid())
+  documentId      String   @map("document_id")
+  artboardId      String?  @map("artboard_id")
+  exportFormat    String   @map("export_format") // "pdf", "svg", "png", etc.
+  status          String   @default("pending")   // "pending", "processing", "completed", "failed"
+  createdAt       DateTime @default(now()) @map("created_at")
+  completedAt     DateTime? @map("completed_at")
+  artifactUrl     String?  @map("artifact_url") // S3/object storage URL
+
+  // Relationships
+  document        Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+
+  @@index([documentId, status])
+  @@map("export_jobs")
+}
+
+// ============================================================================
+// FEATURE FLAGS & SETTINGS LAYER: Configuration Management
+// ============================================================================
+
+/// Feature flag settings for controlled rollout
+model FeatureFlagSetting {
+  id                  String   @id @default(uuid())
+  flagKey             String   @unique @map("flag_key")
+  enabled             Boolean  @default(false)
+  userId              String?  @map("user_id")
+  rolloutPercentage   Float?   @default(0.0) @map("rollout_percentage")
+  updatedAt           DateTime @updatedAt @map("updated_at")
+
+  @@index([flagKey, userId])
+  @@map("feature_flag_settings")
+}
+
+// ============================================================================
+// TELEMETRY LAYER: Observability & Analytics
+// ============================================================================
+
+/// Telemetry event tracking for usage analytics and debugging
+model TelemetryEvent {
+  id              String   @id @default(uuid())
+  eventType       String   @map("event_type")
+  timestamp       DateTime @default(now())
+  userId          String?  @map("user_id")
+  sessionId       String?  @map("session_id")
+  properties      String?  // JSON-serialized properties
+
+  @@index([eventType, timestamp])
+  @@index([userId, timestamp])
+  @@map("telemetry_events")
+}
+
+// ============================================================================
+// NOTES & DESIGN DECISIONS
+// ============================================================================
+
+// 1. Event Sourcing Architecture (ADR-003):
+//    - Events are append-only (no updates/deletes)
+//    - Snapshots created every 1000 events for fast replay
+//    - Document state reconstructed via snapshot + event replay
+//
+// 2. SQLite Provider:
+//    - Local-first design: each .wiretuner file is a SQLite database
+//    - Server-side Sync API also uses SQLite for development/testing
+//    - Production may use PostgreSQL (update provider to "postgresql")
+//
+// 3. Timestamp Precision:
+//    - Prisma DateTime maps to INTEGER (Unix milliseconds) in SQLite
+//    - Aligns with event_schema.md millisecond precision requirement
+//
+// 4. JSON Serialization:
+//    - eventPayload, properties stored as String (JSON text)
+//    - Client/server responsible for JSON validation via json_serializable
+//
+// 5. Cascade Delete:
+//    - Events and Snapshots cascade delete with Document
+//    - Ensures referential integrity when documents are deleted
+//
+// 6. Future Extensibility:
+//    - Collaboration, Export, FeatureFlag, Telemetry tables scaffold future features
+//    - Optional fields (userId, sessionId, deviceId) prepare for multi-user editing
+//
+// 7. Index Strategy:
+//    - Composite indexes on (documentId, eventSequence) for replay queries
+//    - Timestamp indexes for time-range queries and analytics
+//
+// ============================================================================
+// VALIDATION & MIGRATION
+// ============================================================================
+
+// To validate this schema:
+//   npx prisma validate
+//
+// To generate Prisma Client:
+//   npx prisma generate
+//
+// To create migration:
+//   npx prisma migrate dev --name init
+//
+// To apply migrations:
+//   npx prisma migrate deploy

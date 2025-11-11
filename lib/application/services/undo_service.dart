@@ -87,7 +87,8 @@ class UndoService {
 
       _updateDocumentFromState(result.state);
 
-      _logger.i('UndoService initialized at sequence ${_navigator.currentSequence}');
+      _logger.i(
+          'UndoService initialized at sequence ${_navigator.currentSequence}');
       return true;
     } catch (e, stackTrace) {
       _logger.e(
@@ -151,7 +152,8 @@ class UndoService {
 
       _updateDocumentFromState(result.state);
 
-      _logger.i('Undo successful, now at sequence ${_navigator.currentSequence}');
+      _logger
+          .i('Undo successful, now at sequence ${_navigator.currentSequence}');
       return true;
     } catch (e, stackTrace) {
       _logger.e(
@@ -199,7 +201,8 @@ class UndoService {
 
       _updateDocumentFromState(result.state);
 
-      _logger.i('Redo successful, now at sequence ${_navigator.currentSequence}');
+      _logger
+          .i('Redo successful, now at sequence ${_navigator.currentSequence}');
       return true;
     } catch (e, stackTrace) {
       _logger.e(
@@ -235,7 +238,8 @@ class UndoService {
 
       _updateDocumentFromState(result.state);
 
-      _logger.i('Navigation successful, now at sequence ${_navigator.currentSequence}');
+      _logger.i(
+          'Navigation successful, now at sequence ${_navigator.currentSequence}');
       return true;
     } catch (e, stackTrace) {
       _logger.e(

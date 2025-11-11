@@ -379,7 +379,8 @@ class _MockSnapshotStore implements SnapshotStore {
   }
 
   @override
-  Future<int> deleteOldSnapshots(String documentId, {int keepCount = 10}) async {
+  Future<int> deleteOldSnapshots(String documentId,
+      {int keepCount = 10}) async {
     // No-op - return 0 deleted count
     return 0;
   }

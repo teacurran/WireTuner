@@ -185,7 +185,8 @@ void main() {
         // Should create path with 4 corners
         final addEvents = events.where((e) => e.eventType == 'AddAnchorEvent');
         expect(addEvents.length, equals(3),
-            reason: 'Rectangle should have 3 additional corners (4 total with start)');
+            reason:
+                'Rectangle should have 3 additional corners (4 total with start)');
 
         // Should be closed
         final finishEvent = events.last as FinishPathEvent;
@@ -254,8 +255,7 @@ void main() {
         expect(addEvent.anchorType, equals(AnchorType.line));
 
         final finishEvent = events.last as FinishPathEvent;
-        expect(finishEvent.closed, false,
-            reason: 'Line should not be closed');
+        expect(finishEvent.closed, false, reason: 'Line should not be closed');
       });
 
       test('Converts polyline to line segments', () async {
@@ -295,8 +295,7 @@ void main() {
             reason: 'Polygon with 3 points should have 2 AddAnchor events');
 
         final finishEvent = events.last as FinishPathEvent;
-        expect(finishEvent.closed, true,
-            reason: 'Polygon should be closed');
+        expect(finishEvent.closed, true, reason: 'Polygon should be closed');
       });
     });
 
@@ -459,8 +458,7 @@ void main() {
 
         // Should not throw, just return empty events
         final events = await importer.importFromString(svgContent);
-        expect(events, isEmpty,
-            reason: 'Empty path data should be skipped');
+        expect(events, isEmpty, reason: 'Empty path data should be skipped');
       });
 
       test('Validates coordinate values', () async {
