@@ -1,0 +1,645 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://wiretuner.dev/schemas/snapshot.schema.json",
+  "title": "WireTuner Snapshot Schema",
+  "description": "JSON Schema for WireTuner document state snapshots created during event sourcing replay. Snapshots are captured every 500 events (base interval per ADR-0003) with adaptive cadence multipliers and timer-based triggers (10-minute rule) to enable fast document loading without full event replay. Schema Version: 1.0.0",
+  "type": "object",
+  "required": [
+    "snapshotId",
+    "documentId",
+    "eventSequence",
+    "createdAt",
+    "compression",
+    "formatVersion",
+    "documentState"
+  ],
+  "properties": {
+    "snapshotId": {
+      "type": "integer",
+      "description": "Auto-increment primary key for snapshot record",
+      "minimum": 1
+    },
+    "documentId": {
+      "type": "string",
+      "description": "UUID of the document this snapshot belongs to (references metadata.document_id)",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+    },
+    "eventSequence": {
+      "type": "integer",
+      "description": "Event sequence number at which this snapshot was taken (0-based index)",
+      "minimum": 0
+    },
+    "createdAt": {
+      "type": "integer",
+      "description": "Unix timestamp in milliseconds when snapshot was created",
+      "minimum": 0
+    },
+    "compression": {
+      "type": "string",
+      "description": "Compression method applied to snapshot data",
+      "enum": ["gzip", "none"],
+      "default": "gzip"
+    },
+    "formatVersion": {
+      "type": "string",
+      "description": "Snapshot format version for backward compatibility (SemVer)",
+      "pattern": "^\\d+\\.\\d+\\.\\d+$",
+      "default": "1.0.0"
+    },
+    "adaptiveCadenceMetadata": {
+      "type": "object",
+      "description": "Metadata about adaptive snapshot cadence configuration at time of snapshot creation",
+      "properties": {
+        "effectiveInterval": {
+          "type": "integer",
+          "description": "Actual event interval used for this snapshot (after adaptive cadence calculation)",
+          "minimum": 1
+        },
+        "activityMode": {
+          "type": "string",
+          "description": "Editing activity classification at time of snapshot",
+          "enum": ["burst", "normal", "idle"]
+        },
+        "eventsPerSecond": {
+          "type": "number",
+          "description": "Calculated editing rate (events/second) from activity tracking window",
+          "minimum": 0
+        },
+        "baseInterval": {
+          "type": "integer",
+          "description": "Base snapshot interval configuration (WIRETUNER_SNAPSHOT_BASE_INTERVAL). Default per ADR-0003 is 500 events.",
+          "default": 500
+        },
+        "burstMultiplier": {
+          "type": "number",
+          "description": "Burst mode multiplier configuration (WIRETUNER_SNAPSHOT_BURST_MULTIPLIER)",
+          "default": 0.5,
+          "minimum": 0.1,
+          "maximum": 1.0
+        },
+        "idleMultiplier": {
+          "type": "number",
+          "description": "Idle mode multiplier configuration (WIRETUNER_SNAPSHOT_IDLE_MULTIPLIER)",
+          "default": 2.0,
+          "minimum": 1.0,
+          "maximum": 10.0
+        },
+        "windowSeconds": {
+          "type": "integer",
+          "description": "Activity tracking window size in seconds (WIRETUNER_SNAPSHOT_WINDOW_SECONDS)",
+          "default": 60,
+          "minimum": 10,
+          "maximum": 600
+        },
+        "burstThreshold": {
+          "type": "number",
+          "description": "Events/second threshold for burst classification (WIRETUNER_SNAPSHOT_BURST_THRESHOLD)",
+          "default": 20.0,
+          "minimum": 1.0
+        },
+        "idleThreshold": {
+          "type": "number",
+          "description": "Events/second threshold for idle classification (WIRETUNER_SNAPSHOT_IDLE_THRESHOLD)",
+          "default": 2.0,
+          "minimum": 0.1
+        }
+      },
+      "required": ["effectiveInterval", "activityMode", "eventsPerSecond"]
+    },
+    "telemetryMetadata": {
+      "type": "object",
+      "description": "Performance and instrumentation data for snapshot creation",
+      "properties": {
+        "creationDurationMs": {
+          "type": "number",
+          "description": "Time taken to create snapshot in milliseconds",
+          "minimum": 0
+        },
+        "compressedSizeBytes": {
+          "type": "integer",
+          "description": "Size of compressed snapshot data in bytes",
+          "minimum": 0
+        },
+        "uncompressedSizeBytes": {
+          "type": "integer",
+          "description": "Size of uncompressed snapshot data in bytes",
+          "minimum": 0
+        },
+        "compressionRatio": {
+          "type": "number",
+          "description": "Compression ratio (uncompressed / compressed)",
+          "minimum": 1.0
+        },
+        "queueDepth": {
+          "type": "integer",
+          "description": "Number of pending snapshots in queue at creation time",
+          "minimum": 0
+        },
+        "eventsSinceLastSnapshot": {
+          "type": "integer",
+          "description": "Number of events processed since previous snapshot",
+          "minimum": 0
+        }
+      },
+      "required": ["creationDurationMs"]
+    },
+    "documentState": {
+      "type": "object",
+      "description": "Complete serialized document state at eventSequence (immutable Freezed Dart objects)",
+      "required": ["id", "title", "formatVersion", "createdAt", "modifiedAt", "artboards", "layers", "viewport", "selection"],
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Document unique identifier",
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+        },
+        "title": {
+          "type": "string",
+          "description": "Document title",
+          "maxLength": 200
+        },
+        "formatVersion": {
+          "type": "string",
+          "description": "Document file format version (SemVer)",
+          "pattern": "^\\d+\\.\\d+\\.\\d+$"
+        },
+        "createdAt": {
+          "type": "integer",
+          "description": "Document creation timestamp (Unix milliseconds)",
+          "minimum": 0
+        },
+        "modifiedAt": {
+          "type": "integer",
+          "description": "Document last modified timestamp (Unix milliseconds)",
+          "minimum": 0
+        },
+        "author": {
+          "type": "string",
+          "description": "Document author name (optional)"
+        },
+        "artboards": {
+          "type": "array",
+          "description": "List of artboards in document",
+          "items": {
+            "$ref": "#/$defs/Artboard"
+          }
+        },
+        "layers": {
+          "type": "array",
+          "description": "List of layers across all artboards",
+          "items": {
+            "$ref": "#/$defs/Layer"
+          }
+        },
+        "viewport": {
+          "$ref": "#/$defs/Viewport",
+          "description": "Current viewport state (pan, zoom, canvas size)"
+        },
+        "selection": {
+          "$ref": "#/$defs/Selection",
+          "description": "Current selection state"
+        }
+      }
+    }
+  },
+  "$defs": {
+    "Artboard": {
+      "type": "object",
+      "description": "Artboard entity representing a drawing canvas with specific dimensions",
+      "required": ["id", "documentId", "name", "boundsX", "boundsY", "boundsWidth", "boundsHeight", "backgroundColor", "zOrder"],
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Artboard unique identifier",
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+        },
+        "documentId": {
+          "type": "string",
+          "description": "Parent document ID",
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+        },
+        "name": {
+          "type": "string",
+          "description": "Artboard name",
+          "maxLength": 100
+        },
+        "boundsX": {
+          "type": "number",
+          "description": "Artboard X position in canvas coordinates"
+        },
+        "boundsY": {
+          "type": "number",
+          "description": "Artboard Y position in canvas coordinates"
+        },
+        "boundsWidth": {
+          "type": "number",
+          "description": "Artboard width",
+          "minimum": 1
+        },
+        "boundsHeight": {
+          "type": "number",
+          "description": "Artboard height",
+          "minimum": 1
+        },
+        "backgroundColor": {
+          "type": "string",
+          "description": "Background color (RGBA hex)",
+          "pattern": "^#[0-9A-Fa-f]{6}([0-9A-Fa-f]{2})?$"
+        },
+        "preset": {
+          "type": "string",
+          "description": "Optional artboard preset (e.g., 'iPhone14', 'A4')"
+        },
+        "zOrder": {
+          "type": "integer",
+          "description": "Artboard z-order for rendering",
+          "minimum": 0
+        }
+      }
+    },
+    "Layer": {
+      "type": "object",
+      "description": "Layer entity containing vector objects",
+      "required": ["id", "artboardId", "name", "visible", "locked", "zIndex", "objects"],
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Layer unique identifier",
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+        },
+        "artboardId": {
+          "type": "string",
+          "description": "Parent artboard ID",
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+        },
+        "name": {
+          "type": "string",
+          "description": "Layer name",
+          "maxLength": 100
+        },
+        "visible": {
+          "type": "boolean",
+          "description": "Layer visibility flag"
+        },
+        "locked": {
+          "type": "boolean",
+          "description": "Layer edit lock flag"
+        },
+        "zIndex": {
+          "type": "integer",
+          "description": "Layer z-order within artboard",
+          "minimum": 0
+        },
+        "objects": {
+          "type": "array",
+          "description": "Vector objects on this layer",
+          "items": {
+            "$ref": "#/$defs/VectorObject"
+          }
+        }
+      }
+    },
+    "VectorObject": {
+      "type": "object",
+      "description": "Base vector object (path, shape, text, compound)",
+      "required": ["id", "layerId", "artboardId", "type", "transform", "style", "createdAt", "modifiedAt"],
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Object unique identifier",
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+        },
+        "layerId": {
+          "type": "string",
+          "description": "Parent layer ID",
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+        },
+        "artboardId": {
+          "type": "string",
+          "description": "Parent artboard ID",
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+        },
+        "type": {
+          "type": "string",
+          "description": "Object type discriminator",
+          "enum": ["path", "shape", "text", "compound"]
+        },
+        "transform": {
+          "$ref": "#/$defs/Transform",
+          "description": "Affine transformation matrix"
+        },
+        "style": {
+          "$ref": "#/$defs/Style",
+          "description": "Fill and stroke styling"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Object creation timestamp (RFC3339)"
+        },
+        "modifiedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Object last modified timestamp (RFC3339)"
+        },
+        "pathData": {
+          "$ref": "#/$defs/Path",
+          "description": "Path-specific data (if type = 'path')"
+        },
+        "shapeData": {
+          "$ref": "#/$defs/Shape",
+          "description": "Shape-specific data (if type = 'shape')"
+        }
+      }
+    },
+    "Path": {
+      "type": "object",
+      "description": "Vector path with anchor points and segments",
+      "required": ["anchors", "segments", "closed"],
+      "properties": {
+        "anchors": {
+          "type": "array",
+          "description": "Anchor points defining path",
+          "items": {
+            "$ref": "#/$defs/AnchorPoint"
+          },
+          "minItems": 1
+        },
+        "segments": {
+          "type": "array",
+          "description": "Segments connecting anchors",
+          "items": {
+            "$ref": "#/$defs/Segment"
+          },
+          "minItems": 1
+        },
+        "closed": {
+          "type": "boolean",
+          "description": "Whether path loops back to start"
+        }
+      }
+    },
+    "AnchorPoint": {
+      "type": "object",
+      "description": "Anchor point on a path with optional Bezier control points",
+      "required": ["position", "anchorType"],
+      "properties": {
+        "position": {
+          "$ref": "#/$defs/Point",
+          "description": "Anchor position on canvas"
+        },
+        "handleIn": {
+          "$ref": "#/$defs/Point",
+          "description": "Optional incoming Bezier control point (relative to position)"
+        },
+        "handleOut": {
+          "$ref": "#/$defs/Point",
+          "description": "Optional outgoing Bezier control point (relative to position)"
+        },
+        "anchorType": {
+          "type": "string",
+          "description": "Anchor type for handle behavior",
+          "enum": ["corner", "smooth", "symmetric", "line", "bezier"]
+        }
+      }
+    },
+    "Segment": {
+      "type": "object",
+      "description": "Segment connecting two anchor points",
+      "required": ["startAnchorIndex", "endAnchorIndex", "segmentType"],
+      "properties": {
+        "startAnchorIndex": {
+          "type": "integer",
+          "description": "Index into path anchors list",
+          "minimum": 0
+        },
+        "endAnchorIndex": {
+          "type": "integer",
+          "description": "Index into path anchors list",
+          "minimum": 0
+        },
+        "segmentType": {
+          "type": "string",
+          "description": "Segment type",
+          "enum": ["line", "bezier", "arc"]
+        }
+      }
+    },
+    "Shape": {
+      "type": "object",
+      "description": "Parametric shape (rectangle, ellipse, polygon, star)",
+      "required": ["center", "kind"],
+      "properties": {
+        "center": {
+          "$ref": "#/$defs/Point",
+          "description": "Shape center point"
+        },
+        "kind": {
+          "type": "string",
+          "description": "Shape kind discriminator",
+          "enum": ["rectangle", "ellipse", "polygon", "star"]
+        },
+        "width": {
+          "type": "number",
+          "description": "Width (for rectangle, ellipse)",
+          "minimum": 0
+        },
+        "height": {
+          "type": "number",
+          "description": "Height (for rectangle, ellipse)",
+          "minimum": 0
+        },
+        "cornerRadius": {
+          "type": "number",
+          "description": "Corner radius (for rectangle)",
+          "minimum": 0
+        },
+        "radius": {
+          "type": "number",
+          "description": "Radius (for polygon, star outer radius)",
+          "minimum": 0
+        },
+        "innerRadius": {
+          "type": "number",
+          "description": "Inner radius (for star)",
+          "minimum": 0
+        },
+        "sides": {
+          "type": "integer",
+          "description": "Side count (for polygon) or point count (for star)",
+          "minimum": 3
+        },
+        "rotation": {
+          "type": "number",
+          "description": "Rotation angle in radians"
+        }
+      }
+    },
+    "Transform": {
+      "type": "object",
+      "description": "Affine transformation matrix (4x4 Matrix4)",
+      "required": ["matrix"],
+      "properties": {
+        "matrix": {
+          "type": "array",
+          "description": "16-element array representing 4x4 matrix in column-major order",
+          "items": {
+            "type": "number"
+          },
+          "minItems": 16,
+          "maxItems": 16
+        }
+      }
+    },
+    "Style": {
+      "type": "object",
+      "description": "Fill and stroke styling for vector objects",
+      "required": ["opacity"],
+      "properties": {
+        "fill": {
+          "$ref": "#/$defs/Paint",
+          "description": "Fill paint (color, gradient, pattern)"
+        },
+        "stroke": {
+          "$ref": "#/$defs/Paint",
+          "description": "Stroke paint"
+        },
+        "strokeWidth": {
+          "type": "number",
+          "description": "Stroke width in pixels",
+          "minimum": 0
+        },
+        "opacity": {
+          "type": "number",
+          "description": "Object opacity (0-1)",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "blendMode": {
+          "type": "string",
+          "description": "Compositing blend mode",
+          "enum": ["normal", "multiply", "screen", "overlay", "darken", "lighten", "colorDodge", "colorBurn", "hardLight", "softLight", "difference", "exclusion"]
+        }
+      }
+    },
+    "Paint": {
+      "type": "object",
+      "description": "Paint definition (color, gradient, or pattern)",
+      "required": ["type"],
+      "properties": {
+        "type": {
+          "type": "string",
+          "description": "Paint type discriminator",
+          "enum": ["solid", "linearGradient", "radialGradient", "pattern"]
+        },
+        "color": {
+          "type": "string",
+          "description": "Solid color (hex RGBA)",
+          "pattern": "^#[0-9A-Fa-f]{6}([0-9A-Fa-f]{2})?$"
+        },
+        "gradientStops": {
+          "type": "array",
+          "description": "Gradient color stops (for gradient paints)",
+          "items": {
+            "type": "object",
+            "required": ["offset", "color"],
+            "properties": {
+              "offset": {
+                "type": "number",
+                "description": "Stop position (0-1)",
+                "minimum": 0,
+                "maximum": 1
+              },
+              "color": {
+                "type": "string",
+                "description": "Stop color (hex RGBA)",
+                "pattern": "^#[0-9A-Fa-f]{6}([0-9A-Fa-f]{2})?$"
+              }
+            }
+          }
+        }
+      }
+    },
+    "Viewport": {
+      "type": "object",
+      "description": "Viewport state (pan, zoom, canvas dimensions)",
+      "required": ["pan", "zoom", "canvasSize"],
+      "properties": {
+        "pan": {
+          "$ref": "#/$defs/Point",
+          "description": "Canvas pan offset"
+        },
+        "zoom": {
+          "type": "number",
+          "description": "Zoom level (1.0 = 100%)",
+          "minimum": 0.01,
+          "maximum": 100
+        },
+        "canvasSize": {
+          "$ref": "#/$defs/Size",
+          "description": "Canvas dimensions"
+        }
+      }
+    },
+    "Selection": {
+      "type": "object",
+      "description": "Current selection state",
+      "required": ["objectIds", "anchorIndices"],
+      "properties": {
+        "objectIds": {
+          "type": "array",
+          "description": "Set of selected object IDs",
+          "items": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+          },
+          "uniqueItems": true
+        },
+        "anchorIndices": {
+          "type": "object",
+          "description": "Map of object ID to set of selected anchor indices",
+          "additionalProperties": {
+            "type": "array",
+            "items": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "uniqueItems": true
+          }
+        }
+      }
+    },
+    "Point": {
+      "type": "object",
+      "description": "2D point (x, y)",
+      "required": ["x", "y"],
+      "properties": {
+        "x": {
+          "type": "number",
+          "description": "X coordinate"
+        },
+        "y": {
+          "type": "number",
+          "description": "Y coordinate"
+        }
+      }
+    },
+    "Size": {
+      "type": "object",
+      "description": "2D dimensions (width, height)",
+      "required": ["width", "height"],
+      "properties": {
+        "width": {
+          "type": "number",
+          "description": "Width",
+          "minimum": 0
+        },
+        "height": {
+          "type": "number",
+          "description": "Height",
+          "minimum": 0
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,238 @@
+@startuml
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Container.puml
+
+/' anchor: container-deployment '/
+
+title Container Diagram - WireTuner Deployable Units
+
+note as version_meta
+  **Version:** 1.0
+  **Date:** 2025-11-10
+  **Author:** WireTuner Architecture Team
+  **Reference:** Section 3.4 Container Diagram (C4 Level 2)
+  **Source:** .codemachine/artifacts/architecture/02_System_Structure_and_Data.md#container-diagram
+  **ADRs:** ADR-003 (Event Sourcing), ADR-002 (Backend Services)
+end note
+
+SHOW_LEGEND()
+AddElementTag("Runtime", $bgColor="#fff3e0", $fontColor="#e65100")
+AddElementTag("Service", $bgColor="#e8f5e9", $fontColor="#1b5e20")
+AddElementTag("Store", $bgColor="#e3f2fd", $fontColor="#0d47a1")
+AddElementTag("Platform", $bgColor="#f3e5f5", $fontColor="#4a148c")
+
+' ==========================================
+' ACTORS
+' ==========================================
+
+Person(designerPersona, "Designer", "Primary creative user creating vector illustrations")
+Person(opsPersona, "Ops Engineer", "Manages deployments, monitors infrastructure, publishes installers")
+
+' ==========================================
+' DESKTOP RUNTIME BOUNDARY
+' ==========================================
+
+System_Boundary(desktopBoundary, "WireTuner Desktop Runtime") {
+  Container(wireDesktopApp, "WireTuner Desktop Application", "Flutter 3.x", "Clean Architecture layers (Presentation → Application → Domain → Infrastructure) orchestrating tools, rendering, events, collaboration", $tags="Runtime")
+
+  ContainerDb(sqliteStore, "Embedded Event Store", "SQLite 3.x (WAL mode)", "Append-only event log, periodic snapshots (1000 events), document metadata, artboard thumbnails", $tags="Store")
+
+  Container(backgroundWorkers, "BackgroundWorkerPool", "Flutter isolates + Rust resvg FFI", "Non-blocking snapshot serialization, SVG→PDF conversion, AI import parsing", $tags="Runtime")
+
+  Container(quickLookExt, "QuickLook Extension", "macOS Swift plugin", "Generates Finder thumbnails by invoking shared RenderingPipeline library", $tags="Platform")
+
+  Container(explorerHandler, "Explorer Handler", "Windows C++/WinRT shell extension", "Provides thumbnail/preview support in Windows Explorer via cached blobs", $tags="Platform")
+}
+
+' ==========================================
+' CLOUD SERVICES BOUNDARY
+' ==========================================
+
+System_Boundary(serverBoundary, "WireTuner Cloud Services") {
+  Container(collabGatewaySvc, "Collaboration Gateway", "Dart Frog WebSocket", "Operational Transform sequencing engine, presence indicators, multi-user session orchestration", $tags="Service")
+
+  Container(syncAPISvc, "Sync API", "Dart Frog GraphQL + REST", "Document metadata CRUD, snapshot uploads/downloads, settings profile synchronization", $tags="Service")
+
+  Container(telemetrySvc, "Telemetry Collector", "Prometheus + OpenTelemetry", "Aggregates metrics (FPS, replay rate, snapshot duration), traces, structured logs", $tags="Service")
+
+  Container(featureFlagSvc, "Feature Flag Service", "LaunchDarkly / Flagsmith", "Configuration rollouts, A/B test toggles, emergency kill switches for beta features", $tags="Service")
+
+  Container(redisCluster, "Redis Pub/Sub", "Redis Cluster", "Real-time collaboration event fan-out, presence heartbeat channels, job queue streams", $tags="Store")
+
+  Container(postgresDb, "Collaboration Metadata DB", "PostgreSQL 14+", "Document lists, collaboration sessions, OT sequence numbers, settings profiles, export jobs", $tags="Store")
+
+  Container(objectStore, "Artifact Storage", "S3-compatible object storage", "Remote snapshots, export artifacts (PDF/SVG/JSON), installer DMG/MSI, thumbnail caches", $tags="Store")
+
+  Container(conversionWorkers, "Conversion Worker Fleet", "Rust resvg containers (Docker)", "Background SVG→PDF conversion, AI import preprocessing, high-fidelity vector rasterization", $tags="Service")
+
+  Container(observabilityStack, "Observability Stack", "Grafana + Loki + CloudWatch", "Performance dashboards, log aggregation, SLA alerts (60 FPS, <100ms load), incident correlation", $tags="Service")
+
+  Container(installerPipelines, "Installer Pipelines", "GitHub Actions + notarization services", "Automated DMG/MSI packaging, code signing, QuickLook/Explorer extension bundling", $tags="Service")
+}
+
+' ==========================================
+' EXTERNAL IDENTITY SERVICE
+' ==========================================
+
+System_Ext(identityProvider, "Identity Provider", "OAuth 2.0 / OIDC authentication (Auth0/Okta)")
+
+' ==========================================
+' USER TO DESKTOP INTERACTIONS
+' ==========================================
+
+Rel(designerPersona, wireDesktopApp, "Creates artboards, triggers exports, replays history, toggles anchor visibility modes")
+Rel(designerPersona, quickLookExt, "Previews .wiretuner files in Finder without launching app", "Spacebar QuickLook")
+Rel(designerPersona, explorerHandler, "Views thumbnails in Windows Explorer grid view", "Explorer preview pane")
+
+' ==========================================
+' DESKTOP INTERNAL RELATIONSHIPS
+' ==========================================
+
+Rel(wireDesktopApp, sqliteStore, "Persists events after 50ms sampling, creates snapshots every 1000 events, loads document state on open", "sqflite_common_ffi")
+Rel(wireDesktopApp, backgroundWorkers, "Dispatches snapshot compression jobs, SVG→PDF conversions, AI import parsing to isolates", "Flutter compute() + FFI messages")
+Rel(wireDesktopApp, quickLookExt, "Shares CustomPainter rendering pipeline for thumbnail generation", "Shared dynamic library")
+Rel(wireDesktopApp, explorerHandler, "Provides pre-rendered thumbnail blobs via shared cache directory", "File system cache")
+
+' ==========================================
+' DESKTOP TO CLOUD SERVICES
+' ==========================================
+
+Rel(wireDesktopApp, collabGatewaySvc, "Streams Operational Transform events, receives remote edits, publishes presence heartbeats", "WebSocket over TLS 1.3")
+Rel(wireDesktopApp, syncAPISvc, "Queries document metadata, uploads manual snapshots, fetches remote settings profiles", "GraphQL over HTTPS")
+Rel(wireDesktopApp, telemetrySvc, "Emits FPS metrics, event replay rates, snapshot durations, crash dumps (opt-in only)", "OpenTelemetry OTLP/HTTP")
+Rel(wireDesktopApp, featureFlagSvc, "Evaluates feature toggles on startup and streaming updates", "LaunchDarkly SDK / HTTPS")
+Rel(wireDesktopApp, objectStore, "Uploads manual backups, downloads remote snapshots, fetches installer updates", "S3 API over HTTPS")
+
+' ==========================================
+' BACKGROUND WORKERS TO CLOUD
+' ==========================================
+
+Rel(backgroundWorkers, objectStore, "Uploads completed PDF conversion outputs, large snapshot blobs", "S3 API multipart upload")
+Rel(backgroundWorkers, conversionWorkers, "Enqueues complex SVG→PDF jobs when local resvg times out", "Redis Streams job queue")
+Rel(backgroundWorkers, telemetrySvc, "Reports snapshot serialization duration, compression ratios, FFI latency", "OTLP metrics")
+
+' ==========================================
+' COLLABORATION GATEWAY RELATIONSHIPS
+' ==========================================
+
+Rel(collabGatewaySvc, redisCluster, "Fans out OT events to active sessions, publishes presence updates", "Redis Pub/Sub")
+Rel(collabGatewaySvc, postgresDb, "Stores session metadata, OT baseline sequences, participant lists", "PostgreSQL over TLS")
+Rel(collabGatewaySvc, identityProvider, "Validates JWT signatures, introspects user claims for session auth", "JWT verification endpoint")
+Rel(collabGatewaySvc, telemetrySvc, "Reports WebSocket connection counts, OT latency p95, conflict resolution metrics", "Prometheus metrics")
+
+' ==========================================
+' SYNC API RELATIONSHIPS
+' ==========================================
+
+Rel(syncAPISvc, postgresDb, "Reads/writes document lists, settings profiles, export job metadata", "PostgreSQL connection pool")
+Rel(syncAPISvc, objectStore, "Stores large snapshots (>10 MB), export artifacts, remote thumbnail caches", "S3 API")
+Rel(syncAPISvc, telemetrySvc, "Reports GraphQL query latencies, snapshot upload durations, cache hit rates", "Prometheus metrics")
+Rel(syncAPISvc, collabGatewaySvc, "Shares document metadata for OT session initialization", "Internal gRPC")
+
+' ==========================================
+' CONVERSION WORKERS RELATIONSHIPS
+' ==========================================
+
+Rel(conversionWorkers, objectStore, "Publishes completed PDF exports with signed download URLs", "S3 API")
+Rel(conversionWorkers, redisCluster, "Polls job queue for SVG→PDF conversion requests", "Redis Streams consumer group")
+Rel(conversionWorkers, telemetrySvc, "Emits conversion duration, resvg CPU usage, PDF file size metrics", "OTLP exporters")
+
+' ==========================================
+' FEATURE FLAG SERVICE RELATIONSHIPS
+' ==========================================
+
+Rel(featureFlagSvc, postgresDb, "Persists user-specific flag overrides, environment configurations", "PostgreSQL")
+Rel(featureFlagSvc, wireDesktopApp, "Pushes real-time flag updates via streaming SDK", "Server-Sent Events / WebSocket")
+
+' ==========================================
+' TELEMETRY & OBSERVABILITY RELATIONSHIPS
+' ==========================================
+
+Rel(telemetrySvc, observabilityStack, "Feeds Grafana dashboards, Loki log aggregation, CloudWatch alarms", "Prometheus remote write, log shippers")
+Rel(redisCluster, telemetrySvc, "Exports cluster health metrics, pub/sub backlog depths", "Redis exporter")
+Rel(postgresDb, observabilityStack, "Exposes query performance stats, connection pool metrics", "PostgreSQL exporter")
+Rel(objectStore, observabilityStack, "Reports storage usage, request rates, signed URL expirations", "CloudWatch metrics")
+
+' ==========================================
+' OPS ENGINEER RELATIONSHIPS
+' ==========================================
+
+Rel(opsPersona, observabilityStack, "Monitors SLA dashboards, triages alerts, reviews trace timelines")
+Rel(opsPersona, installerPipelines, "Triggers notarized DMG/MSI builds, publishes to artifact storage")
+Rel(opsPersona, syncAPISvc, "Manages document lifecycle via GraphQL admin mutations (archive, restore)")
+Rel(opsPersona, collabGatewaySvc, "Inspects active collaboration sessions, force-disconnects stale clients")
+
+' ==========================================
+' INSTALLER PIPELINE RELATIONSHIPS
+' ==========================================
+
+Rel(installerPipelines, objectStore, "Uploads signed installers, QuickLook/Explorer extension bundles", "S3 API")
+Rel(wireDesktopApp, installerPipelines, "Checks for updates via version manifest", "HTTPS polling")
+
+' ==========================================
+' DESKTOP TO IDENTITY
+' ==========================================
+
+Rel(wireDesktopApp, identityProvider, "Authenticates users, refreshes JWT access tokens, stores refresh tokens in OS keychain", "OAuth 2.0 / OIDC")
+
+' ==========================================
+' ADDITIONAL OBSERVABILITY FLOWS
+' ==========================================
+
+Rel(collabGatewaySvc, observabilityStack, "Streams structured logs with correlation IDs for incident triage")
+Rel(syncAPISvc, observabilityStack, "Publishes audit logs for document access, snapshot downloads")
+Rel(conversionWorkers, observabilityStack, "Reports conversion failure stack traces, unsupported SVG element warnings")
+
+' ==========================================
+' LEGEND - TECHNOLOGY STACK DETAILS
+' ==========================================
+
+legend right
+  **Container Legend**
+
+  |= Tag |= Description |
+  | Runtime | Desktop application and background processing units |
+  | Service | Cloud-hosted microservices (REST/GraphQL/WebSocket APIs) |
+  | Store | Data persistence layers (databases, caches, object storage) |
+  | Platform | OS-specific integrations (macOS/Windows extensions) |
+
+  **Technology Stack by Container:**
+
+  **Desktop Runtime:**
+  • WireTuner Desktop: Flutter 3.x, Dart 3.x, Provider, Freezed, CustomPainter
+  • SQLite: Version 3.x, WAL mode, fsync durability, sqflite_common_ffi
+  • BackgroundWorkerPool: Flutter compute() isolates, Rust resvg via FFI
+  • QuickLook: Swift, macOS QLThumbnailProvider framework
+  • Explorer Handler: C++/WinRT, Windows Shell Extension API
+
+  **Cloud Services:**
+  • Collaboration Gateway: Dart Frog, WebSocket, Operational Transform engine
+  • Sync API: Dart Frog, GraphQL (schema.graphql), REST endpoints
+  • Telemetry: Prometheus, OpenTelemetry Collector, OTLP receivers
+  • Feature Flags: LaunchDarkly/Flagsmith SaaS, streaming SDK
+  • Redis: Redis Cluster, Pub/Sub, Streams, TLS encryption
+  • PostgreSQL: Version 14+, connection pooling, TLS, read replicas
+  • Object Storage: S3-compatible (AWS S3, MinIO), versioned buckets
+  • Conversion Workers: Rust resvg, Docker containers, Kubernetes pods
+  • Observability: Grafana, Loki, CloudWatch, alert routing via Alertmanager
+  • Installer Pipelines: GitHub Actions, notarytool (macOS), signtool (Windows)
+
+  **Key Architectural Patterns:**
+  • Clean Architecture in desktop app (Presentation → Application → Domain → Infrastructure)
+  • Event sourcing with SQLite append-only log + periodic snapshots (ADR-003)
+  • Operational Transform for collaboration conflict resolution
+  • Background job processing via Redis Streams + worker pools
+  • Feature flag-driven rollouts with emergency kill switches
+  • Observability via OpenTelemetry correlation IDs across all services
+
+  **Performance Targets:**
+  • Desktop: 60 FPS rendering, <100ms document load (≤10K events), <500ms snapshot creation
+  • Collaboration: <200ms OT round-trip latency, ≤10 concurrent editors per document
+  • Export: <5s for SVG→PDF conversion (1000 objects), 7-day artifact retention
+
+  **Security & Compliance:**
+  • TLS 1.3 end-to-end, JWT auth (15-minute expiry), OS keychain storage
+  • Path canonicalization, file type validation, telemetry opt-out honored
+  • SOC 2 audit trails, GDPR-compliant data handling, no PII in logs
+end legend
+
+@enduml

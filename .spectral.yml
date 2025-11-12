@@ -1,0 +1,16 @@
+extends: ["spectral:oas"]
+
+rules:
+  # OpenAPI 3.1 specific rules
+  oas3-api-servers: error
+  oas3-schema: error
+  oas3-valid-media-example: warn
+  oas3-valid-schema-example: warn
+
+  # Ensure all operations have descriptions
+  operation-description: warn
+  operation-operationId: error
+  operation-tags: warn
+
+  # Schema validation
+  typed-enum: warn

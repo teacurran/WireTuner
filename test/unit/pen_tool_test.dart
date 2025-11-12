@@ -142,8 +142,7 @@ void main() {
         );
 
         // Verify CreatePathEvent details
-        final createEvent =
-            eventRecorder.recordedEvents[1] as CreatePathEvent;
+        final createEvent = eventRecorder.recordedEvents[1] as CreatePathEvent;
         expect(createEvent.pathId, isNotEmpty);
         expect(createEvent.startAnchor.x, closeTo(100.0, 0.1));
         expect(createEvent.startAnchor.y, closeTo(100.0, 0.1));
@@ -160,8 +159,7 @@ void main() {
         );
         penTool.onPointerDown(event);
 
-        final startGroup =
-            eventRecorder.recordedEvents[0] as StartGroupEvent;
+        final startGroup = eventRecorder.recordedEvents[0] as StartGroupEvent;
         expect(startGroup.groupId, isNotEmpty);
         expect(startGroup.description, equals('Create path'));
       });
@@ -322,8 +320,7 @@ void main() {
         expect(eventRecorder.recordedEvents[0], isA<FinishPathEvent>());
         expect(eventRecorder.recordedEvents[1], isA<EndGroupEvent>());
 
-        final finishEvent =
-            eventRecorder.recordedEvents[0] as FinishPathEvent;
+        final finishEvent = eventRecorder.recordedEvents[0] as FinishPathEvent;
         expect(finishEvent.closed, isFalse);
         expect(eventRecorder.flushCallCount, greaterThan(0));
       });
@@ -428,8 +425,7 @@ void main() {
         penTool.onPointerUp(up);
 
         // Should emit ModifyAnchorEvent
-        final modifyEvents =
-            eventRecorder.getEventsOfType<ModifyAnchorEvent>();
+        final modifyEvents = eventRecorder.getEventsOfType<ModifyAnchorEvent>();
         expect(modifyEvents.length, equals(1));
 
         final modifyEvent = modifyEvents[0];
@@ -576,13 +572,11 @@ void main() {
         // Should emit FinishPathEvent + EndGroupEvent
         expect(eventRecorder.recordedEvents.length, greaterThanOrEqualTo(2));
         expect(
-          eventRecorder.recordedEvents
-              .any((e) => e is FinishPathEvent),
+          eventRecorder.recordedEvents.any((e) => e is FinishPathEvent),
           isTrue,
         );
         expect(
-          eventRecorder.recordedEvents
-              .any((e) => e is EndGroupEvent),
+          eventRecorder.recordedEvents.any((e) => e is EndGroupEvent),
           isTrue,
         );
         expect(eventRecorder.flushCallCount, greaterThan(0));

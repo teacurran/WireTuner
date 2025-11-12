@@ -73,8 +73,10 @@ class DocumentProvider extends ChangeNotifier {
   /// Gets the current document.
   Document get document => _document;
 
-  /// Gets the current viewport state from the document.
-  Viewport get viewport => _document.viewport;
+  /// Gets the current viewport state from the first artboard.
+  Viewport? get viewport => _document.artboards.isNotEmpty
+      ? _document.artboards.first.viewport
+      : null;
 
   /// Gets whether the document has unsaved changes.
   ///
@@ -102,7 +104,7 @@ class DocumentProvider extends ChangeNotifier {
   /// Updates the viewport state within the document.
   ///
   /// This is called when viewport controller changes (pan, zoom, canvas resize).
-  /// The viewport state is persisted within the document so it can be restored
+  /// The viewport state is persisted within the first artboard so it can be restored
   /// when the document is reopened.
   ///
   /// Example:
@@ -116,8 +118,15 @@ class DocumentProvider extends ChangeNotifier {
   /// );
   /// ```
   void updateViewport(Viewport newViewport) {
-    if (_document.viewport == newViewport) return;
-    _document = _document.copyWith(viewport: newViewport);
+    // Update viewport in the first artboard
+    if (_document.artboards.isEmpty) return;
+    final artboard = _document.artboards.first;
+    if (artboard.viewport == newViewport) return;
+
+    final updatedArtboard = artboard.copyWith(viewport: newViewport);
+    final updatedArtboards = [..._document.artboards];
+    updatedArtboards[0] = updatedArtboard;
+    _document = _document.copyWith(artboards: updatedArtboards);
     notifyListeners();
   }
 
@@ -131,21 +140,34 @@ class DocumentProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// Updates the selection state within the document.
+  /// Updates the selection state within the first artboard.
   ///
   /// This is called when selection changes via tools or keyboard shortcuts.
   void updateSelection(Selection newSelection) {
-    if (_document.selection == newSelection) return;
-    _document = _document.copyWith(selection: newSelection);
+    if (_document.artboards.isEmpty) return;
+    final artboard = _document.artboards.first;
+    if (artboard.selection == newSelection) return;
+
+    final updatedArtboard = artboard.copyWith(selection: newSelection);
+    final updatedArtboards = [..._document.artboards];
+    updatedArtboards[0] = updatedArtboard;
+    _document = _document.copyWith(artboards: updatedArtboards);
     notifyListeners();
   }
 
-  /// Updates the layers within the document.
-  ///
-  /// This is called when layers are added, removed, or modified.
+  /// DEPRECATED: Updates the layers within the document.
+  /// This method is kept for backward compatibility but should not be used.
+  /// Layers are now managed per-artboard.
+  @Deprecated('Use artboard-level layer management instead')
   void updateLayers(List<Layer> newLayers) {
-    if (_document.layers == newLayers) return;
-    _document = _document.copyWith(layers: newLayers);
+    if (_document.artboards.isEmpty) return;
+    final artboard = _document.artboards.first;
+    if (artboard.layers == newLayers) return;
+
+    final updatedArtboard = artboard.copyWith(layers: newLayers);
+    final updatedArtboards = [..._document.artboards];
+    updatedArtboards[0] = updatedArtboard;
+    _document = _document.copyWith(artboards: updatedArtboards);
     notifyListeners();
   }
 

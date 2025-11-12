@@ -1,0 +1,275 @@
+@startuml WireTuner Domain ERD
+' ========================================================================
+' WireTuner Data & Domain ERD (PlantUML Version)
+' ========================================================================
+' This diagram maps SQLite persistent tables to in-memory domain aggregates.
+' The persistent layer provides durability through event sourcing.
+' The domain layer provides rich behavior through immutable Dart objects.
+'
+' Legend:
+' - [SQLite Tables] = Persistent storage (event sourcing)
+' - [Domain Entities] = In-memory Dart objects (reconstructed via replay)
+' ========================================================================
+
+!define TABLE(name) entity name << (T, #FFAAAA) >>
+!define ENTITY(name) entity name << (E, #AAFFAA) >>
+
+skinparam entity {
+  BackgroundColor #fafafa
+  BorderColor #424242
+}
+
+' ========================================================================
+' PERSISTENT LAYER: SQLite Tables
+' ========================================================================
+
+entity "metadata" as metadata {
+  * document_id : TEXT <<PK>>
+  --
+  title : TEXT
+  format_version : INTEGER
+  created_at : INTEGER
+  modified_at : INTEGER
+  author : TEXT
+}
+
+entity "events" as events {
+  * event_id : INTEGER <<PK>>
+  --
+  document_id : TEXT <<FK>>
+  event_sequence : INTEGER
+  event_type : TEXT
+  event_payload : TEXT
+  timestamp : INTEGER
+  user_id : TEXT
+}
+
+entity "snapshots" as snapshots {
+  * snapshot_id : INTEGER <<PK>>
+  --
+  document_id : TEXT <<FK>>
+  event_sequence : INTEGER
+  snapshot_data : BLOB
+  created_at : INTEGER
+  compression : TEXT
+}
+
+' ========================================================================
+' DOMAIN LAYER: In-Memory Dart Entities
+' ========================================================================
+
+entity "Document" as Document {
+  * id : String
+  --
+  title : String
+  layers : List<Layer>
+  selection : Selection
+  viewport : Viewport
+}
+
+entity "Artboard" as Artboard {
+  * id : UUID
+  --
+  documentId : UUID
+  name : String(100)
+  boundsX : Double
+  boundsY : Double
+  boundsWidth : Double
+  boundsHeight : Double
+  backgroundColor : RGBA
+  preset : Enum
+  zOrder : Int
+}
+
+entity "Layer" as Layer {
+  * id : String
+  --
+  artboardId : UUID
+  name : String
+  visible : bool
+  locked : bool
+  objects : List<VectorObject>
+  zIndex : Int
+}
+
+entity "VectorObject" as VectorObject {
+  * id : String
+  --
+  layerId : UUID
+  artboardId : UUID
+  type : Enum(path|shape|text|compound)
+  transform : Transform
+  style : Style
+  createdAt : RFC3339
+  modifiedAt : RFC3339
+}
+
+entity "Path" as Path {
+  --
+  anchors : List<AnchorPoint>
+  segments : List<Segment>
+  closed : bool
+}
+
+entity "Shape" as Shape {
+  --
+  center : Point
+  kind : ShapeKind
+  width : double
+  height : double
+  cornerRadius : double
+  radius : double
+  innerRadius : double
+  sides : int
+  rotation : double
+}
+
+entity "Segment" as Segment {
+  --
+  startAnchorIndex : int
+  endAnchorIndex : int
+  segmentType : SegmentType
+}
+
+entity "AnchorPoint" as AnchorPoint {
+  --
+  position : Point
+  handleIn : Point
+  handleOut : Point
+  anchorType : AnchorType
+}
+
+entity "Style" as Style {
+  --
+  fill : Paint
+  stroke : Paint
+  strokeWidth : double
+  opacity : double
+  blendMode : BlendMode
+}
+
+entity "Transform" as Transform {
+  --
+  matrix : Matrix4
+}
+
+entity "Selection" as Selection {
+  --
+  objectIds : Set<String>
+  anchorIndices : Map<String, Set<int>>
+}
+
+entity "Viewport" as Viewport {
+  --
+  pan : Point
+  zoom : double
+  canvasSize : Size
+}
+
+entity "CollaborationSession" as CollaborationSession {
+  * id : UUID
+  --
+  documentId : UUID
+  sessionName : String
+  ownerId : UUID
+  createdAt : RFC3339
+  activatedAt : RFC3339
+  deactivatedAt : RFC3339
+}
+
+entity "ExportJob" as ExportJob {
+  * id : UUID
+  --
+  documentId : UUID
+  artboardId : UUID
+  exportFormat : Enum
+  status : Enum
+  createdAt : RFC3339
+  completedAt : RFC3339
+  artifactUrl : String
+}
+
+entity "FeatureFlagSetting" as FeatureFlagSetting {
+  * id : UUID
+  --
+  flagKey : String
+  enabled : bool
+  userId : UUID
+  rolloutPercentage : double
+  updatedAt : RFC3339
+}
+
+entity "TelemetryEvent" as TelemetryEvent {
+  * id : UUID
+  --
+  eventType : String
+  timestamp : RFC3339
+  userId : UUID
+  sessionId : UUID
+  properties : JsonObject
+}
+
+' ========================================================================
+' RELATIONSHIPS: Persistent Layer
+' ========================================================================
+
+metadata ||--o{ events : "1:N (CASCADE DELETE)"
+metadata ||--o{ snapshots : "1:N (CASCADE DELETE)"
+
+note right of events
+  Events and snapshots are independent
+  but both reference metadata.
+  Snapshots are created every 1000 events
+  per architecture decision.
+end note
+
+' ========================================================================
+' RELATIONSHIPS: Domain Layer (Composition)
+' ========================================================================
+
+Document ||--|{ Artboard : "contains 0..N"
+Document ||--|| Selection : "has 1"
+Document ||--|| Viewport : "has 1"
+
+Artboard ||--|{ Layer : "contains 0..N"
+Layer ||--o{ VectorObject : "contains 0..N"
+
+VectorObject ||--|| Transform : "has 1"
+VectorObject ||--|| Style : "has 1"
+VectorObject <|-- Path : "is a (inheritance)"
+VectorObject <|-- Shape : "is a (inheritance)"
+
+Path ||--|{ Segment : "composed of 2..N"
+Path ||--|{ AnchorPoint : "composed of 1..N"
+
+Segment }o--|| AnchorPoint : "references start"
+Segment }o--|| AnchorPoint : "references end"
+
+' ========================================================================
+' SUPPORTING RELATIONSHIPS
+' ========================================================================
+
+Document ||--o{ CollaborationSession : "has 0..N"
+Document ||--o{ ExportJob : "has 0..N"
+Document ||--o{ TelemetryEvent : "generates 0..N"
+
+' ========================================================================
+' CROSS-LAYER MAPPING NOTES
+' ========================================================================
+
+note bottom of Document
+  **Document Lifecycle:**
+  1. User creates document → metadata row inserted
+  2. User actions → events rows appended (event_sequence increments)
+  3. Every 1000 events → snapshots row created with serialized Document
+  4. Document loaded → latest snapshot retrieved + subsequent events replayed
+  5. Replay reconstructs Document aggregate from events
+
+  **Key Insight:**
+  - Persistent layer (metadata, events, snapshots) = source of truth
+  - Domain layer (Document, Path, Shape, etc) = transient, reconstructed
+  - Changes to domain objects generate events, not direct DB updates
+  - Event replay is the ONLY way to reconstruct domain state
+end note
+
+@enduml

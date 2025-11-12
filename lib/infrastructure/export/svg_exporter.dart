@@ -161,7 +161,92 @@ class SvgExporter {
     writer.writeMetadata(title: document.title);
 
     // Write layers (skip invisible layers)
-    for (final layer in document.layers) {
+    // Legacy: Support deprecated document.layers for backward compatibility
+    if (document.layers != null && document.layers!.isNotEmpty) {
+      for (final layer in document.layers!) {
+        if (!layer.visible) {
+          _logger.d('Skipping invisible layer: ${layer.id}');
+          continue;
+        }
+
+        // Start layer group
+        writer.startGroup(id: layer.id, opacity: '1');
+
+        // Write objects in layer
+        for (final object in layer.objects) {
+          _writeObject(writer, object);
+        }
+
+        // End layer group
+        writer.endGroup();
+      }
+    } else {
+      // Multi-artboard: Export all artboards as groups
+      for (final artboard in document.artboards) {
+        // Start artboard group
+        writer.startGroup(id: artboard.id, opacity: '1');
+
+        // Write layers within artboard
+        for (final layer in artboard.layers) {
+          if (!layer.visible) {
+            _logger.d('Skipping invisible layer: ${layer.id}');
+            continue;
+          }
+
+          // Start layer group
+          writer.startGroup(id: layer.id, opacity: '1');
+
+          // Write objects in layer
+          for (final object in layer.objects) {
+            _writeObject(writer, object);
+          }
+
+          // End layer group
+          writer.endGroup();
+        }
+
+        // End artboard group
+        writer.endGroup();
+      }
+    }
+
+    // Write footer
+    writer.writeFooter();
+
+    return writer.build();
+  }
+
+  /// Generates SVG XML content from a specific artboard.
+  ///
+  /// This method exports a single artboard with proper viewBox and metadata.
+  /// The SVG viewBox is calculated from the artboard's bounds rather than
+  /// object bounds, ensuring consistent coordinate system.
+  ///
+  /// Parameters:
+  /// - [artboard]: The artboard to export
+  /// - [documentTitle]: Optional document title for metadata
+  ///
+  /// Returns the SVG document as an XML string.
+  ///
+  /// Example:
+  /// ```dart
+  /// final artboard = document.getArtboardById('artboard-1');
+  /// final svgContent = exporter.generateSvgForArtboard(artboard);
+  /// ```
+  String generateSvgForArtboard(Artboard artboard, {String? documentTitle}) {
+    final writer = SvgWriter();
+
+    // Use artboard bounds for viewBox
+    writer.writeHeader(viewBox: artboard.bounds);
+
+    // Write metadata with artboard name
+    final title = documentTitle != null
+        ? '$documentTitle - ${artboard.name}'
+        : artboard.name;
+    writer.writeMetadata(title: title);
+
+    // Write layers (skip invisible layers)
+    for (final layer in artboard.layers) {
       if (!layer.visible) {
         _logger.d('Skipping invisible layer: ${layer.id}');
         continue;
@@ -183,6 +268,54 @@ class SvgExporter {
     writer.writeFooter();
 
     return writer.build();
+  }
+
+  /// Exports a specific artboard to an SVG file.
+  ///
+  /// This is the artboard-scoped version of [exportToFile].
+  ///
+  /// Parameters:
+  /// - [artboard]: The artboard to export
+  /// - [filePath]: Absolute path to the output SVG file
+  /// - [documentTitle]: Optional document title for metadata
+  ///
+  /// Throws:
+  /// - [FileSystemException] if file cannot be written
+  /// - [Exception] for other export errors
+  Future<void> exportArtboardToFile(
+    Artboard artboard,
+    String filePath, {
+    String? documentTitle,
+  }) async {
+    final startTime = DateTime.now();
+
+    try {
+      _logger.d(
+        'Starting SVG export: artboard=${artboard.id}, path=$filePath',
+      );
+
+      // Generate SVG content for artboard
+      final svgContent = generateSvgForArtboard(
+        artboard,
+        documentTitle: documentTitle,
+      );
+
+      // Write to file with UTF-8 encoding
+      final file = File(filePath);
+      await file.writeAsString(svgContent, encoding: utf8);
+
+      // Log performance metrics
+      final duration = DateTime.now().difference(startTime);
+      final objectCount = artboard.getAllObjects().length;
+
+      _logger.i(
+        'SVG export completed: $objectCount objects, '
+        '${duration.inMilliseconds}ms, path=$filePath',
+      );
+    } catch (e, stackTrace) {
+      _logger.e('SVG export failed', error: e, stackTrace: stackTrace);
+      rethrow;
+    }
   }
 
   /// Writes a vector object to the SVG writer.
@@ -248,7 +381,8 @@ class SvgExporter {
     // Start with 'M' (move to first anchor)
     final firstAnchor = path.anchors[0];
     buffer.write(
-        'M ${_fmt(firstAnchor.position.x)} ${_fmt(firstAnchor.position.y)}',);
+      'M ${_fmt(firstAnchor.position.x)} ${_fmt(firstAnchor.position.y)}',
+    );
 
     // Process each segment
     for (final segment in path.segments) {
@@ -274,7 +408,8 @@ class SvgExporter {
         buffer.write(' C ${_fmt(cp1.x)} ${_fmt(cp1.y)},');
         buffer.write(' ${_fmt(cp2.x)} ${_fmt(cp2.y)},');
         buffer.write(
-            ' ${_fmt(endAnchor.position.x)} ${_fmt(endAnchor.position.y)}',);
+          ' ${_fmt(endAnchor.position.x)} ${_fmt(endAnchor.position.y)}',
+        );
       }
     }
 
@@ -303,16 +438,34 @@ class SvgExporter {
   Rectangle _calculateBounds(Document document) {
     Rectangle? bounds;
 
-    for (final layer in document.layers) {
-      // Consider all layers (visible and invisible) for bounds calculation
-      // This ensures consistent viewBox even if layers are toggled
-      for (final object in layer.objects) {
-        final objBounds = object.getBounds();
+    // Legacy support for deprecated document.layers
+    if (document.layers != null && document.layers!.isNotEmpty) {
+      for (final layer in document.layers!) {
+        // Consider all layers (visible and invisible) for bounds calculation
+        // This ensures consistent viewBox even if layers are toggled
+        for (final object in layer.objects) {
+          final objBounds = object.getBounds();
 
-        if (bounds == null) {
-          bounds = objBounds;
-        } else {
-          bounds = bounds.union(objBounds);
+          if (bounds == null) {
+            bounds = objBounds;
+          } else {
+            bounds = bounds.union(objBounds);
+          }
+        }
+      }
+    } else {
+      // Multi-artboard: Calculate bounds from all artboards
+      for (final artboard in document.artboards) {
+        for (final layer in artboard.layers) {
+          for (final object in layer.objects) {
+            final objBounds = object.getBounds();
+
+            if (bounds == null) {
+              bounds = objBounds;
+            } else {
+              bounds = bounds.union(objBounds);
+            }
+          }
         }
       }
     }
@@ -330,10 +483,19 @@ class SvgExporter {
   /// Counts total number of objects in document.
   ///
   /// Used for performance logging.
-  int _countObjects(Document document) => document.layers.fold(
+  int _countObjects(Document document) {
+    if (document.layers != null && document.layers!.isNotEmpty) {
+      return document.layers!.fold(
         0,
         (sum, layer) => sum + layer.objects.length,
       );
+    } else {
+      return document.artboards.fold(
+        0,
+        (sum, artboard) => sum + artboard.getAllObjects().length,
+      );
+    }
+  }
 
   /// Formats a coordinate value with 2 decimal places.
   String _fmt(double value) => value.toStringAsFixed(2);

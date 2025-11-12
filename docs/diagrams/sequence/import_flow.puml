@@ -1,0 +1,264 @@
+' =========================================================================
+' SVG/AI Import Flow with Background Processing - Sequence Diagram
+' =========================================================================
+' Purpose: Documents the complete import flow from file selection through
+'          parsing, conversion, security validation, and event recording,
+'          showing background worker delegation and progress feedback.
+'
+' Related Specs:
+'   - Architecture Blueprint Section 3.7.1 (API Style - Import hooks)
+'   - Architecture Blueprint Section 3.5 (Component Diagram - ImportExportService)
+'   - Architecture Blueprint Appendix B.3 (Import via BackgroundWorkerBridge)
+'   - FR-041 (Import format support)
+'   - NFR-PERF-006 (Background processing)
+'
+' Date: 2025-11-11
+' =========================================================================
+
+@startuml import_flow
+title SVG/AI Import Flow with Background Processing
+
+' =========================================================================
+' Participants
+' =========================================================================
+
+actor Designer as "User"
+
+box "UI Layer" #FFFDE7
+  participant DesktopShell
+  participant NavigatorService
+end box
+
+box "Import Pipeline" #FCE4EC
+  participant ImportExportService
+  participant SecurityGateway
+end box
+
+box "Processing Layer" #E3F2FD
+  participant BackgroundWorkerBridge
+  participant EventStoreService
+  participant TelemetryService
+end box
+
+box "External Systems" #F3E5F5
+  participant ConversionQueue
+  participant FeatureFlagClient
+end box
+
+' =========================================================================
+' File Selection and Validation
+' =========================================================================
+
+Designer -> DesktopShell: File > Import... (Cmd/Ctrl+I)
+DesktopShell -> DesktopShell: showFileDialog(filter="*.svg,*.ai")
+
+Designer -> DesktopShell: Select file(s)
+DesktopShell -> SecurityGateway: validateFilePath(selectedPath)
+
+SecurityGateway -> SecurityGateway: checkPermissions()
+SecurityGateway -> SecurityGateway: validateExtension()
+SecurityGateway -> SecurityGateway: sanitizeFileName()
+
+SecurityGateway --> DesktopShell: pathApproved
+
+note over SecurityGateway
+  Security validation per blueprint:
+  - Verifies read permissions
+  - Validates file extension (.svg, .ai)
+  - Sanitizes file names to prevent injection
+  - Checks file size limits (configurable)
+
+  Rejects files that may contain malicious content.
+end note
+
+' =========================================================================
+' Feature Flag Check for AI Import
+' =========================================================================
+
+DesktopShell -> ImportExportService: initiateImport(filePath, format)
+
+alt AI format detected
+  ImportExportService -> FeatureFlagClient: evaluate("ai_import_tier2")
+  FeatureFlagClient --> ImportExportService: enabled=true|false
+
+  alt AI import disabled
+    ImportExportService -> DesktopShell: showError("AI import requires feature flag")
+    DesktopShell -> Designer: Display error toast
+
+    note right of ImportExportService
+      AI import gated by feature flag per
+      architecture blueprint Section 3.7.1.
+
+      Tier 2 features require explicit enablement
+      via LaunchDarkly/Flagsmith.
+    end note
+  end
+end
+
+' =========================================================================
+' Background Worker Job Submission
+' =========================================================================
+
+group Background job submission
+  ImportExportService -> TelemetryService: log(metric="import.start", format=format)
+  TelemetryService --> ImportExportService: ack
+
+  ImportExportService -> BackgroundWorkerBridge: enqueueConversionJob(jobPayload)
+  BackgroundWorkerBridge -> ConversionQueue: push(jobId, filePath, targetFormat)
+  ConversionQueue --> BackgroundWorkerBridge: jobQueued
+
+  BackgroundWorkerBridge --> ImportExportService: jobId
+
+  ImportExportService -> NavigatorService: showProgressIndicator(jobId)
+  NavigatorService -> DesktopShell: displayProgressBar(title="Importing...")
+end
+
+note over BackgroundWorkerBridge
+  Heavy parsing delegated to isolate worker
+  per NFR-PERF-006 to prevent UI blocking.
+
+  Job includes:
+  - File path
+  - Target format (WireTuner internal)
+  - Parsing options (precision, artboard scope)
+  - Progress callback WebSocket endpoint
+end note
+
+' =========================================================================
+' Background Parsing and Conversion
+' =========================================================================
+
+group Background parsing loop
+  ConversionQueue -> BackgroundWorkerBridge: pull(jobId)
+  activate BackgroundWorkerBridge
+
+  BackgroundWorkerBridge -> BackgroundWorkerBridge: parseFile(format)
+
+  loop Progress updates
+    BackgroundWorkerBridge -> ImportExportService: progressUpdate(percent, status)
+    ImportExportService -> NavigatorService: updateProgressBar(percent)
+    NavigatorService -> DesktopShell: refreshUI(progress)
+  end
+
+  BackgroundWorkerBridge -> BackgroundWorkerBridge: convertToWireTunerSchema()
+
+  BackgroundWorkerBridge -> TelemetryService: log(metric="conversion.duration")
+  TelemetryService --> BackgroundWorkerBridge: ack
+
+  deactivate BackgroundWorkerBridge
+  BackgroundWorkerBridge --> ImportExportService: geometryPayload
+end
+
+note right of BackgroundWorkerBridge
+  Conversion produces WireTuner-native
+  Document/Artboard/Layer/Vector objects
+  matching foundation domain models.
+
+  Rust FFI bridges may accelerate heavy
+  computations (path simplification, etc.).
+end note
+
+' =========================================================================
+' Event Recording and Document Integration
+' =========================================================================
+
+group Event recording
+  ImportExportService -> EventStoreService: record(document.imported start)
+  EventStoreService --> ImportExportService: startSequence
+
+  ImportExportService -> EventStoreService: record(artboard.created) for each artboard
+  EventStoreService --> ImportExportService: artboardSequences
+
+  ImportExportService -> EventStoreService: record(layer.added) for each layer
+  EventStoreService --> ImportExportService: layerSequences
+
+  ImportExportService -> EventStoreService: record(path.created) for each vector
+  EventStoreService --> ImportExportService: pathSequences
+
+  ImportExportService -> EventStoreService: record(document.imported end)
+  EventStoreService --> ImportExportService: endSequence
+end
+
+note over EventStoreService
+  Import generates event sequence that
+  mirrors manual creation workflow.
+
+  Enables:
+  - Full undo of import operation
+  - Replay/audit of imported geometry
+  - Collaboration sync if remote session active
+end note
+
+' =========================================================================
+' Success Feedback and Cleanup
+' =========================================================================
+
+group Success feedback
+  ImportExportService -> NavigatorService: importComplete(artboardCount)
+
+  NavigatorService -> DesktopShell: closeProgressBar()
+  DesktopShell -> Designer: toast("Imported N artboards successfully")
+
+  NavigatorService -> NavigatorService: refreshArtboardThumbnails()
+  NavigatorService -> DesktopShell: selectFirstImportedArtboard()
+
+  ImportExportService -> TelemetryService: log(metric="import.success", artboards=N)
+  TelemetryService --> ImportExportService: ack
+end
+
+note over NavigatorService
+  Navigator automatically selects first
+  imported artboard for immediate editing.
+
+  Thumbnails generated in background to
+  provide visual confirmation of import.
+end note
+
+' =========================================================================
+' Error Handling Path
+' =========================================================================
+
+alt Parsing or conversion error
+  BackgroundWorkerBridge -> ImportExportService: conversionFailed(error)
+
+  ImportExportService -> NavigatorService: importFailed(error)
+  NavigatorService -> DesktopShell: closeProgressBar()
+
+  DesktopShell -> Designer: showError("Import failed: " + error.message)
+
+  ImportExportService -> TelemetryService: log(metric="import.error", reason=error.code)
+  TelemetryService --> ImportExportService: ack
+
+  note right of ImportExportService
+    Error telemetry captures:
+    - File format
+    - Error code (parse, validation, memory)
+    - File size (for correlation analysis)
+
+    No file content logged to protect user privacy.
+  end note
+end
+
+' =========================================================================
+' Summary Notes
+' =========================================================================
+
+note right of ImportExportService
+  **Import Architecture (FR-041):**
+  - Supported formats: SVG, AI (when flagged)
+  - Security: Path validation, sanitization
+  - Performance: Background isolate processing
+  - Events: Full undo/replay support
+
+  **Progress Feedback:**
+  - Real-time updates via WebSocket frames
+  - Cancellable operations (Escape key)
+  - Thumbnail auto-generation on completion
+
+  **Error Handling:**
+  - Graceful degradation on parse failures
+  - User-friendly error messages
+  - Telemetry for format compatibility tracking
+end note
+
+@enduml

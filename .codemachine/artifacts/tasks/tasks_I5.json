@@ -2,193 +2,108 @@
   {
     "task_id": "I5.T1",
     "iteration_id": "I5",
-    "iteration_goal": "Finalize save/load flows with semantic versioning, implement SVG/PDF export and Tier-2 AI import, codify interoperability specs, and run platform parity QA culminating in release packaging.",
-    "description": "Implement document save orchestrator writing snapshots + metadata into `.wiretuner` SQLite files, handling Save and Save As flows with blocking UI + progress indicators.",
-    "agent_type_hint": "BackendAgent",
-    "inputs": "Snapshot serializer, event store, operation grouping for dirty state.",
+    "iteration_goal": "Complete SVG/PDF/AI import-export pipelines, finalize verification strategy, quality gates, release documentation, and ops automation.",
+    "description": "Implement SVG export (paths, shapes, metadata, per-artboard scope) + JSON archival export with round-trip tests.",
+    "agent_type_hint": "FrontendAgent",
+    "inputs": "FR-019, FR-049, Section 7.10.",
     "target_files": [],
     "input_files": [],
-    "deliverables": "Save service with blocking dialogs, dirty-state tracking, unit tests for success/failure (disk full) scenarios.",
-    "acceptance_criteria": "Save completes <100 ms for baseline doc; errors display actionable dialog; tests simulate failure + success; logging captures file path + version.",
+    "deliverables": "Export services, UI dialog updates, tests comparing Illustrator round-trip.",
+    "acceptance_criteria": "SVG validates vs W3C; JSON export imports back; export dialog shows compatibility warnings.",
     "dependencies": [
-      "I2.T4",
+      "I3.T3",
+      "I3.T5"
+    ],
+    "parallelizable": true,
+    "done": true
+  },
+  {
+    "task_id": "I5.T2",
+    "iteration_id": "I5",
+    "iteration_goal": "Complete SVG/PDF/AI import-export pipelines, finalize verification strategy, quality gates, release documentation, and ops automation.",
+    "description": "Integrate PDF export pipeline via resvg worker, queue-based job management, telemetry, and failure handling UI.",
+    "agent_type_hint": "BackendAgent",
+    "inputs": "FR-020, Section 7.6.",
+    "target_files": [],
+    "input_files": [],
+    "deliverables": "Worker service, client queue integration, UI status panel.",
+    "acceptance_criteria": "Export completes with vector fidelity; retries on failures; telemetry logs failure reasons; UI shows progress.",
+    "dependencies": [
+      "I5.T1"
+    ],
+    "parallelizable": false,
+    "done": true
+  },
+  {
+    "task_id": "I5.T3",
+    "iteration_id": "I5",
+    "iteration_goal": "Complete SVG/PDF/AI import-export pipelines, finalize verification strategy, quality gates, release documentation, and ops automation.",
+    "description": "Build AI (PDF-compatible) import pipeline with compatibility report, warnings, and FR-021 Tier 1/Tier 2 coverage.",
+    "agent_type_hint": "BackendAgent",
+    "inputs": "ADR-005, FR-021.",
+    "target_files": [],
+    "input_files": [],
+    "deliverables": "Importer, warning catalog, UI integration, regression tests covering sample corpus.",
+    "acceptance_criteria": "Imports Tier 1/Tier 2 features; warns on unsupported; tests run across sample files; docs detail limitations.",
+    "dependencies": [
+      "I3.T3"
+    ],
+    "parallelizable": true,
+    "done": true
+  },
+  {
+    "task_id": "I5.T4",
+    "iteration_id": "I5",
+    "iteration_goal": "Complete SVG/PDF/AI import-export pipelines, finalize verification strategy, quality gates, release documentation, and ops automation.",
+    "description": "Produce verification & validation strategy (unit/integration/E2E, performance benchmarks, regression suites) and populate traceability matrix.",
+    "agent_type_hint": "QAAgent",
+    "inputs": "Section 6 Verification Strategy requirement, QA appendix.",
+    "target_files": [],
+    "input_files": [],
+    "deliverables": "Updated matrix mapping FR/NFR → tests, benchmark plan, doc describing automated test orchestration.",
+    "acceptance_criteria": "Every FR/NFR mapped; CI includes benchmark stage; doc cross-links to telemetry; sign-off by QA lead.",
+    "dependencies": [
+      "I1.T6",
+      "I3.T6"
+    ],
+    "parallelizable": true,
+    "done": true
+  },
+  {
+    "task_id": "I5.T5",
+    "iteration_id": "I5",
+    "iteration_goal": "Complete SVG/PDF/AI import-export pipelines, finalize verification strategy, quality gates, release documentation, and ops automation.",
+    "description": "Finalize release ops: installer pipelines, feature flag rollout plan, runbooks, incident templates, status page automation.",
+    "agent_type_hint": "DevOpsAgent",
+    "inputs": "Section 3 (Operational), Section 4 directives.",
+    "target_files": [],
+    "input_files": [],
+    "deliverables": "Automated release scripts, notarization/signing instructions, runbooks, status page integration script.",
+    "acceptance_criteria": "Dry run produces signed DMG/MSI; runbooks reviewed; feature flag rollout steps documented; status page updates automated.",
+    "dependencies": [
+      "I1.T6",
       "I4.T6"
     ],
     "parallelizable": false,
     "done": true
   },
   {
-    "task_id": "I5.T2",
-    "iteration_id": "I5",
-    "iteration_goal": "Finalize save/load flows with semantic versioning, implement SVG/PDF export and Tier-2 AI import, codify interoperability specs, and run platform parity QA culminating in release packaging.",
-    "description": "Author `api/file_format_spec.md` describing `.wiretuner` semantic versioning, schema, backward-compatible downgrade flows, and compatibility matrix per Decision 4.",
-    "agent_type_hint": "DocumentationAgent",
-    "inputs": "Tasks `I5.T1`, `I2.T4`, Decision 4 table.",
-    "target_files": [],
-    "input_files": [],
-    "deliverables": "Markdown spec with header structure, field definitions, migration steps, degrade warnings, JSON header example.",
-    "acceptance_criteria": "Document references compatibility matrix, includes Save As degrade workflow, ties to QA plan; markdown lint passes; manifest entry added.",
-    "dependencies": [
-      "I5.T1"
-    ],
-    "parallelizable": true,
-    "done": true
-  },
-  {
-    "task_id": "I5.T3",
-    "iteration_id": "I5",
-    "iteration_goal": "Finalize save/load flows with semantic versioning, implement SVG/PDF export and Tier-2 AI import, codify interoperability specs, and run platform parity QA culminating in release packaging.",
-    "description": "Implement load service reading `.wiretuner` files, verifying version compatibility, running migrations, and populating UI (recent files, error dialogs) with degrade warnings.",
-    "agent_type_hint": "BackendAgent",
-    "inputs": "Save service, file spec, undo navigator.",
-    "target_files": [],
-    "input_files": [],
-    "deliverables": "Load service + dialogs, integration test verifying round-trip, degrade warning UI.",
-    "acceptance_criteria": "Load rejects unsupported versions gracefully; integration test uses fixture; warnings show when downgrading features; telemetry logs file versions.",
-    "dependencies": [
-      "I5.T1",
-      "I5.T2"
-    ],
-    "parallelizable": false,
-    "done": true
-  },
-  {
-    "task_id": "I5.T4",
-    "iteration_id": "I5",
-    "iteration_goal": "Finalize save/load flows with semantic versioning, implement SVG/PDF export and Tier-2 AI import, codify interoperability specs, and run platform parity QA culminating in release packaging.",
-    "description": "Generate AI import feature matrix (Tier-2) documenting supported constructs, partial support, warnings; build parser leveraging PDF structure to extract paths/shapes.",
-    "agent_type_hint": "BackendAgent",
-    "inputs": "Decision 5, vector engine, event schema, file format spec.",
-    "target_files": [],
-    "input_files": [],
-    "deliverables": "Matrix doc, importer converting Tier-2 constructs to events, tests with sample AI fixtures + warning logs.",
-    "acceptance_criteria": "Matrix lists Tier-1/Tier-2 coverage; importer warns on unsupported Tier-3 features; tests verify gradient/stroke conversions; doc cross-links to Decision 5.",
-    "dependencies": [
-      "I2.T3",
-      "I5.T2"
-    ],
-    "parallelizable": false,
-    "done": true
-  },
-  {
-    "task_id": "I5.T5",
-    "iteration_id": "I5",
-    "iteration_goal": "Finalize save/load flows with semantic versioning, implement SVG/PDF export and Tier-2 AI import, codify interoperability specs, and run platform parity QA culminating in release packaging.",
-    "description": "Implement SVG export (Tier-2) supporting paths, shapes, gradients, clipping masks, compound paths, and metadata; ensure exported files pass W3C validator.",
-    "agent_type_hint": "BackendAgent",
-    "inputs": "Vector engine, render pipeline, file spec.",
-    "target_files": [],
-    "input_files": [],
-    "deliverables": "SVG exporter, unit tests verifying DOM output, integration test comparing against golden file opened via CLI validator.",
-    "acceptance_criteria": "Exporter handles gradients/clipping; tests assert XML equality; validator CLI returns success; doc snippet explains known limitations.",
-    "dependencies": [
-      "I2.T6",
-      "I5.T2"
-    ],
-    "parallelizable": true,
-    "done": true
-  },
-  {
     "task_id": "I5.T6",
     "iteration_id": "I5",
-    "iteration_goal": "Finalize save/load flows with semantic versioning, implement SVG/PDF export and Tier-2 AI import, codify interoperability specs, and run platform parity QA culminating in release packaging.",
-    "description": "Implement PDF export leveraging `pdf` package, mapping vector objects to PDF operators, embedding fonts for text-as-path, and verifying output via external viewer tests.",
-    "agent_type_hint": "BackendAgent",
-    "inputs": "SVG exporter (for parity), vector engine, performance metrics.",
-    "target_files": [],
-    "input_files": [],
-    "deliverables": "PDF exporter, tests verifying page size/objects, integration test opening file via `pdfinfo` or similar CLI.",
-    "acceptance_criteria": "PDF opens in Preview/Acrobat without warnings; tests ensure gradients/fills map correctly; documentation lists color management assumptions.",
-    "dependencies": [
-      "I5.T5"
-    ],
-    "parallelizable": false,
-    "done": true
-  },
-  {
-    "task_id": "I5.T7",
-    "iteration_id": "I5",
-    "iteration_goal": "Finalize save/load flows with semantic versioning, implement SVG/PDF export and Tier-2 AI import, codify interoperability specs, and run platform parity QA culminating in release packaging.",
-    "description": "Implement SVG import (Tier-1/Tier-2) to complement AI import, focusing on path, gradient, clipping, and text-as-path conversion with warning logs for unsupported elements.",
-    "agent_type_hint": "BackendAgent",
-    "inputs": "SVG exporter knowledge, event schema, vector model.",
-    "target_files": [],
-    "input_files": [],
-    "deliverables": "Importer with DOM parser, tests using sample files, doc describing supported tags/attributes.",
-    "acceptance_criteria": "Imports Round-trip sample doc (export then import) without diff; warnings issued for filters/blend modes; doc lists fallback behaviors.",
-    "dependencies": [
-      "I5.T5"
-    ],
-    "parallelizable": true,
-    "done": true
-  },
-  {
-    "task_id": "I5.T8",
-    "iteration_id": "I5",
-    "iteration_goal": "Finalize save/load flows with semantic versioning, implement SVG/PDF export and Tier-2 AI import, codify interoperability specs, and run platform parity QA culminating in release packaging.",
-    "description": "Build platform parity QA checklist + automation (where possible) ensuring keyboard shortcuts, window chrome, file dialogs, and exporters behave identically on macOS/Windows.",
+    "iteration_goal": "Complete SVG/PDF/AI import-export pipelines, finalize verification strategy, quality gates, release documentation, and ops automation.",
+    "description": "Conduct end-to-end validation (multi-artboard editing, collaboration, import/export) and compile release readiness report summarizing KPIs, risks, mitigations.",
     "agent_type_hint": "QAAgent",
-    "inputs": "Decisions 2 & 6, tasks `I5.T1`–`I5.T7`.",
+    "inputs": "Outputs from Tasks 5.1–5.5, verification matrix.",
     "target_files": [],
     "input_files": [],
-    "deliverables": "Updated checklist, automated smoke test verifying shortcuts + exports per platform (guarded by tags), report template for manual QA.",
-    "acceptance_criteria": "Checklist covers menus, shortcuts, file pickers; automation verifies parity-critical flows; doc includes sign-off template; manifest updated.",
+    "deliverables": "Report capturing test evidence, KPI metrics, open issues, sign-offs.",
+    "acceptance_criteria": "All KPIs meet thresholds; open risks logged with owners; leadership sign-off recorded.",
     "dependencies": [
       "I5.T1",
-      "I5.T7"
-    ],
-    "parallelizable": false,
-    "done": true
-  },
-  {
-    "task_id": "I5.T9",
-    "iteration_id": "I5",
-    "iteration_goal": "Finalize save/load flows with semantic versioning, implement SVG/PDF export and Tier-2 AI import, codify interoperability specs, and run platform parity QA culminating in release packaging.",
-    "description": "Prepare release packaging scripts (macOS notarized DMG, Windows signed installer), update CI pipelines to build artifacts, and document release checklist.",
-    "agent_type_hint": "DevOpsAgent",
-    "inputs": "Section 2 deployment plan, CI from `I1.T7`, parity checklist.",
-    "target_files": [],
-    "input_files": [],
-    "deliverables": "Build scripts, release workflow (manual trigger), checklist describing signing/notarization steps.",
-    "acceptance_criteria": "Scripts produce DMG/EXE locally; release workflow uploads artifacts; checklist includes hash verification + gate approvals.",
-    "dependencies": [
-      "I5.T8"
-    ],
-    "parallelizable": true,
-    "done": true
-  },
-  {
-    "task_id": "I5.T10",
-    "iteration_id": "I5",
-    "iteration_goal": "Finalize save/load flows with semantic versioning, implement SVG/PDF export and Tier-2 AI import, codify interoperability specs, and run platform parity QA culminating in release packaging.",
-    "description": "Conduct end-to-end regression suite (unit, widget, integration, benchmarks, QA checklists) and create final report summarizing readiness, risks, and follow-up work.",
-    "agent_type_hint": "QAAgent",
-    "inputs": "All prior tasks, verification strategy (Section 6), manifest for referencing artifacts.",
-    "target_files": [],
-    "input_files": [],
-    "deliverables": "Final QA report with pass/fail matrix, backlog of post-v0.1 items, attachments referencing logs/artifacts.",
-    "acceptance_criteria": "Report includes summary, risks, metrics; CSV lists each test suite; document cross-links to plan anchors; stakeholder sign-off recorded.",
-    "dependencies": [
-      "I5.T1",
-      "I5.T9"
-    ],
-    "parallelizable": false,
-    "done": true
-  },
-  {
-    "task_id": "I5.T11",
-    "iteration_id": "I5",
-    "iteration_goal": "Finalize save/load flows with semantic versioning, implement SVG/PDF export and Tier-2 AI import, codify interoperability specs, and run platform parity QA culminating in release packaging.",
-    "description": "Update README + marketing snippet with feature list (pen, shapes, undo, import/export), include download/install instructions, and link to release artifacts.",
-    "agent_type_hint": "DocumentationAgent",
-    "inputs": "Final QA report, release scripts, architecture docs.",
-    "target_files": [],
-    "input_files": [],
-    "deliverables": "Updated README, release notes summarizing highlights/known issues, references to file format spec + troubleshooting docs.",
-    "acceptance_criteria": "README badges updated; release notes mention compatibility matrix + Tier-2 import limitations; Markdown lint passes; manifest updated.",
-    "dependencies": [
-      "I5.T9",
-      "I5.T10"
+      "I5.T2",
+      "I5.T3",
+      "I5.T4",
+      "I5.T5"
     ],
     "parallelizable": false,
     "done": true

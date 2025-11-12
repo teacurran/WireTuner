@@ -1,6 +1,6 @@
 # Specification Review & Recommendations: WireTuner Vector Drawing Application
 
-**Date:** 2025-11-08
+**Date:** 2025-11-10
 **Status:** Awaiting Specification Enhancement
 
 ### **1.0 Executive Summary**
@@ -13,96 +13,89 @@ This document is an automated analysis of the provided project specifications. I
 
 *Based on the provided data, the core project objective is to engineer a system that:*
 
-WireTuner is a desktop vector drawing application built with Flutter targeting macOS and Windows platforms. It employs event-sourced architecture for history replay visualization, supports Adobe Illustrator file import at Tier 2 fidelity, and provides professional-grade vector editing tools including pen, shape creation, and anchor point manipulation with persistent document storage.
+Delivers a professional desktop vector drawing application with complete event-sourced interaction history, enabling precise vector artwork creation while capturing the entire creative process for replay, analysis, and collaboration. The system differentiates through comprehensive event sourcing that records all user interactions, supporting rich history visualization beyond traditional undo/redo.
 
 ### **3.0 Critical Assertions & Required Clarifications**
 
 ---
 
-#### **Assertion 1: Event Sampling Strategy vs. Tool-Specific Event Types**
+#### **Assertion 1: Event Sourcing Storage Strategy & Performance Trade-offs**
 
-*   **Observation:** The architecture document specifies a blanket 50ms sampling rate for all user interactions (T005: Event Recorder with Sampling), but different tools have fundamentally different interaction patterns that may require distinct event modeling strategies.
-*   **Architectural Impact:** This decision affects event log size, replay fidelity, and the complexity of the event recorder system.
-    *   **Path A (Universal Sampling):** Apply 50ms sampling uniformly across all tools. Simple to implement but may oversample discrete actions (pen tool clicks) while undersampling continuous gestures (complex bezier curve adjustments).
-    *   **Path B (Tool-Aware Event Types):** Define discrete event types for tools with atomic actions (pen tool anchor creation = single event) and sampling-based events for continuous operations (drag operations sampled at 50ms). Increases event model complexity but optimizes storage and replay accuracy.
-    *   **Path C (Adaptive Sampling):** Implement variable sampling rates based on detected user action velocity or tool type (10ms for high-velocity drags, 100ms for slow movements). Maximizes replay fidelity but adds significant complexity to the event recorder.
-*   **Default Assumption & Required Action:** The system will be architected assuming **Path A (Universal Sampling)** to minimize initial complexity. However, **the specification must explicitly define** whether the 50ms sampling applies to all tool interactions uniformly, or if certain tools (pen tool click-to-place anchor) should generate atomic events instead of time-sampled streams.
-
----
-
-#### **Assertion 2: Snapshot Trigger Strategy & Replay Performance Guarantees**
-
-*   **Observation:** The architecture decision specifies "snapshots every 500 events" for history replay performance, but the specification does not define whether this is a fixed interval, time-based, or dynamic strategy, nor does it specify replay performance requirements beyond "target 5K events/second playback rate."
-*   **Architectural Impact:** Snapshot placement directly impacts memory consumption, replay startup time, and the granularity of seekable positions in the history timeline.
-    *   **Strategy A (Fixed Event Count):** Create snapshot every 500 events regardless of document complexity. Simple and predictable, but may over-snapshot for simple documents or under-snapshot for complex scenes.
-    *   **Strategy B (Document State Size Threshold):** Trigger snapshots when serialized document state exceeds a size threshold (e.g., 1MB). Optimizes for memory efficiency but makes replay seek positions unpredictable.
-    *   **Strategy C (Hybrid Time + Event Count):** Snapshot every 500 events OR every 30 seconds of recorded time, whichever comes first. Balances replay performance with storage efficiency.
-*   **Default Assumption & Required Action:** The architecture will implement **Strategy A (Fixed Event Count)** at 500 events to maintain deterministic behavior. **The specification must be updated** to explicitly define: (1) Whether the 500-event interval is a hard requirement or a baseline target, (2) Maximum acceptable replay startup time for seeking to arbitrary positions, and (3) Whether snapshots should be pruned/compacted on document save or retained indefinitely.
+*   **Observation:** The specification implements a hybrid model (final state + event log) but lacks explicit guidance on event retention policies, database growth management, and performance degradation thresholds for large event stores.
+*   **Architectural Impact:** This directly affects long-term application viability, user experience degradation over time, and disk space requirements.
+    *   **Path A (Unbounded Event Log):** Store all events indefinitely. Enables complete history replay but requires aggressive snapshot strategies and may degrade performance after 500K+ events.
+    *   **Path B (Windowed Event Log):** Retain events for fixed time period (e.g., 90 days) or event count (e.g., 100K events), with archival export. Predictable performance but loses deep history.
+    *   **Path C (Tiered Retention):** Keep all critical events (anchors, objects) indefinitely, but prune high-frequency sampling events (mouse movements) after threshold period. Balances history completeness with storage efficiency.
+*   **Default Assumption & Required Action:** The architecture assumes **Path A (Unbounded)** with user-managed file sizes and configurable snapshot frequency (500 events default). **The specification must be updated** to define explicit event retention policies, expected file size growth patterns (e.g., "typical 1-hour session = 5K events = 2MB file"), and performance degradation thresholds that trigger user warnings or automatic archival suggestions.
 
 ---
 
-#### **Assertion 3: Multi-Window State Synchronization & Menu Bar Coordination**
+#### **Assertion 2: Multiplayer Collaboration Conflict Resolution Algorithm**
 
-*   **Observation:** The architecture decision mandates MDI with multiple windows, stating "Application menu bar coordinates across all windows," but the specification does not define the synchronization model for shared application state (recent files, preferences, clipboard) or whether the menu bar is per-window or global.
-*   **Architectural Impact:** This variable determines the complexity of inter-window communication, shared state management, and platform-specific native integration.
-    *   **Path A (Fully Isolated Windows):** Each window is entirely independent with no shared state except file system access. Simple to implement but provides poor UX (no shared clipboard, no synchronized preferences changes).
-    *   **Path B (Shared Application State with Event Bus):** Implement a singleton application controller that coordinates shared state (preferences, clipboard, recent files) across all document windows via an event bus. Moderate complexity, industry-standard approach.
-    *   **Path C (macOS Application Delegate / Windows Single-Instance Pattern):** Use platform-native application lifecycle patterns for state coordination. Optimal UX but requires platform-specific code paths and increases testing complexity.
-*   **Default Assumption & Required Action:** The system will assume **Path B (Shared Application State with Event Bus)** to balance cross-platform consistency with UX quality. **The specification must explicitly define**: (1) Whether clipboard operations (copy/paste) work across document windows, (2) Whether preference changes apply immediately to all open windows, (3) Whether the "Recent Files" menu is globally synchronized, and (4) The expected behavior when closing the last document window (application quits vs. remains running with no windows).
-
----
-
-#### **Assertion 4: Collaboration Foundation - UUID Collision Handling & Clock Synchronization**
-
-*   **Observation:** The architecture decision specifies UUID-based event IDs and RFC3339 timestamps with microsecond precision for future collaboration support, but does not address UUID collision detection or client clock skew scenarios.
-*   **Architectural Impact:** This decision affects data integrity guarantees and the viability of the deferred collaboration feature.
-    *   **Path A (Trust UUID Uniqueness):** Assume UUIDv4 collisions are statistically impossible and omit collision detection. Simple but introduces non-zero data corruption risk in distributed scenarios.
-    *   **Path B (Deterministic Event IDs with Hybrid Clock):** Use a combination of client ID + Lamport timestamp or Hybrid Logical Clock (HLC) instead of pure UUIDs. Guarantees uniqueness but requires additional infrastructure for clock synchronization.
-    *   **Path C (UUID with Validation Layer):** Use UUIDv4 but implement validation during event persistence to detect and reject duplicate IDs. Adds minimal overhead while maintaining simplicity.
-*   **Default Assumption & Required Action:** The system will implement **Path C (UUID with Validation Layer)** to provide collision detection without overengineering for v0.1. **The specification must be updated** to define: (1) Whether event IDs must be globally unique across all documents/users or only within a single document session, (2) The acceptable tolerance for timestamp drift between collaborating clients (e.g., ±5 seconds), and (3) Whether client-side or server-side timestamp authority is assumed for future collaboration.
+*   **Observation:** Section 7.9 recommends WebSockets + GraphQL with Operational Transform (OT) or CRDT for conflict resolution but does not specify which algorithm is required or provide decision criteria.
+*   **Architectural Impact:** This is a foundational choice affecting real-time collaboration accuracy, server complexity, and client-side state management.
+    *   **Path A (Operational Transform):** Deterministic, well-understood for vector editing. Requires centralized server to sequence operations. Complex transformation functions for path editing (anchor position changes, handle adjustments). Best for low-latency, small team collaboration (2-10 users).
+    *   **Path B (CRDT - Conflict-free Replicated Data Types):** Eventually consistent, decentralized. Simpler conflict resolution but may produce unexpected intermediate states during concurrent edits. Better for asynchronous collaboration or larger teams (10+ users).
+    *   **Path C (Last-Write-Wins with Timestamps):** Simplest implementation. Server-authoritative timestamps determine conflict winners. Acceptable for low-conflict scenarios but may lose user edits during simultaneous modifications.
+*   **Default Assumption & Required Action:** The system will architect for **Path A (Operational Transform)** given the real-time, precision-critical nature of vector path editing and target use case of small design teams. **The specification must be updated** to explicitly mandate OT as the conflict resolution strategy, define maximum supported concurrent editors per document (recommend: 5-10), and specify acceptable conflict resolution latency (recommend: <200ms for transform + broadcast).
 
 ---
 
-#### **Assertion 5: File Format Versioning - Migration Path for Breaking Changes**
+#### **Assertion 3: Cross-Platform File Format Byte Ordering & Portability**
 
-*   **Observation:** The architecture decision specifies semantic versioning with N-2 backward compatibility and "Save As" degradation warnings, but does not define the migration strategy when a major version introduces schema-breaking changes that cannot be gracefully degraded.
-*   **Architectural Impact:** This determines whether users can always open old files (with potential data loss warnings) or if some version migrations require explicit conversion tools.
-    *   **Path A (Always Readable with Data Loss):** Guarantee that any file can always be opened, but unsupported features are silently dropped or converted to nearest equivalents with warnings logged. User-friendly but risks unintentional data loss.
-    *   **Path B (Explicit Migration Required):** When a file format change is non-degradable (e.g., fundamental coordinate system change), require users to run a one-time migration tool or open-and-resave in an intermediate version. Safest for data integrity but poorest UX.
-    *   **Path C (Dual-Format Support Windows):** Major versions support reading old formats natively but write only the new format. Provide a 2-version overlap window where both formats are writable, then drop write support for old format. Balances safety and UX.
-*   **Default Assumption & Required Action:** The system will implement **Path C (Dual-Format Support Windows)** to provide safe migration paths without requiring external tools. **The specification must explicitly define**: (1) The support lifecycle for old formats (e.g., "v3.x drops read support for v1.x after 2 years"), (2) Whether opening an old-format file triggers an automatic upgrade prompt or requires explicit "Save As" to new format, and (3) The validation/testing requirements for each version migration path.
-
----
-
-#### **Assertion 6: Adobe Illustrator Import - Boolean Operations & Compound Path Interpretation**
-
-*   **Observation:** The Tier 2 import specification includes "compound paths and boolean operations" as supported features, but does not define whether these are imported as live/editable operations or flattened/baked geometric results.
-*   **Architectural Impact:** This decision determines the complexity of the path geometry engine and whether WireTuner needs to implement a full boolean operations stack in v0.1.
-    *   **Path A (Flatten on Import):** Convert all compound paths and boolean operations to simple path geometry during import. Simple to implement (7-day estimate is achievable) but users lose editability of boolean operations.
-    *   **Path B (Preserve as Metadata):** Import boolean operations as tagged path groups with original operation metadata stored but not executable. Allows future implementation of live boolean editing without overcommitting in v0.1.
-    *   **Path C (Full Boolean Engine):** Implement a complete constructive solid geometry (CSG) engine to preserve live, editable boolean operations. High-fidelity but adds 5-7 days to the 7-day import estimate.
-*   **Default Assumption & Required Action:** The system will implement **Path A (Flatten on Import)** to respect the 7-day development timeline for Tier 2 import. **The specification must be updated** to explicitly state: (1) Whether compound paths are flattened or preserved with operation history, (2) The expected behavior when re-exporting a flattened boolean operation to AI format, and (3) Whether the import dialog warnings should explicitly call out "boolean operations will be flattened" as a Tier 3 limitation.
+*   **Observation:** The specification mandates SQLite for .wiretuner files with "byte-identical across platforms" (NFR-PORT-002) but does not address potential endianness issues in custom binary data structures or floating-point representation differences.
+*   **Architectural Impact:** Failure to enforce strict serialization standards will cause file corruption when transferring documents between macOS (Intel/ARM) and Windows (x86/x64) systems.
+    *   **Path A (Pure JSON Serialization):** Store all document state and events as JSON text in SQLite BLOB columns. Guaranteed platform-portable but 30-50% larger file sizes and slower parse times.
+    *   **Path B (Canonical Binary Format):** Define explicit byte order (little-endian), IEEE 754 double precision for all coordinates, and protocol buffer or similar schema for binary serialization. Compact and fast but requires rigorous cross-platform testing.
+    *   **Path C (SQLite Native Types Only):** Restrict all stored data to SQLite's native types (INTEGER, REAL, TEXT). Avoids custom serialization entirely. Requires denormalized schema (e.g., separate tables for anchor points) but maximizes portability.
+*   **Default Assumption & Required Action:** The architecture assumes **Path A (Pure JSON)** given Flutter's strong JSON serialization support and Freezed integration. File size increase is acceptable trade-off for guaranteed portability. **The specification must be updated** to mandate JSON-only serialization for all event payloads and snapshot state, specify compression strategy (gzip for snapshots >1MB), and define cross-platform validation test suite (macOS-created files must load identically on Windows and vice versa).
 
 ---
 
-#### **Assertion 7: Undo/Redo Granularity - Cross-Tool Operation Boundaries**
+#### **Assertion 4: Snapshot Background Execution Thread Safety & State Consistency**
 
-*   **Observation:** The architecture decision specifies operation-based undo with 200ms idle detection, but does not address scenarios where users rapidly switch between tools within the same 200ms window (e.g., draw with pen tool, immediately switch to selection tool and drag).
-*   **Architectural Impact:** This affects the user's mental model of undo granularity and the implementation complexity of the operation boundary detection system.
-    *   **Path A (Tool Switch = Operation Boundary):** Any tool change explicitly marks an operation boundary regardless of idle time. Predictable but may fragment logical operations (e.g., drawing a path then immediately adjusting it feels like one action).
-    *   **Path B (Idle Time Only):** Trust the 200ms idle detection exclusively; tool switches do not force boundaries. Simpler implementation but may create unexpectedly large undo operations if users work quickly across tools.
-    *   **Path C (Hybrid with Tool-Specific Markers):** Use 200ms idle as the primary boundary, but allow tools to explicitly emit operation markers when completing a logical action (e.g., pen tool closing a path, shape tool releasing mouse button). Most sophisticated but adds per-tool complexity.
-*   **Default Assumption & Required Action:** The system will implement **Path C (Hybrid with Tool-Specific Markers)** to optimize for user intent rather than pure timing. **The specification must explicitly define**: (1) Whether rapid tool switching (< 200ms) should group actions into a single undo or separate them, (2) The expected undo behavior when switching from pen tool mid-path-creation to selection tool, and (3) Whether the undo stack should display tool names in operation descriptions (e.g., "Undo: Pen Tool - Create Path").
+*   **Observation:** Section 7.7 mandates background snapshot creation using Flutter's `compute()` isolate but does not address potential race conditions when document state changes during snapshot serialization.
+*   **Architectural Impact:** Concurrent mutations during snapshot generation can produce corrupted snapshots or inconsistent event sequences, compromising document integrity.
+    *   **Path A (Copy-on-Write Snapshot):** Deep clone document state before passing to background isolate. Guarantees consistency but requires 2x memory (original + clone) during snapshot operation. May cause memory pressure on large documents (10K+ objects).
+    *   **Path B (Read Lock During Snapshot):** Acquire read lock on document state, pause event recording during serialization (typically 50-200ms). Guarantees consistency with minimal memory overhead but introduces brief UI freeze.
+    *   **Path C (Sequence Number Validation):** Pass current sequence number to isolate. If document sequence advances during snapshot, discard result and retry. Eventually consistent but may require multiple attempts under heavy editing load.
+*   **Default Assumption & Required Action:** The system will implement **Path A (Copy-on-Write)** with memory pressure monitoring. If available RAM < 500MB during snapshot attempt, defer to next opportunity or prompt user to close other documents. **The specification must be updated** to define snapshot thread safety guarantees, specify memory requirements for background execution (recommend: 2x current document size + 200MB headroom), and document retry/fallback behavior if snapshot creation fails.
+
+---
+
+#### **Assertion 5: AI File Import Feature Completeness vs. Implementation Cost**
+
+*   **Observation:** FR-021 scopes AI import to "PDF-compatible AI 9.0+ with Tier 1 features" but the specification's unlimited resources assumption (v3.5 changelog) suggests all features ship with MVP, creating tension with the "easiest and most common" import philosophy.
+*   **Architectural Impact:** Expanding AI import beyond Tier 1 (basic paths/shapes) to Tier 2 (gradients, masks, compound paths) significantly increases parser complexity and edge case handling.
+    *   **Tier 1 Only (Conservative):** Parse basic vector primitives (paths, rectangles, ellipses, fills, strokes). Implementation: 3-5 days. Covers 60-70% of simple AI file import use cases. Clear limitations documented.
+    *   **Tier 1 + Tier 2 (Comprehensive):** Add gradient parsing, clipping mask support, compound path handling. Implementation: 10-15 days including edge case testing. Covers 85-90% of AI file imports. Higher risk of partial import failures.
+    *   **Full AI Specification (Aspirational):** Attempt to parse all AI features including blend modes, live effects, symbols. Implementation: 30-60 days with high failure risk. Unrealistic given AI's proprietary format complexity.
+*   **Default Assumption & Required Action:** Given the specification's "unlimited resources" scope and Tier 2 features explicitly marked as "INCLUDED in MVP" (Section 9.2, Ambiguity 4 Resolution), the system will implement **Tier 1 + Tier 2 (Comprehensive)**. **The specification must be updated** to clearly define the boundary between "supported with high fidelity" (Tier 1+2) and "best-effort import with degradation warnings" (Tier 3+). Recommend adding explicit acceptance criteria: "AI import must successfully parse and render 85%+ of test corpus (20 representative AI files from Illustrator CS6-CC 2024) with warnings for unsupported features."
+
+---
+
+#### **Assertion 6: History Replay Timeline Scrubber Performance Model**
+
+*   **Observation:** The specification includes History Replay UI as in-scope for MVP (Section 5.2, v3.5 changelog) with "5K events/second replay rate" target (NFR-PERF-002) but does not define rendering strategy for timeline scrubbing with 100K+ event documents.
+*   **Architectural Impact:** Naive event-by-event replay during scrubbing will cause catastrophic performance degradation. Real-time scrubbing requires intelligent caching and interpolation strategies.
+    *   **Path A (Snapshot Checkpoints):** Pre-generate snapshots every 1,000 events during document load. Scrubbing seeks to nearest checkpoint then replays forward. Memory overhead: ~50-100MB for 100K event document. Scrub latency: <50ms.
+    *   **Path B (Keyframe + Interpolation):** Identify "keyframe" events (object creation, major transformations) and interpolate intermediate states during scrubbing. Requires event type classification and interpolation logic. Minimal memory overhead but complex implementation.
+    *   **Path C (Lazy Evaluation):** Only replay events when user pauses scrubbing or plays at <2x speed. During fast scrubbing (10x+), show wireframe approximations or skip intermediate frames. Simplest implementation but degraded UX during high-speed replay.
+*   **Default Assumption & Required Action:** The architecture will implement **Path A (Snapshot Checkpoints)** with lazy snapshot generation (created on first timeline scrub, not at document load). This balances performance with memory efficiency. **The specification must be updated** to define history replay performance targets for large documents: "Timeline scrubbing with 100K events must maintain 30fps UI responsiveness" and "Replay from arbitrary timeline position must start within 100ms (snapshot seek + incremental replay)."
+
+---
+
+#### **Assertion 7: Arrow Key Nudging Precision Threshold & Zoom Automation**
+
+*   **Observation:** FR-050 defines intelligent zoom suggestion when user overshoots target (3+ direction reversals) but does not specify the precision threshold where nudging becomes impractical or auto-zoom should be mandatory rather than suggested.
+*   **Architectural Impact:** At extreme zoom levels (0.01x - viewing entire artboard) or pixel-perfect precision work (400%+ zoom), 1px screen-space nudging may be insufficient or excessive.
+    *   **Path A (Fixed Screen-Space Nudging):** Always nudge 1px screen space regardless of zoom. Simple, consistent behavior. At 0.1x zoom, 1px screen = 10px world (coarse). At 800% zoom, 1px screen = 0.125px world (sub-pixel precision).
+    *   **Path B (Adaptive Nudging):** Adjust nudge distance based on current zoom level. At <50% zoom, nudge 2px screen. At >400% zoom, nudge 0.5px screen. More intuitive but adds complexity and user confusion about "how far will this move."
+    *   **Path C (Mandatory Zoom Gates):** Disable arrow key nudging below 25% zoom (force marquee selection) and above 800% zoom (force direct manipulation). Nudging only available in "reasonable precision" range.
+*   **Default Assumption & Required Action:** The system will implement **Path A (Fixed Screen-Space)** as specified, with intelligent zoom suggestions remaining advisory (toast notification, not blocking). This maintains predictable behavior across all zoom levels. **The specification must be updated** to define zoom level boundaries where nudging is recommended vs. discouraged, and specify fallback interaction model for extreme zoom levels (e.g., "Below 10% zoom, arrow keys pan viewport instead of nudging objects").
 
 ---
 
 ### **4.0 Next Steps**
 
 Upon the user's update of the original specification document, the development process will be unblocked and can proceed to the architectural design phase.
-
-The recommended workflow is:
-
-1. **Review each assertion** in Section 3.0 and select the preferred path for each ambiguity.
-2. **Update the architecture decisions document** to explicitly address each assertion with selected paths and rationale.
-3. **Revise affected ticket estimates** in the implementation index if any decisions significantly alter complexity (e.g., choosing Path C for boolean operations would extend T038 from 3d to ~5d).
-4. **Signal completion** by updating the specification status to "Architecture Finalized" to trigger the next phase of detailed technical design.

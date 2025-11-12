@@ -106,16 +106,23 @@ class DocumentPainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
+    debugPrint('[DocumentPainter] paint() called with ${paths.length} paths, ${shapes.length} shapes');
+    debugPrint('[DocumentPainter] renderPipeline: ${renderPipeline != null ? "enabled" : "disabled"}');
+
     // Use render pipeline if available
     if (renderPipeline != null) {
+      debugPrint('[DocumentPainter] Using render pipeline');
       _paintWithPipeline(canvas, size);
     } else {
+      debugPrint('[DocumentPainter] Using legacy renderer');
       _paintLegacy(canvas, size);
     }
   }
 
   /// Renders using the advanced render pipeline.
   void _paintWithPipeline(Canvas canvas, Size size) {
+    debugPrint('[DocumentPainter._paintWithPipeline] Converting ${paths.length} paths, ${shapes.length} shapes');
+
     // Convert paths to renderable objects with default style
     final defaultStyle = PaintStyle.stroke(
       color: strokeColor,
@@ -133,6 +140,9 @@ class DocumentPainter extends CustomPainter {
       );
     }
 
+    debugPrint('[DocumentPainter._paintWithPipeline] Calling render pipeline with ${renderablePaths.length} renderable paths');
+    debugPrint('[DocumentPainter._paintWithPipeline] WARNING: Shapes are NOT being rendered by the pipeline!');
+
     // Render via pipeline
     renderPipeline!.render(
       canvas: canvas,
@@ -144,28 +154,40 @@ class DocumentPainter extends CustomPainter {
 
   /// Legacy rendering approach (backward compatibility).
   void _paintLegacy(Canvas canvas, Size size) {
+    // Debug: Log what we're rendering
+    debugPrint('[DocumentPainter] Rendering ${paths.length} paths, ${shapes.length} shapes');
+
     // Apply viewport transformation
     canvas.save();
     canvas.transform(viewportController.worldToScreenMatrix.storage);
 
     // Create paint for path strokes
-    final paint = Paint()
+    final strokePaint = Paint()
       ..color = strokeColor
       ..style = PaintingStyle.stroke
       ..strokeWidth = strokeWidth
       ..strokeCap = StrokeCap.round
       ..strokeJoin = StrokeJoin.round;
 
-    // Render each path
+    // Create paint for shape fills
+    final fillPaint = Paint()
+      ..color = const Color(0xFFE0E0E0) // Light gray fill
+      ..style = PaintingStyle.fill;
+
+    // Render each path (stroke only)
     for (final domainPath in paths) {
       final uiPath = _convertDomainPathToUiPath(domainPath);
-      canvas.drawPath(uiPath, paint);
+      canvas.drawPath(uiPath, strokePaint);
     }
 
-    // Render each shape
+    // Render each shape (fill + stroke)
     for (final shape in shapes.values) {
+      debugPrint('[DocumentPainter] Drawing shape: ${shape.kind}, center: ${shape.center}, width: ${shape.width}, height: ${shape.height}');
       final uiPath = _convertShapeToUiPath(shape);
-      canvas.drawPath(uiPath, paint);
+      // Draw fill first
+      canvas.drawPath(uiPath, fillPaint);
+      // Then draw stroke on top
+      canvas.drawPath(uiPath, strokePaint);
     }
 
     canvas.restore();
@@ -206,7 +228,8 @@ class DocumentPainter extends CustomPainter {
         break;
 
       case ShapeKind.star:
-        _addStarToPath(path, shape.center, shape.radius!, shape.innerRadius!, shape.sides);
+        _addStarToPath(
+            path, shape.center, shape.radius!, shape.innerRadius!, shape.sides);
         break;
     }
 

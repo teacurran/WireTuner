@@ -2,6 +2,7 @@ name: wiretuner_workspace
 
 packages:
   - packages/**
+  - server/**
 
 command:
   bootstrap:
@@ -11,9 +12,7 @@ command:
 scripts:
   analyze:
     description: Run static analysis across all packages
-    run: |
-      melos exec -- dart analyze .
-      flutter analyze
+    run: melos exec -- dart analyze --fatal-infos --fatal-warnings .
 
   test:
     description: Run all tests across all packages

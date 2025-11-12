@@ -1,0 +1,171 @@
+# =========================================
+# WireTuner GraphQL Query Examples
+# =========================================
+
+# Query: Fetch Document Summary
+# Retrieves document metadata, artboards, collaboration status, and health diagnostics
+# Must resolve in <100ms for docs ≤10K events per contract (NFR-PERF-001)
+query GetDocumentSummary {
+  documentSummary(
+    id: "a3bb189e-8bf9-4bc6-9c8e-d3d0c2b3e9f1"
+    includeArtboards: true
+    includeSnapshots: false
+    artboardLimit: 50
+  ) {
+    id
+    name
+    fileFormatVersion
+    metadata {
+      anchorVisibilityMode
+      samplingPreset
+      platform
+    }
+    author {
+      id
+      displayName
+      email
+      platform
+      telemetryOptIn
+    }
+    createdAt
+    modifiedAt
+    snapshotSequence
+    eventCount
+    undoDepthLimit
+
+    # Paginated artboards
+    artboards(first: 10) {
+      edges {
+        cursor
+        node {
+          id
+          name
+          bounds {
+            x
+            y
+            width
+            height
+          }
+          backgroundColor {
+            r
+            g
+            b
+            a
+          }
+          zOrder
+          preset
+          thumbnailRef
+          viewportState {
+            zoom
+            panOffsetX
+            panOffsetY
+          }
+        }
+      }
+      pageInfo {
+        hasNextPage
+        hasPreviousPage
+        startCursor
+        endCursor
+      }
+      totalCount
+    }
+
+    # Collaboration status
+    collaborationStatus {
+      active
+      participants
+      otBaselineSequence
+    }
+
+    # Performance hints
+    performanceHints {
+      recommendedSnapshotThreshold
+      recommendedSamplingInterval
+    }
+
+    # Document health
+    health {
+      sqliteIntegrity
+      pendingMigrations
+      diskUsageBytes
+    }
+
+    featureFlags
+    lastManualSaveAt
+    lastAutoSaveAt
+  }
+}
+
+# Query: Fetch User Settings Profile
+# Retrieves all user settings with effective values, sources, and timestamps
+query GetSettingsProfile {
+  settingsProfile(userId: "b7c8d9e0-1f2a-3b4c-5d6e-7f8a9b0c1d2e") {
+    userId
+    samplingInterval {
+      effectiveValue
+      source
+      updatedAt
+    }
+    snapshotThreshold {
+      effectiveValue
+      source
+      updatedAt
+    }
+    anchorVisibilityDefault {
+      effectiveValue
+      source
+      updatedAt
+    }
+    telemetryEnabled {
+      effectiveValue
+      source
+      updatedAt
+    }
+    gridSnapEnabled {
+      effectiveValue
+      source
+      updatedAt
+    }
+    nudgeDistanceOverrides {
+      effectiveValue
+      source
+      updatedAt
+    }
+    pendingAdminOverrides
+  }
+}
+
+# Query: Document Summary with Variables
+# Demonstrates parameterized queries for client-side flexibility
+query GetDocumentSummaryWithVariables(
+  $documentId: UUID!
+  $includeArtboards: Boolean = true
+  $artboardLimit: Int = 20
+) {
+  documentSummary(
+    id: $documentId
+    includeArtboards: $includeArtboards
+    artboardLimit: $artboardLimit
+  ) {
+    id
+    name
+    artboards(first: $artboardLimit) {
+      edges {
+        node {
+          id
+          name
+          preset
+        }
+      }
+      totalCount
+    }
+  }
+}
+
+# Example variables for above query:
+# {
+#   "documentId": "a3bb189e-8bf9-4bc6-9c8e-d3d0c2b3e9f1",
+#   "includeArtboards": true,
+#   "artboardLimit": 10
+# }

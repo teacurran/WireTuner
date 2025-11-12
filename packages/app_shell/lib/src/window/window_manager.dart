@@ -25,7 +25,6 @@
 /// - Decision 7: Provider-based state management
 library;
 
-import 'package:flutter/foundation.dart';
 import 'package:logger/logger.dart';
 import 'package:event_core/event_core.dart';
 import 'package:wiretuner/domain/document/document.dart';

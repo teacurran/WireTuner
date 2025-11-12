@@ -2,6 +2,7 @@ import 'package:json_annotation/json_annotation.dart';
 import 'package:vector_math/vector_math.dart';
 import 'package:wiretuner/domain/events/event_base.dart';
 import 'package:wiretuner/domain/models/anchor_point.dart' as ap;
+import 'package:wiretuner/domain/models/geometry/rectangle.dart';
 import 'package:wiretuner/domain/models/path.dart';
 import 'package:wiretuner/domain/models/segment.dart';
 import 'package:wiretuner/domain/models/shape.dart';
@@ -137,5 +138,29 @@ class TransformConverter
   @override
   Map<String, dynamic> toJson(Transform object) => {
         'matrix': object.matrix.storage.toList(),
+      };
+}
+
+/// JSON converter for Rectangle objects.
+///
+/// Converts Rectangle to/from JSON representation for artboard bounds.
+class RectangleConverter
+    implements JsonConverter<Rectangle, Map<String, dynamic>> {
+  const RectangleConverter();
+
+  @override
+  Rectangle fromJson(Map<String, dynamic> json) => Rectangle(
+        x: (json['x'] as num).toDouble(),
+        y: (json['y'] as num).toDouble(),
+        width: (json['width'] as num).toDouble(),
+        height: (json['height'] as num).toDouble(),
+      );
+
+  @override
+  Map<String, dynamic> toJson(Rectangle object) => {
+        'x': object.x,
+        'y': object.y,
+        'width': object.width,
+        'height': object.height,
       };
 }

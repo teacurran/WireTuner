@@ -2,17 +2,17 @@
   {
     "task_id": "I3.T1",
     "iteration_id": "I3",
-    "iteration_goal": "Establish a robust tool framework with selection/direct-selection tooling, pen tool creation flows, overlays, and cursor/state management so later iterations can add shape tools, direct manipulation, and undo orchestration.",
-    "description": "Implement the tool framework runtime: `ITool` interface, tool manager, dependency injection wiring, activation/deactivation lifecycle hooks, and provider integration for UI components.",
-    "agent_type_hint": "BackendAgent",
-    "inputs": "Section 2 key components, Task `I2.T7` hit testing, Task `I2.T8` viewport notifications.",
+    "iteration_goal": "Implement core drawing/selection tools, viewport controls, screen-space snapping/nudging, and UI shells (Navigator, Inspector, HUDs) grounded in earlier infrastructure.",
+    "description": "Build InteractionEngine tool registry plus Pen, Selection, Direct Selection tool implementations with undo grouping and sampling hooks.",
+    "agent_type_hint": "FrontendAgent",
+    "inputs": "FR-001–FR-007, FR-025, Section 7.11.",
     "target_files": [],
     "input_files": [],
-    "deliverables": "Tool manager with registration API, active tool stream, hotkey mapping placeholder, plus tests verifying activation order and singleton enforcement.",
-    "acceptance_criteria": "Switching tools triggers lifecycle callbacks; tool provider notifies UI; tests cover invalid activation attempts; documentation references Section 2.",
+    "deliverables": "Tool interfaces, implementations, tests validating sampling & snapping integration.",
+    "acceptance_criteria": "Tools fire correct events; undo boundaries respect 200 ms idle; tests cover anchor creation/move cases.",
     "dependencies": [
-      "I2.T7",
-      "I2.T8"
+      "I2.T1",
+      "I2.T5"
     ],
     "parallelizable": false,
     "done": true
@@ -20,16 +20,16 @@
   {
     "task_id": "I3.T2",
     "iteration_id": "I3",
-    "iteration_goal": "Establish a robust tool framework with selection/direct-selection tooling, pen tool creation flows, overlays, and cursor/state management so later iterations can add shape tools, direct manipulation, and undo orchestration.",
-    "description": "Produce PlantUML state-machine diagram covering selection, direct selection, and pen tool states (Idle, Hover, PointerDown, Dragging, Commit) with undo grouping markers.",
-    "agent_type_hint": "DiagrammingAgent",
-    "inputs": "Task `I3.T1` framework, Decisions 5 & 7, Section 2.1 artifact plan.",
+    "iteration_goal": "Implement core drawing/selection tools, viewport controls, screen-space snapping/nudging, and UI shells (Navigator, Inspector, HUDs) grounded in earlier infrastructure.",
+    "description": "Implement viewport controller (zoom, pan, fit, per-artboard state), screen-space grid snapping, and intelligent nudging with toast hints.",
+    "agent_type_hint": "FrontendAgent",
+    "inputs": "FR-012, FR-013, FR-028, FR-050, Section 7.11.",
     "target_files": [],
     "input_files": [],
-    "deliverables": "Diagram including state transitions, guard conditions, notes for 50 ms sampling, anchors + legend.",
-    "acceptance_criteria": "PlantUML renders cleanly; diagram cross-referenced from README and manifest; includes explicit undo boundary markers and event IDs.",
+    "deliverables": "Viewport service, grid snapper, nudge notifications, tests.",
+    "acceptance_criteria": "Viewport state saved per artboard; snapping uses screen-space; toast fires after overshoot; tests enforce conversions.",
     "dependencies": [
-      "I3.T1"
+      "I2.T3"
     ],
     "parallelizable": true,
     "done": true
@@ -37,18 +37,17 @@
   {
     "task_id": "I3.T3",
     "iteration_id": "I3",
-    "iteration_goal": "Establish a robust tool framework with selection/direct-selection tooling, pen tool creation flows, overlays, and cursor/state management so later iterations can add shape tools, direct manipulation, and undo orchestration.",
-    "description": "Implement Selection Tool supporting object selection (click, marquee), multi-select (Shift), and move operations emitting `MoveObject` events via recorder stub.",
+    "iteration_goal": "Implement core drawing/selection tools, viewport controls, screen-space snapping/nudging, and UI shells (Navigator, Inspector, HUDs) grounded in earlier infrastructure.",
+    "description": "Construct Navigator window UI (tabs, grid, context menus, thumbnail auto-refresh hook) plus associated state providers.",
     "agent_type_hint": "FrontendAgent",
-    "inputs": "Tool framework, hit testing, viewport, event recorder interface.",
+    "inputs": "FR-029–FR-044, Section 3.7 Flow H.",
     "target_files": [],
     "input_files": [],
-    "deliverables": "Selection tool class, overlay updates for bounding boxes, tests simulating pointer events and verifying event recorder interactions.",
-    "acceptance_criteria": "Tool selects multiple objects, handles keyboard modifiers, emits move events with proper payload, passes widget + unit tests.",
+    "deliverables": "Functional Navigator UI with virtualization, context menus, shortcuts, tests for tab/thumbnail logic.",
+    "acceptance_criteria": "Handles 1000 artboards with virtualization; context menu actions dispatch events; thumbnail refresh respects 10s interval or save trigger.",
     "dependencies": [
-      "I3.T1",
-      "I2.T7",
-      "I1.T3"
+      "I2.T2",
+      "I2.T5"
     ],
     "parallelizable": false,
     "done": true
@@ -56,36 +55,33 @@
   {
     "task_id": "I3.T4",
     "iteration_id": "I3",
-    "iteration_goal": "Establish a robust tool framework with selection/direct-selection tooling, pen tool creation flows, overlays, and cursor/state management so later iterations can add shape tools, direct manipulation, and undo orchestration.",
-    "description": "Implement Direct Selection Tool enabling anchor/BCP selection, dragging with 50 ms sampled events, and snapping toggles (grid, angles) for advanced editing.",
-    "agent_type_hint": "FrontendAgent",
-    "inputs": "Selection tool behaviors, geometry library, event schema sampling metadata.",
+    "iteration_goal": "Implement core drawing/selection tools, viewport controls, screen-space snapping/nudging, and UI shells (Navigator, Inspector, HUDs) grounded in earlier infrastructure.",
+    "description": "Produce UI wireframes + interaction write-ups for artboard window, Navigator, history replay, collaboration overlays per Section 6 (UI spec) and embed into docs.",
+    "agent_type_hint": "DocumentationAgent",
+    "inputs": "Section 6 UI/UX architecture, flows A–J.",
     "target_files": [],
     "input_files": [],
-    "deliverables": "Direct selection tool class, overlay for handles, tests verifying anchor selection + event emission.",
-    "acceptance_criteria": "Dragging anchors generates `MoveAnchorEvent` sequences respecting sampler; snapping toggle documented; tests hit anchor-level accuracy thresholds.",
+    "deliverables": "Annotated wireframes (ASCII/embedded images), interaction notes referencing requirement IDs.",
+    "acceptance_criteria": "Wireframes cover responsive states, accessibility cues; reviewed by UX lead; plan manifest references anchors.",
     "dependencies": [
-      "I3.T3",
-      "I2.T3",
-      "I1.T3"
+      "I3.T3"
     ],
-    "parallelizable": false,
+    "parallelizable": true,
     "done": true
   },
   {
     "task_id": "I3.T5",
     "iteration_id": "I3",
-    "iteration_goal": "Establish a robust tool framework with selection/direct-selection tooling, pen tool creation flows, overlays, and cursor/state management so later iterations can add shape tools, direct manipulation, and undo orchestration.",
-    "description": "Build cursor manager + tool overlays that change cursor icons per tool state and show contextual hints (angle lock, snapping). Integrate with macOS/Windows conventions.",
+    "iteration_goal": "Implement core drawing/selection tools, viewport controls, screen-space snapping/nudging, and UI shells (Navigator, Inspector, HUDs) grounded in earlier infrastructure.",
+    "description": "Implement Inspector + Layer panel organisms (property editors, layer tree, inline rename, lock/visibility) wired to domain models.",
     "agent_type_hint": "FrontendAgent",
-    "inputs": "Section 2 tech stack, Decisions 6 (parity), Tasks `I3.T1`–`I3.T4`.",
+    "inputs": "FR-045, UI tokens, Section 6.2 component specs.",
     "target_files": [],
     "input_files": [],
-    "deliverables": "Cursor manager service, UI hints widget, tests verifying platform-specific mappings.",
-    "acceptance_criteria": "Cursor updates within 1 frame; macOS uses `SystemMouseCursors.precise`, Windows uses `basic`; hints internationalization-ready; tests cover parity rules.",
+    "deliverables": "Inspector UI, layer tree virtualization, hooking into InteractionEngine selections.",
+    "acceptance_criteria": "Edits dispatch domain commands; accessibility labels present; virtualization handles 100 layers; tests for rename/lock toggles.",
     "dependencies": [
-      "I3.T3",
-      "I3.T4"
+      "I3.T1"
     ],
     "parallelizable": true,
     "done": true
@@ -93,110 +89,18 @@
   {
     "task_id": "I3.T6",
     "iteration_id": "I3",
-    "iteration_goal": "Establish a robust tool framework with selection/direct-selection tooling, pen tool creation flows, overlays, and cursor/state management so later iterations can add shape tools, direct manipulation, and undo orchestration.",
-    "description": "Implement Pen Tool phase 1—creating anchors, toggling between straight vs. curved points, closing paths, and previewing upcoming segments before commit.",
+    "iteration_goal": "Implement core drawing/selection tools, viewport controls, screen-space snapping/nudging, and UI shells (Navigator, Inspector, HUDs) grounded in earlier infrastructure.",
+    "description": "Build performance overlay + telemetry instrumentation surfaces (FPS, replay rate, snapshot duration) along with opt-out aware settings UI.",
     "agent_type_hint": "FrontendAgent",
-    "inputs": "Tool framework, geometry, event schema, selection overlay.",
+    "inputs": "Section 3.6 metrics, Section 6 overlay tokens.",
     "target_files": [],
     "input_files": [],
-    "deliverables": "Pen tool class covering anchor creation + preview lines, overlay for rubber-band preview, tests verifying event payloads for `CreatePath` + `AddAnchor` events.",
-    "acceptance_criteria": "Path creation works for open/closed shapes; preview overlay matches pointer movement; events recorded with correct metadata; tests cover both straight + curved toggles.",
+    "deliverables": "Overlay widget, telemetry toggles, instrumentation hooks into InteractionEngine/SnapshotManager.",
+    "acceptance_criteria": "Overlay draggable/dockable; metrics cross-reference telemetry IDs; opt-out disables emission; tests ensure state persistence.",
     "dependencies": [
-      "I3.T4",
-      "I2.T3",
-      "I1.T3"
-    ],
-    "parallelizable": false,
-    "done": true
-  },
-  {
-    "task_id": "I3.T7",
-    "iteration_id": "I3",
-    "iteration_goal": "Establish a robust tool framework with selection/direct-selection tooling, pen tool creation flows, overlays, and cursor/state management so later iterations can add shape tools, direct manipulation, and undo orchestration.",
-    "description": "Extend Pen Tool with Bezier curve handles (dragging out BCPs during placement), handle locking (symmetrical/corner), and keyboard modifiers for converting anchors.",
-    "agent_type_hint": "FrontendAgent",
-    "inputs": "Task `I3.T6`, geometry library, undo granularity decision.",
-    "target_files": [],
-    "input_files": [],
-    "deliverables": "Enhanced pen tool supporting BCP manipulation, tests verifying handle math + event output, and user-facing doc describing modifiers.",
-    "acceptance_criteria": "Handles obey symmetrical/corner rules; events include handle positions; doc lists keyboard shortcuts; tests assert geometry outputs.",
-    "dependencies": [
-      "I3.T6"
-    ],
-    "parallelizable": false,
-    "done": true
-  },
-  {
-    "task_id": "I3.T8",
-    "iteration_id": "I3",
-    "iteration_goal": "Establish a robust tool framework with selection/direct-selection tooling, pen tool creation flows, overlays, and cursor/state management so later iterations can add shape tools, direct manipulation, and undo orchestration.",
-    "description": "Implement tool overlay rendering order + z-index management to coordinate selection boxes, pen previews, snapping guides, and future shape guides.",
-    "agent_type_hint": "FrontendAgent",
-    "inputs": "Tasks `I3.T3`–`I3.T7`, canvas pipeline from `I2`.",
-    "target_files": [],
-    "input_files": [],
-    "deliverables": "Overlay registry with deterministic stacking, tests verifying order + hit pass-through, documentation snippet.",
-    "acceptance_criteria": "Overlays stack as configured; pointer events route to active overlay; tests cover stacking + removal; README references overlay architecture.",
-    "dependencies": [
-      "I3.T5",
-      "I3.T7"
+      "I2.T6"
     ],
     "parallelizable": true,
-    "done": true
-  },
-  {
-    "task_id": "I3.T9",
-    "iteration_id": "I3",
-    "iteration_goal": "Establish a robust tool framework with selection/direct-selection tooling, pen tool creation flows, overlays, and cursor/state management so later iterations can add shape tools, direct manipulation, and undo orchestration.",
-    "description": "Add telemetry + undo boundary annotations for tools: ensure operations flush pending sampled events, emit human-readable labels (\"Move Rectangle\") for UI, and log tool usage counts.",
-    "agent_type_hint": "BackendAgent",
-    "inputs": "Task `I1.T8` metrics, `I3` tool implementations, Decision 7 undo granularity.",
-    "target_files": [],
-    "input_files": [],
-    "deliverables": "Telemetry helper, undo label mapping table, tests verifying labels for each tool, and documentation for UI surfaces.",
-    "acceptance_criteria": "Each tool registers descriptive labels; telemetry aggregated per tool; doc lists operations; metrics exported via logger.",
-    "dependencies": [
-      "I3.T3",
-      "I3.T7",
-      "I1.T8"
-    ],
-    "parallelizable": true,
-    "done": true
-  },
-  {
-    "task_id": "I3.T10",
-    "iteration_id": "I3",
-    "iteration_goal": "Establish a robust tool framework with selection/direct-selection tooling, pen tool creation flows, overlays, and cursor/state management so later iterations can add shape tools, direct manipulation, and undo orchestration.",
-    "description": "Deliver manual + automated QA scripts covering selection + pen flows: widget tests simulating pointer sequences, integration test verifying events persisted, and QA checklist referencing Decision 6 parity.",
-    "agent_type_hint": "QAAgent",
-    "inputs": "All prior I3 tasks, event schema, metrics outputs.",
-    "target_files": [],
-    "input_files": [],
-    "deliverables": "Integration test verifying pen + selection interplay, QA checklist with macOS/Windows steps, recorded expected telemetry ranges.",
-    "acceptance_criteria": "Tests pass headless; QA checklist includes parity notes; telemetry thresholds documented; references anchors for manifest.",
-    "dependencies": [
-      "I3.T3",
-      "I3.T9"
-    ],
-    "parallelizable": false,
-    "done": true
-  },
-  {
-    "task_id": "I3.T11",
-    "iteration_id": "I3",
-    "iteration_goal": "Establish a robust tool framework with selection/direct-selection tooling, pen tool creation flows, overlays, and cursor/state management so later iterations can add shape tools, direct manipulation, and undo orchestration.",
-    "description": "Update documentation + onboarding materials (README, developer workflow) with tool usage gifs/screenshots (if possible) and describe how to enable mock events for demos.",
-    "agent_type_hint": "DocumentationAgent",
-    "inputs": "Tool outputs, QA checklist, Section 1 goal statement.",
-    "target_files": [],
-    "input_files": [],
-    "deliverables": "Refreshed docs explaining tool states, keybindings, screenshots/gifs references, plus instructions for running integration tests.",
-    "acceptance_criteria": "README tool section matches shipped features, links to plan anchors; dev workflow doc updated; Markdown lint passes; assets added to `.gitignore` if needed.",
-    "dependencies": [
-      "I3.T6",
-      "I3.T10"
-    ],
-    "parallelizable": false,
     "done": true
   }
 ]

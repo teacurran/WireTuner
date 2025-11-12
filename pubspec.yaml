@@ -12,6 +12,8 @@ dependencies:
     sdk: flutter
 
   # Local packages
+  app:
+    path: packages/app
   app_shell:
     path: packages/app_shell
   event_core:
@@ -32,6 +34,9 @@ dependencies:
 
   # Logging
   logger: ^2.0.0
+
+  # HTTP Client (for telemetry export)
+  http: ^1.1.0
 
   # UUID Generation
   uuid: ^4.0.0

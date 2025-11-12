@@ -4,6 +4,27 @@ import 'package:flutter/foundation.dart';
 import 'package:vector_math/vector_math_64.dart';
 import 'package:wiretuner/domain/events/event_base.dart' as event_base;
 
+/// Snapshot of viewport state for a specific artboard.
+///
+/// Used to save and restore viewport transformations when switching between
+/// artboards. Each artboard can have its own zoom level and pan position.
+class ViewportSnapshot {
+  /// Creates a viewport snapshot.
+  const ViewportSnapshot({
+    required this.panOffset,
+    required this.zoom,
+  });
+
+  /// The pan offset in screen pixels.
+  final Offset panOffset;
+
+  /// The zoom level (1.0 = 100%).
+  final double zoom;
+
+  @override
+  String toString() => 'ViewportSnapshot(pan: $panOffset, zoom: ${zoom.toStringAsFixed(2)})';
+}
+
 /// Controls viewport transformations for the canvas, including pan and zoom.
 ///
 /// The ViewportController manages the coordinate transformation between:
@@ -24,6 +45,18 @@ import 'package:wiretuner/domain/events/event_base.dart' as event_base;
 /// - Minimum (0.05): 5% scale, zoomed way out
 /// - Maximum (8.0): 800% scale, zoomed way in
 ///
+/// ## Per-Artboard State
+///
+/// The controller supports saving and restoring viewport state per artboard:
+///
+/// ```dart
+/// // Save current state for an artboard
+/// controller.saveArtboardState('artboard-1');
+///
+/// // Switch to different artboard and restore its state
+/// controller.restoreArtboardState('artboard-2');
+/// ```
+///
 /// ## Usage
 ///
 /// ```dart
@@ -38,6 +71,9 @@ import 'package:wiretuner/domain/events/event_base.dart' as event_base;
 /// // Convert between coordinate spaces
 /// final screenPoint = controller.worldToScreen(Point(x: 100, y: 100));
 /// final worldPoint = controller.screenToWorld(Offset(400, 300));
+///
+/// // Fit content to screen
+/// controller.fitToScreen(contentBounds, canvasSize);
 /// ```
 ///
 /// The controller extends [ChangeNotifier] to support reactive UI updates.
@@ -79,6 +115,13 @@ class ViewportController extends ChangeNotifier {
   /// Recomputed when [_zoom] or [_panOffset] changes.
   /// This is the inverse of [_worldToScreenMatrix].
   Matrix4 _screenToWorldMatrix;
+
+  /// Per-artboard viewport state storage.
+  ///
+  /// Maps artboard IDs to their saved viewport states (zoom and pan).
+  /// This enables restoring the exact viewport configuration when switching
+  /// between artboards.
+  final Map<String, ViewportSnapshot> _artboardStates = {};
 
   /// The current pan offset in screen pixels.
   Offset get panOffset => _panOffset;
@@ -255,6 +298,150 @@ class ViewportController extends ChangeNotifier {
   void reset() {
     _panOffset = Offset.zero;
     _zoom = 1.0;
+    _updateMatrices();
+    notifyListeners();
+  }
+
+  /// Saves the current viewport state for a specific artboard.
+  ///
+  /// This captures the current zoom and pan values and associates them
+  /// with the given artboard ID. Later, [restoreArtboardState] can be
+  /// called to restore this exact viewport configuration.
+  ///
+  /// Example:
+  /// ```dart
+  /// // Save state before switching artboards
+  /// controller.saveArtboardState('artboard-1');
+  ///
+  /// // ... make changes to viewport ...
+  ///
+  /// // Restore original state
+  /// controller.restoreArtboardState('artboard-1');
+  /// ```
+  void saveArtboardState(String artboardId) {
+    _artboardStates[artboardId] = ViewportSnapshot(
+      panOffset: _panOffset,
+      zoom: _zoom,
+    );
+  }
+
+  /// Restores the viewport state for a specific artboard.
+  ///
+  /// If a saved state exists for the given artboard ID, the viewport
+  /// is restored to that state. If no state exists, the viewport is
+  /// reset to default (zoom 1.0, pan zero).
+  ///
+  /// Returns true if state was restored, false if reset to default.
+  ///
+  /// Example:
+  /// ```dart
+  /// // Restore viewport when switching to artboard
+  /// if (controller.restoreArtboardState('artboard-2')) {
+  ///   print('Restored saved viewport state');
+  /// } else {
+  ///   print('No saved state, using defaults');
+  /// }
+  /// ```
+  bool restoreArtboardState(String artboardId) {
+    final snapshot = _artboardStates[artboardId];
+    if (snapshot != null) {
+      _panOffset = snapshot.panOffset;
+      _zoom = snapshot.zoom;
+      _updateMatrices();
+      notifyListeners();
+      return true;
+    } else {
+      // No saved state, reset to defaults
+      reset();
+      return false;
+    }
+  }
+
+  /// Clears the saved state for a specific artboard.
+  ///
+  /// This removes the saved viewport snapshot for the given artboard ID.
+  /// Useful when an artboard is deleted or when you want to force a reset
+  /// on next restore.
+  void clearArtboardState(String artboardId) {
+    _artboardStates.remove(artboardId);
+  }
+
+  /// Clears all saved artboard states.
+  ///
+  /// This removes all stored viewport snapshots. Useful when closing
+  /// a document or resetting the entire viewport system.
+  void clearAllArtboardStates() {
+    _artboardStates.clear();
+  }
+
+  /// Fits the given content bounds to the screen with optional padding.
+  ///
+  /// This calculates the optimal zoom level and pan offset to fit the
+  /// content within the canvas, maintaining aspect ratio and adding
+  /// padding around the edges.
+  ///
+  /// The [contentBounds] parameter should contain the world-space bounds
+  /// of the content to fit (x, y, width, height).
+  ///
+  /// The [canvasSize] parameter specifies the screen-space canvas dimensions.
+  ///
+  /// The [padding] parameter (in screen pixels) adds spacing around the
+  /// content. Defaults to 50 pixels on all sides.
+  ///
+  /// Example:
+  /// ```dart
+  /// // Fit artboard bounds to screen
+  /// controller.fitToScreen(
+  ///   Rect.fromLTWH(0, 0, 1920, 1080), // Artboard bounds
+  ///   Size(1440, 900),                  // Canvas size
+  ///   padding: 100,                     // 100px padding
+  /// );
+  /// ```
+  void fitToScreen(
+    Rect contentBounds,
+    Size canvasSize, {
+    double padding = 50.0,
+  }) {
+    // If content has no size, just center at origin
+    if (contentBounds.width <= 0 || contentBounds.height <= 0) {
+      _panOffset = Offset(canvasSize.width / 2, canvasSize.height / 2);
+      _zoom = 1.0;
+      _updateMatrices();
+      notifyListeners();
+      return;
+    }
+
+    // Calculate available space after padding
+    final availableWidth = canvasSize.width - (padding * 2);
+    final availableHeight = canvasSize.height - (padding * 2);
+
+    // Calculate zoom to fit both dimensions
+    final zoomWidth = availableWidth / contentBounds.width;
+    final zoomHeight = availableHeight / contentBounds.height;
+
+    // Use the smaller zoom to ensure both dimensions fit
+    final newZoom = (zoomWidth < zoomHeight ? zoomWidth : zoomHeight)
+        .clamp(minZoom, maxZoom);
+
+    // Calculate content center in world space
+    final contentCenter = Offset(
+      contentBounds.left + contentBounds.width / 2,
+      contentBounds.top + contentBounds.height / 2,
+    );
+
+    // Calculate canvas center in screen space
+    final canvasCenter = Offset(canvasSize.width / 2, canvasSize.height / 2);
+
+    // Calculate pan offset to center the content
+    // screen = world * zoom + pan
+    // pan = screen - world * zoom
+    final newPan = Offset(
+      canvasCenter.dx - contentCenter.dx * newZoom,
+      canvasCenter.dy - contentCenter.dy * newZoom,
+    );
+
+    _zoom = newZoom;
+    _panOffset = newPan;
     _updateMatrices();
     notifyListeners();
   }

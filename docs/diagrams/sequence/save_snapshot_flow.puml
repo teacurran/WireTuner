@@ -1,0 +1,210 @@
+' =========================================================================
+' Manual Save, Auto-Save, and Snapshot Coordination - Sequence Diagram
+' =========================================================================
+' Purpose: Documents the interaction between manual saves (Cmd/Ctrl+S),
+'          auto-save idle detection, and snapshot manager coordination,
+'          showing deduplication, compression, and status feedback flows.
+'
+' Related Specs:
+'   - Architecture Blueprint Section 3.7.3.2 (Flow B)
+'   - Architecture Blueprint Appendix B.3 (Save + Snapshot + Export)
+'   - ADR-001 (Hybrid State + History - Snapshot strategy)
+'   - FR-014 (Save deduplication)
+'   - NFR-PERF-006 (Snapshot compression performance)
+'
+' Date: 2025-11-11
+' =========================================================================
+
+@startuml save_snapshot_flow
+title Manual Save, Auto-Save, and Snapshot Coordination
+
+' =========================================================================
+' Participants
+' =========================================================================
+
+actor Creator as "User"
+
+box "UI Layer" #FFFDE7
+  participant DesktopShell
+  participant NavigatorService
+end box
+
+box "Event Pipeline" #FCE4EC
+  participant InteractionEngine
+  participant EventStoreService
+end box
+
+box "Persistence & Background" #E3F2FD
+  participant SnapshotManager
+  participant SecurityGateway
+  participant TelemetryService
+end box
+
+' =========================================================================
+' Auto-Save Idle Detection
+' =========================================================================
+
+group Auto-save idle detection
+  InteractionEngine -> EventStoreService: pendingEvents?
+  EventStoreService --> InteractionEngine: count > 0
+
+  InteractionEngine -> EventStoreService: flushAutoSave()
+  EventStoreService --> InteractionEngine: flushed
+
+  EventStoreService -> TelemetryService: log(metric="autosave.flush")
+  TelemetryService --> EventStoreService: ack
+end
+
+note right of InteractionEngine
+  Auto-save triggers after 200ms idle window.
+  Persists pending events to SQLite without
+  creating snapshot or document.saved marker.
+
+  Prevents data loss during crashes while
+  avoiding excessive dedup checks.
+end note
+
+' =========================================================================
+' Manual Save Request
+' =========================================================================
+
+Creator -> DesktopShell: Cmd/Ctrl+S
+DesktopShell -> InteractionEngine: requestManualSave()
+
+InteractionEngine -> EventStoreService: ensureAllEventsCommitted()
+EventStoreService --> InteractionEngine: currentSequence
+
+InteractionEngine -> EventStoreService: compareWithLastManualSave()
+EventStoreService --> InteractionEngine: deltaExists?
+
+note over EventStoreService
+  Deduplication check per FR-014:
+  Compares current sequence number with
+  last document.saved event sequence.
+
+  Prevents redundant snapshot creation
+  when no edits occurred since last save.
+end note
+
+' =========================================================================
+' Save Deduplication Logic
+' =========================================================================
+
+alt No new events since last save
+  InteractionEngine -> DesktopShell: showStatus("No changes to save")
+
+  InteractionEngine -> TelemetryService: log(metric="save.skipped")
+  TelemetryService --> InteractionEngine: ack
+
+  note right of DesktopShell
+    User feedback indicates no work needed.
+    No snapshot created, no disk I/O triggered.
+  end note
+
+else New events detected
+  InteractionEngine -> SecurityGateway: validateFilePath(currentDocument)
+  SecurityGateway --> InteractionEngine: pathApproved
+
+  InteractionEngine -> EventStoreService: record(document.saved)
+  EventStoreService --> InteractionEngine: saveSequence
+
+  InteractionEngine -> SnapshotManager: triggerSnapshotOnSave(sequence)
+end
+
+note over SecurityGateway
+  SecurityGateway validates:
+  - File path permissions
+  - Document ownership
+  - Write access to target directory
+
+  Prevents unauthorized file writes.
+end note
+
+' =========================================================================
+' Snapshot Creation in Background
+' =========================================================================
+
+group Snapshot creation in background
+  activate SnapshotManager
+
+  SnapshotManager -> SnapshotManager: deepCopyDocument()
+
+  SnapshotManager -> TelemetryService: log(metric="snapshot.start")
+  TelemetryService --> SnapshotManager: ack
+
+  SnapshotManager -> SnapshotManager: compressJSON(gzip)
+
+  note right of SnapshotManager
+    Compression runs in isolate per NFR-PERF-006.
+    Memory checks performed before allocating
+    large buffers to prevent OOM crashes.
+
+    Snapshots created every:
+    - Manual save (Cmd/Ctrl+S)
+    - 1000 events (auto-threshold per ADR-001)
+  end note
+
+  SnapshotManager -> EventStoreService: persistSnapshotBlob()
+  EventStoreService --> SnapshotManager: stored
+
+  SnapshotManager -> TelemetryService: log(metric="snapshot.duration")
+  TelemetryService --> SnapshotManager: ack
+
+  SnapshotManager -> NavigatorService: notifySnapshotReady(sequence)
+  deactivate SnapshotManager
+
+  NavigatorService -> DesktopShell: updateStatus("Saved")
+end
+
+note over EventStoreService
+  Snapshot blob stored in snapshots table
+  with sequence number, timestamp, and
+  compressed document state.
+
+  Auto-save continues to persist events
+  after manual save completes, but timer
+  pauses during snapshot compression.
+end note
+
+' =========================================================================
+' UI Feedback and Status Update
+' =========================================================================
+
+group UI feedback and dedup markers
+  DesktopShell -> NavigatorService: removeDirtyIndicator()
+  NavigatorService --> DesktopShell: indicatorCleared
+
+  DesktopShell -> TelemetryService: log(metric="save.duration")
+  TelemetryService --> DesktopShell: ack
+end
+
+note over DesktopShell
+  Window title and Navigator tab updated
+  to remove dirty indicator (*).
+
+  Status bar shows "Saved" confirmation
+  with timestamp of last save operation.
+end note
+
+' =========================================================================
+' Summary Notes
+' =========================================================================
+
+note right of SnapshotManager
+  **Snapshot Strategy (ADR-001):**
+  - Periodic: Every 1000 events
+  - Manual: User-triggered (Cmd/Ctrl+S)
+  - Compression: gzip in background isolate
+
+  **Performance:**
+  - Isolate execution honors NFR-PERF-006
+  - Memory checks prevent crashes
+  - Compression ratios tracked in telemetry
+
+  **Deduplication:**
+  - FR-014 compliance via sequence comparison
+  - Skips redundant snapshots when no deltas exist
+  - Telemetry tracks skip rate for UX optimization
+end note
+
+@enduml

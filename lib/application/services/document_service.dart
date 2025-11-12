@@ -151,7 +151,8 @@ class DocumentService {
 
       return result;
     } catch (e, stackTrace) {
-      _logger.e('Unexpected error during save', error: e, stackTrace: stackTrace);
+      _logger.e('Unexpected error during save',
+          error: e, stackTrace: stackTrace);
 
       // Hide progress dialog
       if (context.mounted) {
@@ -185,7 +186,8 @@ class DocumentService {
   Future<SaveResult?> saveDocumentAs({
     required BuildContext context,
   }) async {
-    _logger.i('Save As requested for document: ${_documentProvider.document.id}');
+    _logger
+        .i('Save As requested for document: ${_documentProvider.document.id}');
 
     // Get current document state
     final documentId = _documentProvider.document.id;
@@ -255,7 +257,8 @@ class DocumentService {
 
       return result;
     } catch (e, stackTrace) {
-      _logger.e('Unexpected error during Save As', error: e, stackTrace: stackTrace);
+      _logger.e('Unexpected error during Save As',
+          error: e, stackTrace: stackTrace);
 
       // Hide progress dialog
       if (context.mounted) {
@@ -370,7 +373,9 @@ class DocumentService {
         }
 
         // Show degrade warnings if present
-        if (context.mounted && result.degradeWarnings != null && result.degradeWarnings!.isNotEmpty) {
+        if (context.mounted &&
+            result.degradeWarnings != null &&
+            result.degradeWarnings!.isNotEmpty) {
           _openDialogs.showDegradeWarning(
             context: context,
             warnings: result.degradeWarnings!,
@@ -401,7 +406,8 @@ class DocumentService {
 
       return result;
     } catch (e, stackTrace) {
-      _logger.e('Unexpected error during load', error: e, stackTrace: stackTrace);
+      _logger.e('Unexpected error during load',
+          error: e, stackTrace: stackTrace);
 
       // Hide progress dialog
       if (context.mounted) {

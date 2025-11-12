@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import 'package:logger/logger.dart';
 import 'package:event_core/event_core.dart';
 import 'package:app_shell/app_shell.dart';
+import 'package:app/app.dart';
 import 'package:wiretuner/application/services/document_event_applier.dart';
 import 'package:wiretuner/application/services/undo_service.dart';
 import 'package:wiretuner/application/tools/direct_selection/direct_selection_tool.dart';
@@ -16,6 +17,8 @@ import 'package:wiretuner/application/tools/shapes/polygon_tool.dart';
 import 'package:wiretuner/application/tools/shapes/rectangle_tool.dart';
 import 'package:wiretuner/application/tools/shapes/star_tool.dart';
 import 'package:wiretuner/domain/document/document.dart';
+import 'package:wiretuner/domain/document/selection.dart';
+import 'package:wiretuner/domain/models/geometry/rectangle.dart';
 import 'package:wiretuner/infrastructure/event_sourcing/event_recorder.dart'
     as app_event_recorder;
 import 'package:wiretuner/infrastructure/event_sourcing/event_navigator.dart'
@@ -43,10 +46,7 @@ class App extends StatelessWidget {
   @override
   Widget build(BuildContext context) => MaterialApp(
         title: 'WireTuner',
-        theme: ThemeData(
-          colorScheme: ColorScheme.fromSeed(seedColor: Colors.blue),
-          useMaterial3: true,
-        ),
+        theme: buildWireTunerTheme(brightness: Brightness.dark),
         home: const _AppInitializer(),
       );
 }
@@ -109,9 +109,19 @@ class _AppInitializerState extends State<_AppInitializer> {
       ),
     );
 
-    // Create document provider with default document
+    // Create document provider with default document and default artboard
     _documentProvider = DocumentProvider(
-      initialDocument: const Document(id: 'default-doc', title: 'Untitled'),
+      initialDocument: Document(
+        id: 'default-doc',
+        title: 'Untitled',
+        artboards: const [
+          Artboard(
+            id: 'artboard-1',
+            name: 'Artboard 1',
+            bounds: Rectangle(x: 0, y: 0, width: 1920, height: 1080),
+          ),
+        ],
+      ),
     );
 
     // Create viewport controller with default zoom and pan
@@ -381,7 +391,8 @@ class _MockSnapshotStore implements SnapshotStore {
   }
 
   @override
-  Future<int> deleteOldSnapshots(String documentId, {int keepCount = 10}) async {
+  Future<int> deleteOldSnapshots(String documentId,
+      {int keepCount = 10}) async {
     // No-op - return 0 deleted count
     return 0;
   }

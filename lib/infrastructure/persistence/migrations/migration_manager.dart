@@ -44,7 +44,8 @@ class MigrationException implements Exception {
   final Object? cause;
 
   @override
-  String toString() => 'MigrationException: $message${cause != null ? ' (cause: $cause)' : ''}';
+  String toString() =>
+      'MigrationException: $message${cause != null ? ' (cause: $cause)' : ''}';
 }
 
 /// Manages file format version migrations.

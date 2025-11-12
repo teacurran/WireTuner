@@ -102,7 +102,7 @@ class WireTunerCanvas extends StatefulWidget {
     this.telemetryService,
     this.hoveredAnchor,
     this.toolManager,
-    this.enableRenderPipeline = true,
+    this.enableRenderPipeline = false, // Disabled until shapes are supported
     super.key,
   });
 
@@ -128,6 +128,10 @@ class WireTunerCanvas extends StatefulWidget {
   final ToolManager? toolManager;
 
   /// Enable advanced render pipeline with optimizations.
+  ///
+  /// NOTE: Currently disabled by default because the render pipeline doesn't
+  /// support shapes yet. Once shape rendering is added to RenderPipeline,
+  /// this can be re-enabled.
   final bool enableRenderPipeline;
 
   @override

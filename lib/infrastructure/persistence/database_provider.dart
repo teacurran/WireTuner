@@ -5,6 +5,7 @@ import 'package:path/path.dart' as path;
 import 'package:path_provider/path_provider.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
+import 'migrations.dart';
 import 'schema.dart';
 
 /// Provides database connection lifecycle management for the WireTuner application.
@@ -30,7 +31,7 @@ import 'schema.dart';
 /// ```
 class DatabaseProvider {
   /// The current schema version for the WireTuner database.
-  static const int currentSchemaVersion = 1;
+  static const int currentSchemaVersion = 2;
 
   /// The file extension for WireTuner database files.
   static const String databaseExtension = '.wiretuner';
@@ -195,10 +196,18 @@ class DatabaseProvider {
 
   /// Callback invoked when the database needs to be upgraded.
   ///
-  /// This handles schema migrations between versions.
+  /// This handles schema migrations between versions using the migration harness.
   Future<void> _onUpgrade(Database db, int oldVersion, int newVersion) async {
     _logger.i('Upgrading database from version $oldVersion to $newVersion');
-    // Schema migrations will be implemented in future tasks
+    await SchemaMigrationManager.migrate(db, oldVersion);
+
+    // Verify migration succeeded
+    final isValid = await SchemaMigrationManager.verifySchemaIntegrity(db);
+    if (!isValid) {
+      throw Exception('Schema migration failed integrity check');
+    }
+
+    _logger.i('Schema migration completed and verified');
   }
 
   /// Callback invoked when the database is opened (every time).

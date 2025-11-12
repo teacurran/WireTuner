@@ -1,0 +1,105 @@
+# =========================================
+# WireTuner GraphQL Subscription Examples
+# =========================================
+
+# Subscription: Document Presence
+# Streams real-time presence updates for collaborators
+# Fallback for when WebSocket firewall policies prohibit raw connections per Section 3.7.4.6
+subscription WatchDocumentPresence {
+  documentPresence(
+    documentId: "a3bb189e-8bf9-4bc6-9c8e-d3d0c2b3e9f1"
+    cursorSamplingMs: 100
+  ) {
+    user {
+      id
+      displayName
+      email
+      avatarUrl
+      platform
+    }
+    activity
+    selectedArtboardIds
+    selectionBounds {
+      x
+      y
+      width
+      height
+    }
+    cursor {
+      screenX
+      screenY
+      tool
+      pressure
+    }
+    latencyMs
+    lastEventSequence
+    undoDepthRemaining
+    featureFlags
+    idleReason
+    deviceInfo {
+      platform
+      appVersion
+    }
+    protocolVersion
+  }
+}
+
+# Subscription: Filtered Presence (Single Artboard)
+# Limits presence updates to specific artboards to reduce noise
+subscription WatchArtboardPresence {
+  documentPresence(
+    documentId: "a3bb189e-8bf9-4bc6-9c8e-d3d0c2b3e9f1"
+    artboardFilter: ["f47ac10b-58cc-4372-a567-0e02b2c3d479"]
+    cursorSamplingMs: 50
+  ) {
+    user {
+      id
+      displayName
+    }
+    activity
+    selectedArtboardIds
+    cursor {
+      screenX
+      screenY
+      tool
+    }
+    latencyMs
+  }
+}
+
+# Subscription: Presence with Variables
+# Demonstrates parameterized subscriptions for dynamic artboard filtering
+subscription WatchPresenceWithVariables(
+  $documentId: UUID!
+  $artboards: [UUID!]
+  $samplingMs: Int = 100
+) {
+  documentPresence(
+    documentId: $documentId
+    artboardFilter: $artboards
+    cursorSamplingMs: $samplingMs
+  ) {
+    user {
+      displayName
+      platform
+    }
+    activity
+    cursor {
+      screenX
+      screenY
+      tool
+    }
+    latencyMs
+    deviceInfo {
+      platform
+      appVersion
+    }
+  }
+}
+
+# Example variables for above subscription:
+# {
+#   "documentId": "a3bb189e-8bf9-4bc6-9c8e-d3d0c2b3e9f1",
+#   "artboards": ["f47ac10b-58cc-4372-a567-0e02b2c3d479"],
+#   "samplingMs": 100
+# }

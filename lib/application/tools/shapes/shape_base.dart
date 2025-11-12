@@ -8,6 +8,7 @@ import 'package:wiretuner/application/tools/framework/tool_interface.dart';
 import 'package:wiretuner/domain/document/document.dart';
 import 'package:wiretuner/domain/events/event_base.dart';
 import 'package:wiretuner/domain/events/object_events.dart';
+import 'package:wiretuner/domain/events/selection_events.dart';
 import 'package:wiretuner/presentation/canvas/viewport/viewport_controller.dart';
 
 /// State machine for shape tools.
@@ -149,13 +150,18 @@ abstract class ShapeToolBase implements ITool {
 
   @override
   bool onPointerUp(PointerUpEvent event) {
-    if (_state != ShapeState.dragging || _dragStartPos == null) return false;
+    debugPrint('[ShapeToolBase.onPointerUp] Called with state: $_state');
+    if (_state != ShapeState.dragging || _dragStartPos == null) {
+      debugPrint('[ShapeToolBase.onPointerUp] Ignoring - not dragging or no start pos');
+      return false;
+    }
 
     final worldPos = _viewportController.screenToWorld(event.localPosition);
     _currentDragPos = worldPos;
 
     // Check minimum drag distance
     final dragDistance = _calculateDistance(_dragStartPos!, _currentDragPos!);
+    debugPrint('[ShapeToolBase.onPointerUp] Drag distance: $dragDistance (min: $_minDragDistance)');
     if (dragDistance < _minDragDistance) {
       _logger.d(
         'Drag distance ($dragDistance) below threshold - ignoring',
@@ -174,6 +180,7 @@ abstract class ShapeToolBase implements ITool {
       isAltPressed,
     );
 
+    debugPrint('[ShapeToolBase.onPointerUp] Creating shape with bounding box: $boundingBox');
     // Emit CreateShapeEvent
     _createShape(boundingBox);
 
@@ -235,6 +242,9 @@ abstract class ShapeToolBase implements ITool {
     final now = DateTime.now().millisecondsSinceEpoch;
     final parameters = createShapeParameters(boundingBox);
 
+    debugPrint('[ShapeToolBase._createShape] Creating CreateShapeEvent for $shapeTypeName with ID: $shapeId');
+    debugPrint('[ShapeToolBase._createShape] Parameters: $parameters');
+
     final event = CreateShapeEvent(
       eventId: _uuid.v4(),
       timestamp: now,
@@ -245,7 +255,20 @@ abstract class ShapeToolBase implements ITool {
       strokeWidth: 2.0,
     );
 
+    debugPrint('[ShapeToolBase._createShape] Recording event...');
     _eventRecorder.recordEvent(event);
+    debugPrint('[ShapeToolBase._createShape] Event recorded!');
+
+    // Auto-select the newly created shape
+    _eventRecorder.recordEvent(
+      SelectObjectsEvent(
+        eventId: _uuid.v4(),
+        timestamp: now,
+        objectIds: [shapeId],
+        mode: SelectionMode.replace,
+      ),
+    );
+
     _logger.i(
       '$shapeTypeName created: shapeId=$shapeId, params=$parameters',
     );

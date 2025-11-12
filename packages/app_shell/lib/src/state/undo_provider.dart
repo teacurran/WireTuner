@@ -1,4 +1,3 @@
-import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
 import 'package:wiretuner/application/services/undo_service.dart';
 import 'package:wiretuner/presentation/state/document_provider.dart';
@@ -68,8 +67,7 @@ class UndoProvider extends ChangeNotifier {
   UndoProvider({
     required UndoService undoService,
   })  : _undoService = undoService,
-        _undoNavigator = null,
-        _documentProvider = null;
+        _undoNavigator = null;
 
   /// Creates an undo provider using UndoNavigator (event_core-based).
   ///
@@ -82,15 +80,13 @@ class UndoProvider extends ChangeNotifier {
     required UndoNavigator navigator,
     required DocumentProvider documentProvider,
   })  : _undoService = null,
-        _undoNavigator = navigator,
-        _documentProvider = documentProvider {
+        _undoNavigator = navigator {
     // Subscribe to navigator changes
-    _undoNavigator!.addListener(_onNavigationChanged);
+    navigator.addListener(_onNavigationChanged);
   }
 
   final UndoService? _undoService;
   final UndoNavigator? _undoNavigator;
-  final DocumentProvider? _documentProvider;
 
   /// Flag to prevent re-entrancy during navigation.
   bool _isNavigating = false;
@@ -104,7 +100,7 @@ class UndoProvider extends ChangeNotifier {
   /// Returns whether undo is available.
   bool get canUndo {
     if (_undoNavigator != null) {
-      return _undoNavigator!.canUndo;
+      return _undoNavigator.canUndo;
     }
     return _canUndo;
   }
@@ -112,7 +108,7 @@ class UndoProvider extends ChangeNotifier {
   /// Returns whether redo is available.
   bool get canRedo {
     if (_undoNavigator != null) {
-      return _undoNavigator!.canRedo;
+      return _undoNavigator.canRedo;
     }
     return _canRedo;
   }
@@ -120,7 +116,7 @@ class UndoProvider extends ChangeNotifier {
   /// Returns the action label for undo menu item.
   String get undoActionLabel {
     if (_undoNavigator != null) {
-      final operationName = _undoNavigator!.undoOperationName;
+      final operationName = _undoNavigator.undoOperationName;
       return operationName != null ? 'Undo $operationName' : 'Undo';
     }
     return 'Undo';
@@ -129,7 +125,7 @@ class UndoProvider extends ChangeNotifier {
   /// Returns the action label for redo menu item.
   String get redoActionLabel {
     if (_undoNavigator != null) {
-      final operationName = _undoNavigator!.redoOperationName;
+      final operationName = _undoNavigator.redoOperationName;
       return operationName != null ? 'Redo $operationName' : 'Redo';
     }
     return 'Redo';
@@ -138,8 +134,8 @@ class UndoProvider extends ChangeNotifier {
   /// Refreshes the canUndo/canRedo state (UndoService mode only).
   Future<void> _refreshState() async {
     if (_undoService != null) {
-      _canUndo = await _undoService!.canUndo();
-      _canRedo = await _undoService!.canRedo();
+      _canUndo = await _undoService.canUndo();
+      _canRedo = await _undoService.canRedo();
       notifyListeners();
     }
   }
@@ -155,12 +151,12 @@ class UndoProvider extends ChangeNotifier {
   Future<bool> handleUndo() async {
     if (_undoNavigator != null) {
       // UndoNavigator mode
-      if (_isNavigating || !_undoNavigator!.canUndo) {
+      if (_isNavigating || !_undoNavigator.canUndo) {
         return false;
       }
       _isNavigating = true;
       try {
-        return await _undoNavigator!.undo();
+        return await _undoNavigator.undo();
       } finally {
         _isNavigating = false;
       }
@@ -189,12 +185,12 @@ class UndoProvider extends ChangeNotifier {
   Future<bool> handleRedo() async {
     if (_undoNavigator != null) {
       // UndoNavigator mode
-      if (_isNavigating || !_undoNavigator!.canRedo) {
+      if (_isNavigating || !_undoNavigator.canRedo) {
         return false;
       }
       _isNavigating = true;
       try {
-        return await _undoNavigator!.redo();
+        return await _undoNavigator.redo();
       } finally {
         _isNavigating = false;
       }
@@ -230,7 +226,7 @@ class UndoProvider extends ChangeNotifier {
       }
       _isNavigating = true;
       try {
-        return await _undoNavigator!.scrubToSequence(targetSequence);
+        return await _undoNavigator.scrubToSequence(targetSequence);
       } finally {
         _isNavigating = false;
       }
@@ -266,7 +262,7 @@ class UndoProvider extends ChangeNotifier {
       }
       _isNavigating = true;
       try {
-        return await _undoNavigator!.scrubToGroup(targetGroup as OperationGroup);
+        return await _undoNavigator.scrubToGroup(targetGroup as OperationGroup);
       } finally {
         _isNavigating = false;
       }
@@ -279,7 +275,7 @@ class UndoProvider extends ChangeNotifier {
   /// Returns the undo stack for history panel display.
   List<OperationGroup> get undoStack {
     if (_undoNavigator != null) {
-      return _undoNavigator!.undoStack;
+      return _undoNavigator.undoStack;
     }
     return const [];
   }
@@ -287,7 +283,7 @@ class UndoProvider extends ChangeNotifier {
   /// Returns the redo stack for history panel display.
   List<OperationGroup> get redoStack {
     if (_undoNavigator != null) {
-      return _undoNavigator!.redoStack;
+      return _undoNavigator.redoStack;
     }
     return const [];
   }
@@ -295,7 +291,7 @@ class UndoProvider extends ChangeNotifier {
   @override
   void dispose() {
     if (_undoNavigator != null) {
-      _undoNavigator!.removeListener(_onNavigationChanged);
+      _undoNavigator.removeListener(_onNavigationChanged);
     }
     super.dispose();
   }

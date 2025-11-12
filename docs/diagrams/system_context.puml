@@ -1,0 +1,201 @@
+@startuml
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Context.puml
+
+/' anchor: system-context '/
+
+title System Context Diagram - WireTuner Ecosystem
+
+note as version_meta
+  **Version:** 1.0
+  **Date:** 2025-11-10
+  **Author:** WireTuner Architecture Team
+  **Reference:** Section 3.3 System Context Diagram
+  **Source:** .codemachine/artifacts/architecture/02_System_Structure_and_Data.md#system-context-diagram
+  **ADRs:** ADR-003 (Event Sourcing Architecture)
+end note
+
+SHOW_PERSON_OUTLINE()
+AddElementTag("SaaS", $bgColor="#e0f7fa", $fontColor="#004d40")
+AddElementTag("Desktop", $bgColor="#ede7f6", $fontColor="#311b92")
+AddElementTag("Platform", $bgColor="#fff3e0", $fontColor="#e65100")
+
+' ==========================================
+' PRIMARY ACTORS
+' ==========================================
+
+Person(proDesigner, "Professional Designer", "Creates production-grade vector illustrations, responsive UI artboards, and multi-device design systems")
+Person(illustratorLead, "Design Lead / Reviewer", "Reviews artboards, curates file standards, ensures Adobe Illustrator compatibility")
+Person(qaSpecialist, "QA / Performance Engineer", "Validates 60 FPS targets, event replay accuracy, regression coverage, telemetry compliance")
+Person(supportEngineer, "Support Engineer", "Assists with crash recovery, telemetry exports, migration troubleshooting")
+
+' ==========================================
+' CENTRAL SYSTEM
+' ==========================================
+
+System_Boundary(wireSuite, "WireTuner Desktop Suite") {
+  System(wireDesktop, "WireTuner Desktop Application", "Flutter 3.x Clean Architecture monolith (macOS/Windows) with embedded SQLite event store, background worker pool, and platform integrations", $tags="Desktop")
+}
+
+' ==========================================
+' EXTERNAL SYSTEMS - CLOUD SERVICES
+' ==========================================
+
+System_Ext(collabGateway, "Collaboration Gateway", "Dart Frog WebSocket service providing Operational Transform sequencing, presence indicators, multi-user editing", $tags="SaaS")
+System_Ext(syncAPI, "Sync API", "GraphQL/REST metadata exchange service for document lists, snapshots, settings synchronization", $tags="SaaS")
+System_Ext(telemetryService, "Telemetry Service", "Prometheus + OpenTelemetry ingest stack collecting metrics, traces, structured logs", $tags="SaaS")
+System_Ext(featureFlagSvc, "Feature Flag Platform", "LaunchDarkly/Flagsmith configuration service enabling staged rollouts and A/B testing", $tags="SaaS")
+
+' ==========================================
+' EXTERNAL SYSTEMS - PLATFORM & OS
+' ==========================================
+
+System_Ext(osFileSystem, "OS File System", "macOS Finder / Windows Explorer providing native file dialogs and .wiretuner file access")
+System_Ext(macQuickLook, "macOS QuickLook Extension", "Finder preview generator rendering .wiretuner thumbnails without launching app", $tags="Platform")
+System_Ext(winExplorerHandler, "Windows Explorer Handler", "Shell extension providing thumbnail/preview support in Windows Explorer", $tags="Platform")
+
+' ==========================================
+' EXTERNAL SYSTEMS - CONVERSION & IMPORT
+' ==========================================
+
+System_Ext(svgLibrary, "SVG Import Sources", "Third-party vector documents (SVG, Adobe Illustrator AI, PDF-based formats)")
+System_Ext(pdfService, "SVG-to-PDF Worker Farm", "Rust resvg-powered container workers converting SVG payloads to high-fidelity PDF artifacts")
+
+' ==========================================
+' EXTERNAL SYSTEMS - IDENTITY & SECURITY
+' ==========================================
+
+System_Ext(identityProvider, "Identity Provider", "OAuth 2.0/OIDC authentication service issuing JWTs with 15-minute expiry", $tags="SaaS")
+
+' ==========================================
+' EXTERNAL SYSTEMS - INFRASTRUCTURE
+' ==========================================
+
+System_Ext(redisBackplane, "Redis Cluster", "Pub/Sub fan-out infrastructure for collaboration events, presence, job dispatch", $tags="SaaS")
+System_Ext(objectStorage, "Object Storage", "S3-compatible storage for exports, backups, remote snapshots, installer artifacts", $tags="SaaS")
+System_Ext(crashPortal, "Crash Reporting Portal", "Operations dashboard for triaging client logs, crash dumps, integrity warnings")
+System_Ext(observabilityStack, "Observability Stack", "Grafana/Loki/CloudWatch providing dashboards, alerts, log archives for SRE teams")
+
+' ==========================================
+' PRIMARY USER RELATIONSHIPS
+' ==========================================
+
+Rel(proDesigner, wireDesktop, "Creates/edits documents via pen, shape, direct selection, typography tools; triggers exports; replays history timelines")
+Rel(illustratorLead, wireDesktop, "Reviews artboards, inspects event history, validates AI/SVG import fidelity, enforces design standards")
+Rel(qaSpecialist, wireDesktop, "Runs regression workflows, monitors FPS overlay, validates undo/redo determinism, checks telemetry opt-out")
+Rel(supportEngineer, wireDesktop, "Guides crash recovery, collects diagnostic logs, ensures file migration succeeds without data loss")
+
+' ==========================================
+' DESKTOP TO CLOUD SERVICES
+' ==========================================
+
+Rel(wireDesktop, collabGateway, "Streams OT events for multi-user editing, receives remote edits, publishes presence heartbeats", "WebSocket over TLS 1.3")
+Rel(wireDesktop, syncAPI, "Loads document metadata, uploads/downloads snapshots, synchronizes settings profiles", "GraphQL over HTTPS")
+Rel(wireDesktop, telemetryService, "Emits FPS metrics, event replay rates, snapshot durations, crash dumps (opt-in only)", "OpenTelemetry gRPC/HTTP")
+Rel(wireDesktop, featureFlagSvc, "Evaluates rollout flags for staged features (e.g., typography beta, boolean ops)", "HTTPS streaming + polling")
+
+' ==========================================
+' DESKTOP TO PLATFORM & OS
+' ==========================================
+
+Rel(wireDesktop, osFileSystem, "Reads/writes .wiretuner SQLite bundles, exports JSON/SVG/PDF artifacts", "POSIX/Win32 file I/O")
+Rel(wireDesktop, macQuickLook, "Shares RenderingPipeline for generating thumbnails", "Plugin shared library")
+Rel(wireDesktop, winExplorerHandler, "Provides cached thumbnail blobs for preview pane", "COM shell extension")
+
+' ==========================================
+' DESKTOP TO CONVERSION & IMPORT
+' ==========================================
+
+Rel(wireDesktop, svgLibrary, "Imports SVG/AI/PDF files via file open dialogs, parses to event sequences", "Native file picker")
+Rel(wireDesktop, pdfService, "Queues SVG export payloads for background PDF conversion jobs", "Redis Streams / SQS")
+
+' ==========================================
+' DESKTOP TO IDENTITY & SECURITY
+' ==========================================
+
+Rel(wireDesktop, identityProvider, "Authenticates users, refreshes JWTs, stores tokens in OS keychain", "OAuth 2.0 / OIDC")
+
+' ==========================================
+' DESKTOP TO INFRASTRUCTURE
+' ==========================================
+
+Rel(wireDesktop, objectStorage, "Uploads manual backups, downloads remote snapshots, fetches installer updates", "S3 API over HTTPS")
+
+' ==========================================
+' CLOUD SERVICE INTERDEPENDENCIES
+' ==========================================
+
+Rel(collabGateway, redisBackplane, "Broadcasts presence events, fans out OT transforms to active sessions", "Redis Pub/Sub")
+Rel(collabGateway, identityProvider, "Validates JWT signatures, introspects user claims", "JWT verification API")
+Rel(syncAPI, objectStorage, "Stores large snapshots, export artifacts, thumbnail caches", "S3 API")
+Rel(syncAPI, telemetryService, "Reports GraphQL query latencies, snapshot upload durations", "Prometheus metrics")
+Rel(pdfService, objectStorage, "Uploads completed PDF conversion outputs with signed URLs", "S3 API")
+Rel(telemetryService, crashPortal, "Surfaces crash incidents, integrity check failures for triage", "Alert webhooks")
+Rel(telemetryService, observabilityStack, "Feeds Grafana dashboards, Loki logs, CloudWatch alarms", "Metrics/logs export")
+
+' ==========================================
+' PLATFORM EXTENSION RELATIONSHIPS
+' ==========================================
+
+Rel(proDesigner, macQuickLook, "Previews .wiretuner artboards in Finder without launching app", "Spacebar preview")
+Rel(illustratorLead, winExplorerHandler, "Views thumbnail grid in Windows Explorer for quick asset review", "Explorer preview pane")
+
+' ==========================================
+' SUPPORT & OPS RELATIONSHIPS
+' ==========================================
+
+Rel(supportEngineer, crashPortal, "Triages client incidents, downloads diagnostic bundles, correlates telemetry", "Web UI")
+Rel(qaSpecialist, telemetryService, "Monitors performance dashboards, validates SLA compliance (60 FPS, <100ms load)", "Grafana dashboards")
+Rel(qaSpecialist, observabilityStack, "Reviews regression test results, trace timelines, log aggregations", "Query UI")
+
+' ==========================================
+' INFRASTRUCTURE OBSERVABILITY
+' ==========================================
+
+Rel(redisBackplane, telemetryService, "Publishes anomaly alerts for pub/sub queue saturation", "Redis exporter")
+Rel(objectStorage, observabilityStack, "Reports storage metrics, access patterns, signed URL expirations", "CloudWatch metrics")
+Rel(featureFlagSvc, wireDesktop, "Pushes real-time flag updates via streaming client SDK", "Server-Sent Events")
+
+' ==========================================
+' BACKUP & RECOVERY FLOWS
+' ==========================================
+
+Rel(objectStorage, supportEngineer, "Delivers exported artifacts, backup bundles via signed download URLs", "HTTPS download")
+Rel(svgLibrary, wireDesktop, "Provides input artifacts for import pipeline (AI, SVG, PDF)", "User file selection")
+
+' ==========================================
+' LAYOUT HINTS
+' ==========================================
+
+Lay_R(proDesigner, illustratorLead)
+Lay_D(qaSpecialist, supportEngineer)
+Lay_D(collabGateway, redisBackplane)
+Lay_D(syncAPI, objectStorage)
+Lay_L(macQuickLook, winExplorerHandler)
+
+' ==========================================
+' LEGEND - ARCHITECTURAL CONTEXT
+' ==========================================
+
+legend right
+  **System Context Legend**
+
+  |= Tag |= Description |
+  | Desktop | Flutter 3.x Clean Architecture monolith (Presentation → Application → Domain → Infrastructure) |
+  | SaaS | Cloud-hosted microservices (Dart Frog, managed databases, feature flags) |
+  | Platform | OS-specific integrations (QuickLook, Explorer extensions) |
+
+  **Key Architectural Decisions:**
+  • ADR-003: Event sourcing with SQLite WAL for unlimited undo/redo, crash recovery, collaboration foundation
+  • Clean Architecture boundaries enforced via Provider DI, immutable Freezed domain models
+  • Hybrid deployment: Desktop monolith + cloud services for collaboration, telemetry, conversions
+  • Security: TLS 1.3 end-to-end, JWT auth with OS keychain storage, path canonicalization
+  • Observability: OpenTelemetry traces, Prometheus metrics, structured logs with correlation IDs
+
+  **Technology Stack:**
+  • Desktop: Flutter 3.x, Dart 3.x, SQLite 3.x (WAL mode), Freezed, Provider
+  • Backend: Dart Frog (preferred) or Node.js/NestJS, PostgreSQL 14+, Redis Cluster
+  • Workers: Rust resvg for SVG→PDF, LaunchDarkly/Flagsmith feature flags
+  • Infrastructure: AWS EKS, S3, RDS, Elasticache, CloudFront, GitHub Actions CI/CD
+end legend
+
+@enduml

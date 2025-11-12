@@ -3,6 +3,28 @@ import 'package:flutter/material.dart';
 import 'package:wiretuner/domain/events/event_base.dart';
 import 'package:wiretuner/presentation/canvas/viewport/viewport_controller.dart';
 
+/// Simple data class to hold anchor position and type for preview rendering.
+class PreviewAnchor {
+  const PreviewAnchor({
+    required this.position,
+    required this.isCorner,
+  });
+
+  final Point position;
+  final bool isCorner; // true for corner/line anchors, false for smooth/bezier
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is PreviewAnchor &&
+          runtimeType == other.runtimeType &&
+          position == other.position &&
+          isCorner == other.isCorner;
+
+  @override
+  int get hashCode => position.hashCode ^ isCorner.hashCode;
+}
+
 /// Visual constants for pen tool preview overlay rendering.
 class PenPreviewConstants {
   /// Color for handle lines and control points during Bezier creation.
@@ -48,6 +70,7 @@ class PenPreviewState {
     this.isDragging = false,
     this.isAdjustingHandles = false,
     this.isAltPressed = false,
+    this.placedAnchors = const [],
   });
 
   /// Position of the last anchor placed (world coordinates).
@@ -72,6 +95,9 @@ class PenPreviewState {
 
   /// Whether Alt key is pressed (for corner/independent handles).
   final bool isAltPressed;
+
+  /// List of all anchors placed so far in the current path, with type info.
+  final List<PreviewAnchor> placedAnchors;
 
   /// Creates an empty state (no preview).
   static const PenPreviewState empty = PenPreviewState();
@@ -125,6 +151,13 @@ class PenPreviewOverlayPainter extends CustomPainter {
   void paint(Canvas canvas, ui.Size size) {
     final zoomLevel = viewportController.zoomLevel;
 
+    // Apply viewport transformation
+    canvas.save();
+    canvas.transform(viewportController.worldToScreenMatrix.storage);
+
+    // Render all placed anchors first
+    _renderPlacedAnchors(canvas, zoomLevel);
+
     // If dragging (either creating anchor or adjusting handles), render handle preview
     if (state.isDragging &&
         state.dragStartPosition != null &&
@@ -139,6 +172,44 @@ class PenPreviewOverlayPainter extends CustomPainter {
     else if (state.hoverPosition != null && state.lastAnchorPosition != null) {
       _renderPathPreview(canvas, zoomLevel);
     }
+
+    canvas.restore();
+  }
+
+  /// Renders all anchor points that have been placed in the current path.
+  void _renderPlacedAnchors(Canvas canvas, double zoomLevel) {
+    if (state.placedAnchors.isEmpty) {
+      return;
+    }
+
+    final anchorPaint = ui.Paint()
+      ..color = PenPreviewConstants.anchorFillColor
+      ..style = ui.PaintingStyle.fill;
+
+    final anchorStrokePaint = ui.Paint()
+      ..color = PenPreviewConstants.anchorStrokeColor
+      ..style = ui.PaintingStyle.stroke
+      ..strokeWidth = PenPreviewConstants.strokeWidth / zoomLevel;
+
+    for (final anchor in state.placedAnchors) {
+      final offset = ui.Offset(anchor.position.x, anchor.position.y);
+      final size = PenPreviewConstants.anchorRadius / zoomLevel;
+
+      if (anchor.isCorner) {
+        // Draw square for corner points
+        final rect = Rect.fromCenter(
+          center: offset,
+          width: size * 2,
+          height: size * 2,
+        );
+        canvas.drawRect(rect, anchorPaint);
+        canvas.drawRect(rect, anchorStrokePaint);
+      } else {
+        // Draw circle for smooth/bezier points
+        canvas.drawCircle(offset, size, anchorPaint);
+        canvas.drawCircle(offset, size, anchorStrokePaint);
+      }
+    }
   }
 
   /// Renders handle preview during drag gesture (for new anchor creation).
@@ -146,15 +217,15 @@ class PenPreviewOverlayPainter extends CustomPainter {
     final anchorPos = state.dragStartPosition!;
     final dragPos = state.currentDragPosition!;
 
-    // Convert world coordinates to screen coordinates
-    final anchorOffset = viewportController.worldToScreen(anchorPos);
-    final dragOffset = viewportController.worldToScreen(dragPos);
+    // Use world coordinates directly (viewport transform already applied)
+    final anchorOffset = ui.Offset(anchorPos.x, anchorPos.y);
+    final dragOffset = ui.Offset(dragPos.x, dragPos.y);
 
     // Paint for handle lines
     final handlePaint = ui.Paint()
       ..color = PenPreviewConstants.handleColor
       ..style = ui.PaintingStyle.stroke
-      ..strokeWidth = PenPreviewConstants.strokeWidth
+      ..strokeWidth = PenPreviewConstants.strokeWidth / zoomLevel
       ..strokeCap = ui.StrokeCap.round;
 
     // Paint for handle control points
@@ -170,7 +241,7 @@ class PenPreviewOverlayPainter extends CustomPainter {
     final anchorStrokePaint = ui.Paint()
       ..color = PenPreviewConstants.anchorStrokeColor
       ..style = ui.PaintingStyle.stroke
-      ..strokeWidth = PenPreviewConstants.strokeWidth;
+      ..strokeWidth = PenPreviewConstants.strokeWidth / zoomLevel;
 
     // Draw handleOut line from anchor to drag position
     canvas.drawLine(anchorOffset, dragOffset, handlePaint);
@@ -178,13 +249,13 @@ class PenPreviewOverlayPainter extends CustomPainter {
     // Draw handleOut control point
     canvas.drawCircle(
       dragOffset,
-      PenPreviewConstants.handleRadius,
+      PenPreviewConstants.handleRadius / zoomLevel,
       handlePointPaint,
     );
 
     // If Alt not pressed (smooth anchor mode), draw mirrored handleIn
     if (!state.isAltPressed) {
-      // Calculate mirrored position in screen space
+      // Calculate mirrored position
       final mirrorOffset = ui.Offset(
         anchorOffset.dx - (dragOffset.dx - anchorOffset.dx),
         anchorOffset.dy - (dragOffset.dy - anchorOffset.dy),
@@ -196,7 +267,7 @@ class PenPreviewOverlayPainter extends CustomPainter {
       // Draw handleIn control point
       canvas.drawCircle(
         mirrorOffset,
-        PenPreviewConstants.handleRadius,
+        PenPreviewConstants.handleRadius / zoomLevel,
         handlePointPaint,
       );
     }
@@ -204,12 +275,12 @@ class PenPreviewOverlayPainter extends CustomPainter {
     // Draw anchor point (on top of handles)
     canvas.drawCircle(
       anchorOffset,
-      PenPreviewConstants.anchorRadius,
+      PenPreviewConstants.anchorRadius / zoomLevel,
       anchorPaint,
     );
     canvas.drawCircle(
       anchorOffset,
-      PenPreviewConstants.anchorRadius,
+      PenPreviewConstants.anchorRadius / zoomLevel,
       anchorStrokePaint,
     );
   }
@@ -258,13 +329,13 @@ class PenPreviewOverlayPainter extends CustomPainter {
     // Draw handleOut control point
     canvas.drawCircle(
       dragOffset,
-      PenPreviewConstants.handleRadius,
+      PenPreviewConstants.handleRadius / zoomLevel,
       handlePointPaint,
     );
 
     // If Alt not pressed (smooth anchor mode), draw mirrored handleIn
     if (!state.isAltPressed) {
-      // Calculate mirrored position in screen space
+      // Calculate mirrored position
       final mirrorOffset = ui.Offset(
         anchorOffset.dx - (dragOffset.dx - anchorOffset.dx),
         anchorOffset.dy - (dragOffset.dy - anchorOffset.dy),
@@ -276,7 +347,7 @@ class PenPreviewOverlayPainter extends CustomPainter {
       // Draw handleIn control point
       canvas.drawCircle(
         mirrorOffset,
-        PenPreviewConstants.handleRadius,
+        PenPreviewConstants.handleRadius / zoomLevel,
         handlePointPaint,
       );
     }
@@ -284,12 +355,12 @@ class PenPreviewOverlayPainter extends CustomPainter {
     // Draw anchor point (on top of handles)
     canvas.drawCircle(
       anchorOffset,
-      PenPreviewConstants.anchorRadius,
+      PenPreviewConstants.anchorRadius / zoomLevel,
       anchorPaint,
     );
     canvas.drawCircle(
       anchorOffset,
-      PenPreviewConstants.anchorRadius,
+      PenPreviewConstants.anchorRadius / zoomLevel,
       anchorStrokePaint,
     );
   }

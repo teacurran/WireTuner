@@ -1,7 +1,7 @@
 # WireTuner
 
-[![CI](https://github.com/YOUR_USERNAME/WireTuner/actions/workflows/ci.yml/badge.svg)](https://github.com/YOUR_USERNAME/WireTuner/actions/workflows/ci.yml)
-[![Release](https://github.com/YOUR_USERNAME/WireTuner/actions/workflows/release.yml/badge.svg)](https://github.com/YOUR_USERNAME/WireTuner/actions/workflows/release.yml)
+[![CI](https://github.com/teacurran/WireTuner/actions/workflows/ci.yml/badge.svg)](https://github.com/teacurran/WireTuner/actions/workflows/ci.yml)
+[![Release](https://github.com/teacurran/WireTuner/actions/workflows/release.yml/badge.svg)](https://github.com/teacurran/WireTuner/actions/workflows/release.yml)
 [![License](https://img.shields.io/badge/license-TBD-blue.svg)](LICENSE)
 
 A professional event-sourced vector drawing application for macOS and Windows built with Flutter.
@@ -51,13 +51,13 @@ WireTuner is a desktop vector drawing application designed with an event-sourcin
 
 | Platform | Download | Requirements |
 |----------|----------|--------------|
-| **macOS** | [WireTuner-0.1.0-macOS.dmg](https://github.com/YOUR_USERNAME/WireTuner/releases) | macOS 10.15 (Catalina) or later<br/>Intel + Apple Silicon supported |
-| **Windows** | [WireTuner-0.1.0-Windows-Setup.exe](https://github.com/YOUR_USERNAME/WireTuner/releases) | Windows 10 version 1809 or later<br/>x64 architecture |
+| **macOS** | [WireTuner-0.1.0-macOS.dmg](https://github.com/teacurran/WireTuner/releases) | macOS 10.15 (Catalina) or later<br/>Intel + Apple Silicon supported |
+| **Windows** | [WireTuner-0.1.0-Windows-Setup.exe](https://github.com/teacurran/WireTuner/releases) | Windows 10 version 1809 or later<br/>x64 architecture |
 
 ### Installation Instructions
 
 #### macOS
-1. Download `WireTuner-0.1.0-macOS.dmg` from [GitHub Releases](https://github.com/YOUR_USERNAME/WireTuner/releases)
+1. Download `WireTuner-0.1.0-macOS.dmg` from [GitHub Releases](https://github.com/teacurran/WireTuner/releases)
 2. Open the DMG file
 3. Drag WireTuner.app to Applications folder
 4. Launch from Applications
@@ -65,7 +65,7 @@ WireTuner is a desktop vector drawing application designed with an event-sourcin
 **Note:** The app is notarized for macOS 10.15+ and signed with a Developer ID certificate.
 
 #### Windows
-1. Download `WireTuner-0.1.0-Windows-Setup.exe` from [GitHub Releases](https://github.com/YOUR_USERNAME/WireTuner/releases)
+1. Download `WireTuner-0.1.0-Windows-Setup.exe` from [GitHub Releases](https://github.com/teacurran/WireTuner/releases)
 2. Run the installer
 3. Follow the installation wizard
 4. Launch from Start Menu or Desktop shortcut
@@ -86,7 +86,7 @@ shasum -a 256 WireTuner-0.1.0-macOS.dmg
 Get-FileHash WireTuner-0.1.0-Windows-Setup.exe -Algorithm SHA256
 ```
 
-Compare the output with the checksums published in the [release notes](https://github.com/YOUR_USERNAME/WireTuner/releases).
+Compare the output with the checksums published in the [release notes](https://github.com/teacurran/WireTuner/releases).
 
 ### Build from Source
 
@@ -198,16 +198,32 @@ flutter run -d windows
 
 ## Workspace Structure (Iteration I1+)
 
-WireTuner uses a **melos-managed monorepo** to organize code into reusable packages. The workspace enables independent development, testing, and versioning of core components.
+WireTuner uses a **melos-managed monorepo** to organize code into reusable packages following Clean Architecture principles. The workspace enables independent development, testing, and versioning of core components.
 
-### Package Overview
+### Package Overview (Clean Architecture Boundaries)
 
 ```
 packages/
-├── app_shell/         # Flutter UI shell and window management
-├── event_core/        # Event sourcing infrastructure (recorder, replayer, snapshots)
-└── vector_engine/     # Vector graphics engine (models, geometry, hit testing)
+├── app/               # [NEW] Presentation layer (UI, rendering, interactions)
+├── core/              # [NEW] Domain layer (business logic, immutable models)
+├── infrastructure/    # [NEW] Infrastructure layer (I/O, persistence, import/export)
+├── app_shell/         # [EXISTING] Flutter UI shell and window management
+├── event_core/        # [EXISTING] Event sourcing infrastructure
+├── io_services/       # [EXISTING] SQLite persistence gateway
+├── tool_framework/    # [EXISTING] Tool interaction framework
+└── vector_engine/     # [EXISTING] Vector graphics engine
+
+server/
+└── collaboration-gateway/  # [FUTURE] Backend service (GraphQL + WebSocket)
 ```
+
+**Architecture Mapping:**
+- **`packages/app`** → Presentation Layer (UI, widgets, rendering)
+- **`packages/core`** → Domain Layer (pure business logic, immutable models, events)
+- **`packages/infrastructure`** → Infrastructure Layer (event store, file I/O, SVG/PDF)
+- **`server/collaboration-gateway`** → Backend Service (collaboration, sync, real-time features)
+
+**Note:** The `app`, `core`, `infrastructure`, and `server/collaboration-gateway` packages are placeholder stubs created in Iteration I1 to establish package boundaries. Existing packages (`app_shell`, `event_core`, `io_services`, `tool_framework`, `vector_engine`) contain working implementations and will be progressively migrated to the new structure in future iterations.
 
 ### Workspace Commands
 
@@ -229,12 +245,26 @@ melos run format
 # Check formatting without modifying files
 melos run format:check
 
+# Run code generation (freezed, json_serializable)
+melos run build:runner
+
 # Clean all packages
 melos run clean
 
 # Run pub get in all packages
 melos run get
+
+# Target specific packages with --scope
+melos run test --scope=core
+melos run analyze --scope=app
 ```
+
+**CI Integration:**
+All GitHub Actions workflows use melos commands to ensure consistency across local development and CI environments. The CI pipeline automatically:
+- Activates melos via `dart pub global activate melos`
+- Bootstraps the workspace with `melos bootstrap`
+- Runs analysis with `melos run analyze` (enforces --fatal-infos --fatal-warnings)
+- Executes tests with `melos run test` across all packages
 
 For detailed workspace architecture, see [.codemachine/artifacts/plan/01_Plan_Overview_and_Setup.md#directory-structure](.codemachine/artifacts/plan/01_Plan_Overview_and_Setup.md#directory-structure).
 
@@ -313,6 +343,33 @@ flutter analyze
 ```bash
 flutter format lib/ test/
 ```
+
+### Design Token Management
+
+WireTuner uses a centralized design token system defined in `docs/ui/tokens.md`. To regenerate Dart theme code from tokens:
+
+```bash
+# Run the design token exporter CLI
+dart tools/design-token-exporter/cli.dart
+```
+
+This validates the token definitions and confirms that generated files (`packages/app/lib/theme/tokens.dart` and `packages/app/lib/theme/theme_data.dart`) are up to date.
+
+**Token usage in code:**
+```dart
+// Access tokens via BuildContext extension
+final tokens = context.tokens;
+final bgColor = tokens.surface.base;
+final spacing = tokens.spacing.spacing8;
+
+// Use typography tokens
+Text(
+  'Hello',
+  style: tokens.typography.md.toTextStyle(color: tokens.text.primary),
+);
+```
+
+See `docs/ui/tokens.md` for the complete token registry documentation.
 
 ## Event Sourcing Architecture
 
@@ -624,6 +681,27 @@ Before starting development, ensure your environment meets all requirements:
    - Types: feat, fix, docs, refactor, test, chore
    - Example: `feat(persistence): add event snapshot compression`
 
+### Pull Request Checklist
+
+Before submitting a pull request, ensure all quality gates pass:
+
+- [ ] **Code Formatting:** `dart format lib/ test/` passes with zero violations
+- [ ] **Static Analysis:** `melos run analyze` passes with zero issues (infos/warnings/errors)
+- [ ] **Unit Tests:** `melos run test` shows 100% passing tests
+- [ ] **Quality Gates:** `./scripts/devtools/quality_gate.sh` passes locally
+- [ ] **CI Pipeline:** GitHub Actions shows green checkmarks for all jobs
+- [ ] **Documentation:** Updated if public APIs changed
+- [ ] **FR/NFR Traceability:** PR description links relevant requirement IDs (e.g., "Implements FR-026")
+- [ ] **Platform Parity:** Changes tested on both macOS and Windows (if applicable)
+
+**Quick Quality Check:**
+```bash
+# Run all quality gates locally before pushing
+./scripts/devtools/quality_gate.sh
+```
+
+See [Quality Gates Documentation](docs/qa/quality_gates.md) for detailed gate descriptions and troubleshooting.
+
 ### Continuous Integration
 
 All pull requests are automatically validated via GitHub Actions CI with parallel jobs:
@@ -632,6 +710,7 @@ All pull requests are automatically validated via GitHub Actions CI with paralle
 - **Lint & Analyze** - `flutter analyze` with warnings as errors (macOS + Windows)
 - **Format Check** - `dart format` validation (macOS + Windows)
 - **Tests** - Full test suite + SQLite smoke tests (macOS + Windows)
+- **Quality Gates** - Enforces baseline quality standards via `quality_gate.sh` (macOS + Windows)
 - **Diagram Validation** - PlantUML and Mermaid syntax checks (macOS)
 - **Build Verification** - Debug builds for both platforms
 

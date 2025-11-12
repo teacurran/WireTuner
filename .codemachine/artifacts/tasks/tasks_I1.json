@@ -2,14 +2,14 @@
   {
     "task_id": "I1.T1",
     "iteration_id": "I1",
-    "iteration_goal": "Stand up the Flutter workspace, melos packages, SQLite-backed event store skeleton, ADRs, and baseline documentation/diagrams so downstream agents share a consistent contract.",
-    "description": "Initialize the `wiretuner-app` Flutter/melos workspace, create core packages (app_shell, event_core, vector_engine stubs), and wire shared linting plus formatting configs aligned with Section 3.",
+    "iteration_goal": "Stand up the monorepo workspace, baseline tooling, architectural diagrams, and domain modeling artifacts so downstream teams share a single source of truth.",
+    "description": "Initialize melos-based Flutter/Dart workspace, set up package boundaries (`packages/app`, `packages/core`, `packages/infrastructure`, `server/*`), and configure lint/test tooling with GitHub Actions skeleton.",
     "agent_type_hint": "SetupAgent",
-    "inputs": "Section 1 overview, Directory blueprint (Section 3), Decisions 1 & 2 for tooling expectations.",
+    "inputs": "Spec Sections 7.1–7.4, existing repo state.",
     "target_files": [],
     "input_files": [],
-    "deliverables": "Bootstrapped Flutter workspace with melos config, lint rules, placeholder packages compiling under `flutter analyze`, and a README section outlining workspace commands.",
-    "acceptance_criteria": "`melos bootstrap` succeeds; `flutter analyze` produces zero errors; workspace README snippet links to plan anchors; no platform-specific code yet.",
+    "deliverables": "Bootstrapped workspace, pinned dependencies, CI workflow covering analyze/test, README excerpt describing workspace layout.",
+    "acceptance_criteria": "Melos `bootstrap` succeeds; CI job runs analyze+test on placeholder targets; README documents workspace commands; no lint violations.",
     "dependencies": [],
     "parallelizable": true,
     "done": true
@@ -17,14 +17,14 @@
   {
     "task_id": "I1.T2",
     "iteration_id": "I1",
-    "iteration_goal": "Stand up the Flutter workspace, melos packages, SQLite-backed event store skeleton, ADRs, and baseline documentation/diagrams so downstream agents share a consistent contract.",
-    "description": "Produce the PlantUML component diagram capturing UI shell, tool framework, event recorder/replayer, vector engine, persistence, and import/export boundaries; ensure legend + numbering align with Section 2 terminology.",
+    "iteration_goal": "Stand up the monorepo workspace, baseline tooling, architectural diagrams, and domain modeling artifacts so downstream teams share a single source of truth.",
+    "description": "Author system context, container, and component diagrams (PlantUML) depicting desktop layers, backend services, and infrastructure per Clean Architecture guidelines.",
     "agent_type_hint": "DiagrammingAgent",
-    "inputs": "Section 2 core architecture, Decisions 1–7, workspace structure from `I1.T1`.",
+    "inputs": "Section 2 (Core Architecture), ADR list.",
     "target_files": [],
     "input_files": [],
-    "deliverables": "PlantUML diagram plus short legend comment; referenced link added to README diagrams section and manifest stub.",
-    "acceptance_criteria": "Diagram renders without syntax errors (`plantuml -check`), matches components listed in Section 2, uses anchors, and includes version/date metadata.",
+    "deliverables": "Reviewed PlantUML diagrams, embedded PNG/SVG exports if automated, update to `docs/README.md` referencing diagrams.",
+    "acceptance_criteria": "Diagrams compile via PlantUML CI; reflect all major components/services; links added to plan manifest; stakeholders approve during design review.",
     "dependencies": [
       "I1.T1"
     ],
@@ -34,14 +34,14 @@
   {
     "task_id": "I1.T3",
     "iteration_id": "I1",
-    "iteration_goal": "Stand up the Flutter workspace, melos packages, SQLite-backed event store skeleton, ADRs, and baseline documentation/diagrams so downstream agents share a consistent contract.",
-    "description": "Define event recorder, sampler, dispatcher, and snapshot manager interfaces (Dart abstract classes) plus stub implementations that log calls for future iterations; include dependency injection hooks for SQLite + metrics.",
-    "agent_type_hint": "BackendAgent",
-    "inputs": "Section 2 communication patterns, Decision 1 sampling rules, Task `I1.T2` diagram for boundaries.",
+    "iteration_goal": "Stand up the monorepo workspace, baseline tooling, architectural diagrams, and domain modeling artifacts so downstream teams share a single source of truth.",
+    "description": "Define canonical domain model, ERD, and JSON schemas covering Document→Artboard→Layer→VectorObject plus Event/Snapshot tables; capture in markdown + schema files.",
+    "agent_type_hint": "DatabaseAgent",
+    "inputs": "Sections 3.1–3.3, ADR-003.",
     "target_files": [],
     "input_files": [],
-    "deliverables": "Interface definitions with doc comments, dependency injection hooks, TODO markers referencing future tasks, and a unit test skeleton verifying interface registration.",
-    "acceptance_criteria": "`dart test packages/event_core/test/unit/event_core_interfaces_test.dart` passes; recorder enforces constructor params for sampler + SQLite gateway; code documented for agents; coverage instrumentation noted.",
+    "deliverables": "Updated ERD, event catalog table, JSON schema for snapshots, DB schema stub for Sync API.",
+    "acceptance_criteria": "ERD builds; schema validates via `ajv`; event catalog lists FR IDs; Prisma schema passes `prisma validate`.",
     "dependencies": [
       "I1.T1"
     ],
@@ -51,129 +51,52 @@
   {
     "task_id": "I1.T4",
     "iteration_id": "I1",
-    "iteration_goal": "Stand up the Flutter workspace, melos packages, SQLite-backed event store skeleton, ADRs, and baseline documentation/diagrams so downstream agents share a consistent contract.",
-    "description": "Establish SQLite integration using `sqflite_common_ffi`, including initialization service, WAL pragma, migration stub applying the base schema for `events`, `snapshots`, `metadata`, and connection pooling for multi-document windows.",
-    "agent_type_hint": "DatabaseAgent",
-    "inputs": "Section 2 data model overview, Decisions 1 & 2, Task `I1.T3` interfaces.",
+    "iteration_goal": "Stand up the monorepo workspace, baseline tooling, architectural diagrams, and domain modeling artifacts so downstream teams share a single source of truth.",
+    "description": "Establish shared design token registry (colors, typography, spacing) and automate export to Flutter theme + documentation.",
+    "agent_type_hint": "FrontendAgent",
+    "inputs": "UI spec (Section 6), design tokens appendix.",
     "target_files": [],
     "input_files": [],
-    "deliverables": "SQLite gateway with connection factory, migration runner, config for file-based/in-memory DBs, and tests validating table creation, WAL toggling, and multi-window handles.",
-    "acceptance_criteria": "Tests run on macOS & Windows targets (CI stub); schema matches ERD placeholders; connection errors bubble with actionable messages; SQL script documented.",
+    "deliverables": "Tokens markdown, generated Dart theme extensions, CLI script to sync tokens.",
+    "acceptance_criteria": "Flutter theme compiles; tokens documented with usage; CLI run logged in README; lint/tests green.",
     "dependencies": [
-      "I1.T3"
+      "I1.T1"
     ],
-    "parallelizable": false,
+    "parallelizable": true,
     "done": true
   },
   {
     "task_id": "I1.T5",
     "iteration_id": "I1",
-    "iteration_goal": "Stand up the Flutter workspace, melos packages, SQLite-backed event store skeleton, ADRs, and baseline documentation/diagrams so downstream agents share a consistent contract.",
-    "description": "Author the Mermaid sequence diagram showing pointer input → sampler → event recorder → SQLite → snapshot manager → replayer → Provider notification flow, aligning with Decision 1 KPIs and logging touchpoints.",
-    "agent_type_hint": "DiagrammingAgent",
-    "inputs": "Section 2 communication patterns, Tasks `I1.T3`–`I1.T4` outputs.",
+    "iteration_goal": "Stand up the monorepo workspace, baseline tooling, architectural diagrams, and domain modeling artifacts so downstream teams share a single source of truth.",
+    "description": "Draft foundational ADRs (event storage, OT strategy, snapshot policy, undo depth) and set up ADR template + contribution guide.",
+    "agent_type_hint": "DocumentationAgent",
+    "inputs": "Section 9 ADR summaries.",
     "target_files": [],
     "input_files": [],
-    "deliverables": "Sequence diagram with participants, notes for sampling intervals, log/metrics markers, and replay performance annotations.",
-    "acceptance_criteria": "Mermaid preview validates; diagram referenced in Section 2.1 + README; anchors inserted for manifest linking; includes latency targets.",
+    "deliverables": "Filled ADRs with context/decision/consequences, documented process in CONTRIBUTING.",
+    "acceptance_criteria": "ADRs cross-link to requirements; template merged; CONTRIBUTING updated with ADR workflow.",
     "dependencies": [
-      "I1.T2",
-      "I1.T3",
-      "I1.T4"
+      "I1.T1"
     ],
-    "parallelizable": false,
+    "parallelizable": true,
     "done": true
   },
   {
     "task_id": "I1.T6",
     "iteration_id": "I1",
-    "iteration_goal": "Stand up the Flutter workspace, melos packages, SQLite-backed event store skeleton, ADRs, and baseline documentation/diagrams so downstream agents share a consistent contract.",
-    "description": "Draft the event schema reference covering UUID IDs, RFC3339 microsecond timestamps, payload envelope, sampling metadata, undo grouping markers, and collaboration-ready fields; include JSON examples for pen, selection, and shape events.",
-    "agent_type_hint": "DocumentationAgent",
-    "inputs": "Section 2.1 artifact list, Decisions 1, 3, 7, Tasks `I1.T3`–`I1.T5`.",
-    "target_files": [],
-    "input_files": [],
-    "deliverables": "Markdown spec with table of fields, JSON snippets, sampling validation checklist, and glossary callouts; cross-linked from README + manifest.",
-    "acceptance_criteria": "Includes at least three event types with required/optional fields, notes sampling intervals + snapshot cadence, references timestamp precision, and passes markdown lint.",
-    "dependencies": [
-      "I1.T3",
-      "I1.T5"
-    ],
-    "parallelizable": true,
-    "done": true
-  },
-  {
-    "task_id": "I1.T7",
-    "iteration_id": "I1",
-    "iteration_goal": "Stand up the Flutter workspace, melos packages, SQLite-backed event store skeleton, ADRs, and baseline documentation/diagrams so downstream agents share a consistent contract.",
-    "description": "Bootstrap CI workflows covering `flutter analyze`, `dart test`, diagram syntax checks, and SQLite smoke tests on macOS + Windows; include caching for `pub get` and PlantUML rendering hook.",
+    "iteration_goal": "Stand up the monorepo workspace, baseline tooling, architectural diagrams, and domain modeling artifacts so downstream teams share a single source of truth.",
+    "description": "Configure baseline CI quality gates (format, lint, unit smoke) and reporting (badge, PR checklist) tied to melos packages.",
     "agent_type_hint": "DevOpsAgent",
-    "inputs": "Section 2 deployment notes, Task `I1.T1` workspace, artifact paths from `I1.T2`/`I1.T5`.",
+    "inputs": "Task outputs from `I1.T1`, quality guidelines.",
     "target_files": [],
     "input_files": [],
-    "deliverables": "CI pipeline definition with parallel jobs (lint/tests/diagram validation) and documentation for running locally, plus badge snippet for README.",
-    "acceptance_criteria": "Workflow passes using `act` or dry-run; includes matrix for macOS + Windows; diagram check fails on syntax errors; README shows CI badge placeholder.",
+    "deliverables": "CI workflow enforcing analyze/test/format, helper script, doc describing gates + badge in README.",
+    "acceptance_criteria": "Workflow passes on clean tree, fails intentionally injected lint error, README badge visible, doc links FR/NFR IDs.",
     "dependencies": [
-      "I1.T1",
-      "I1.T2",
-      "I1.T5"
+      "I1.T1"
     ],
-    "parallelizable": true,
-    "done": true
-  },
-  {
-    "task_id": "I1.T8",
-    "iteration_id": "I1",
-    "iteration_goal": "Stand up the Flutter workspace, melos packages, SQLite-backed event store skeleton, ADRs, and baseline documentation/diagrams so downstream agents share a consistent contract.",
-    "description": "Implement structured logging + performance counters for event core (frame time placeholders, event write latency, replay duration) using `logger` and wiring toggles for debug/release plus log rotation guidance.",
-    "agent_type_hint": "BackendAgent",
-    "inputs": "Decisions 1 & 6 performance targets, Task `I1.T3` interfaces, Section 6 verification preview (draft), CI scripts from `I1.T7` for log artifact capture.",
-    "target_files": [],
-    "input_files": [],
-    "deliverables": "Metrics helper exposing timers/counters, recorder instrumentation hooks, tests validating metric emission, and a logging strategy note cross-linking to Section 6.",
-    "acceptance_criteria": "Metrics toggled via config; tests verify timers record durations; logging note lists file paths + rotation policy; README references new doc.",
-    "dependencies": [
-      "I1.T3",
-      "I1.T6"
-    ],
-    "parallelizable": true,
-    "done": true
-  },
-  {
-    "task_id": "I1.T9",
-    "iteration_id": "I1",
-    "iteration_goal": "Stand up the Flutter workspace, melos packages, SQLite-backed event store skeleton, ADRs, and baseline documentation/diagrams so downstream agents share a consistent contract.",
-    "description": "Capture ADR-001 documenting the hybrid state + history approach (Decision 1) and ADR-002 summarizing multi-window assumptions (Decision 2) so future deviations remain traceable.",
-    "agent_type_hint": "DocumentationAgent",
-    "inputs": "Decisions 1 & 2, Tasks `I1.T3`–`I1.T5` for implemented reality, Section 4 directives.",
-    "target_files": [],
-    "input_files": [],
-    "deliverables": "Two ADR markdown files with context/problem/decision/consequences plus status set to \"Accepted\" and backlinks to blueprint sections.",
-    "acceptance_criteria": "ADR template followed; links to plan anchors; version + date recorded; README ADR table updated.",
-    "dependencies": [
-      "I1.T3",
-      "I1.T4",
-      "I1.T2"
-    ],
-    "parallelizable": true,
-    "done": true
-  },
-  {
-    "task_id": "I1.T10",
-    "iteration_id": "I1",
-    "iteration_goal": "Stand up the Flutter workspace, melos packages, SQLite-backed event store skeleton, ADRs, and baseline documentation/diagrams so downstream agents share a consistent contract.",
-    "description": "Add developer-experience tooling: VS Code + IntelliJ run configurations, `justfile` or `makefile` with common commands, and documentation on using PlantUML/Mermaid CLI locally to keep contributors aligned.",
-    "agent_type_hint": "SetupAgent",
-    "inputs": "Task `I1.T1` workspace, `I1.T7` CI commands, Section 4 directive #2 (single atomic writes) for scripting guidance.",
-    "target_files": [],
-    "input_files": [],
-    "deliverables": "Editor configs for lint/test/diagram preview commands, scripted shortcuts mirroring CI, and developer workflow doc describing atomic write expectations.",
-    "acceptance_criteria": "Configurations run without manual tweaks; README links to workflow doc; `just test`/`just diagrams` commands succeed on macOS + Windows shells.",
-    "dependencies": [
-      "I1.T1",
-      "I1.T7"
-    ],
-    "parallelizable": true,
+    "parallelizable": false,
     "done": true
   }
 ]

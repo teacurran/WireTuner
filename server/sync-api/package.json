@@ -1,0 +1,35 @@
+{
+  "name": "@wiretuner/sync-api",
+  "version": "0.1.0",
+  "description": "WireTuner Sync API - GraphQL/REST metadata and snapshot exchange service",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "tsx lib/main.ts",
+    "start": "node dist/main.js",
+    "build": "tsc",
+    "lint:schema": "tsx lib/validate-schema.ts",
+    "lint:telemetry": "cd ../.. && npx @stoplight/spectral-cli lint api/telemetry.yaml --ruleset .spectral.yml",
+    "lint": "npm run lint:schema && npm run lint:telemetry",
+    "prisma:validate": "prisma validate",
+    "prisma:generate": "prisma generate",
+    "prisma:migrate:dev": "prisma migrate dev",
+    "prisma:migrate:deploy": "prisma migrate deploy",
+    "test": "echo \"Tests not yet implemented\" && exit 0"
+  },
+  "devDependencies": {
+    "@stoplight/spectral-cli": "^6.11.0",
+    "@types/node": "^20.0.0",
+    "graphql-schema-linter": "^3.0.1",
+    "prisma": "^6.0.0",
+    "tsx": "^4.7.0",
+    "typescript": "^5.3.0"
+  },
+  "dependencies": {
+    "@graphql-tools/schema": "^10.0.2",
+    "@prisma/client": "^6.0.0",
+    "graphql": "^16.8.1",
+    "graphql-scalars": "^1.22.4",
+    "graphql-yoga": "^5.1.1"
+  }
+}
