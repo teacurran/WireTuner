@@ -17,6 +17,8 @@ import 'package:wiretuner/application/tools/shapes/polygon_tool.dart';
 import 'package:wiretuner/application/tools/shapes/rectangle_tool.dart';
 import 'package:wiretuner/application/tools/shapes/star_tool.dart';
 import 'package:wiretuner/domain/document/document.dart';
+import 'package:wiretuner/domain/document/selection.dart';
+import 'package:wiretuner/domain/models/geometry/rectangle.dart';
 import 'package:wiretuner/infrastructure/event_sourcing/event_recorder.dart'
     as app_event_recorder;
 import 'package:wiretuner/infrastructure/event_sourcing/event_navigator.dart'
@@ -107,9 +109,19 @@ class _AppInitializerState extends State<_AppInitializer> {
       ),
     );
 
-    // Create document provider with default document
+    // Create document provider with default document and default artboard
     _documentProvider = DocumentProvider(
-      initialDocument: const Document(id: 'default-doc', title: 'Untitled'),
+      initialDocument: Document(
+        id: 'default-doc',
+        title: 'Untitled',
+        artboards: const [
+          Artboard(
+            id: 'artboard-1',
+            name: 'Artboard 1',
+            bounds: Rectangle(x: 0, y: 0, width: 1920, height: 1080),
+          ),
+        ],
+      ),
     );
 
     // Create viewport controller with default zoom and pan

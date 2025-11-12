@@ -108,16 +108,18 @@ class ThumbnailGenerator {
     );
 
     try {
-      // Extract all paths from all layers
+      // Extract all paths from all layers in all artboards
       final allPaths = <domain.Path>[];
-      for (final layer in document.layers) {
-        for (final obj in layer.objects) {
-          obj.when(
-            path: (id, path, _) => allPaths.add(path),
-            shape: (id, shape, _) {
-              // Skip shapes for now or convert to path if needed
-            },
-          );
+      for (final artboard in document.artboards) {
+        for (final layer in artboard.layers) {
+          for (final obj in layer.objects) {
+            obj.when(
+              path: (id, path, _) => allPaths.add(path),
+              shape: (id, shape, _) {
+                // Skip shapes for now or convert to path if needed
+              },
+            );
+          }
         }
       }
 
@@ -152,16 +154,18 @@ class ThumbnailGenerator {
 
   /// Calculates zoom level to fit document bounds in thumbnail.
   double _calculateFitZoom(Document document) {
-    // Extract all paths from all layers
+    // Extract all paths from all layers in all artboards
     final allPaths = <domain.Path>[];
-    for (final layer in document.layers) {
-      for (final obj in layer.objects) {
-        obj.when(
-          path: (id, path, _) => allPaths.add(path),
-          shape: (id, shape, _) {
-            // Skip shapes for now
-          },
-        );
+    for (final artboard in document.artboards) {
+      for (final layer in artboard.layers) {
+        for (final obj in layer.objects) {
+          obj.when(
+            path: (id, path, _) => allPaths.add(path),
+            shape: (id, shape, _) {
+              // Skip shapes for now
+            },
+          );
+        }
       }
     }
 
@@ -205,16 +209,18 @@ class ThumbnailGenerator {
 
   /// Calculates pan offset to center document in thumbnail.
   Offset _calculateCenterPan(Document document) {
-    // Extract all paths from all layers
+    // Extract all paths from all layers in all artboards
     final allPaths = <domain.Path>[];
-    for (final layer in document.layers) {
-      for (final obj in layer.objects) {
-        obj.when(
-          path: (id, path, _) => allPaths.add(path),
-          shape: (id, shape, _) {
-            // Skip shapes for now
-          },
-        );
+    for (final artboard in document.artboards) {
+      for (final layer in artboard.layers) {
+        for (final obj in layer.objects) {
+          obj.when(
+            path: (id, path, _) => allPaths.add(path),
+            shape: (id, shape, _) {
+              // Skip shapes for now
+            },
+          );
+        }
       }
     }
 

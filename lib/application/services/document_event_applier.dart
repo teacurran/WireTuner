@@ -1,8 +1,10 @@
 import 'package:flutter/foundation.dart';
 import 'package:wiretuner/domain/document/document.dart';
+import 'package:wiretuner/domain/document/selection.dart';
 import 'package:wiretuner/domain/events/event_base.dart' as events;
 import 'package:wiretuner/domain/events/object_events.dart';
 import 'package:wiretuner/domain/events/path_events.dart';
+import 'package:wiretuner/domain/events/selection_events.dart';
 import 'package:wiretuner/domain/models/anchor_point.dart' as models;
 import 'package:wiretuner/domain/models/path.dart' as domain;
 import 'package:wiretuner/domain/models/segment.dart';
@@ -38,6 +40,12 @@ class DocumentEventApplier {
       _applyMoveObject(event);
     } else if (event is DeleteObjectEvent) {
       _applyDeleteObject(event);
+    } else if (event is SelectObjectsEvent) {
+      _applySelectObjects(event);
+    } else if (event is DeselectObjectsEvent) {
+      _applyDeselectObjects(event);
+    } else if (event is ClearSelectionEvent) {
+      _applyClearSelection(event);
     } else {
       debugPrint(
           '[DocumentEventApplier] Ignoring unknown event: ${event.eventType}');
@@ -179,7 +187,11 @@ class DocumentEventApplier {
 
   /// Applies a MoveObjectEvent by translating objects.
   void _applyMoveObject(MoveObjectEvent event) {
-    final layers = _documentProvider.document.layers;
+    final document = _documentProvider.document;
+    final artboard = document.artboards.isNotEmpty ? document.artboards.first : null;
+    if (artboard == null) return;
+
+    final layers = artboard.layers;
     final updatedLayers = <Layer>[];
 
     // Create translation transform from delta
@@ -226,12 +238,20 @@ class DocumentEventApplier {
       updatedLayers.add(layer.copyWith(objects: updatedObjects));
     }
 
-    _documentProvider.updateLayers(updatedLayers);
+    // Update the artboard with new layers
+    final updatedArtboard = artboard.copyWith(layers: updatedLayers);
+    final updatedArtboards = [...document.artboards];
+    updatedArtboards[0] = updatedArtboard;
+    _documentProvider.updateDocument(document.copyWith(artboards: updatedArtboards));
   }
 
   /// Applies a DeleteObjectEvent by removing objects from the document.
   void _applyDeleteObject(DeleteObjectEvent event) {
-    final layers = _documentProvider.document.layers;
+    final document = _documentProvider.document;
+    final artboard = document.artboards.isNotEmpty ? document.artboards.first : null;
+    if (artboard == null) return;
+
+    final layers = artboard.layers;
     final updatedLayers = <Layer>[];
 
     for (final layer in layers) {
@@ -242,12 +262,20 @@ class DocumentEventApplier {
       updatedLayers.add(layer.copyWith(objects: updatedObjects));
     }
 
-    _documentProvider.updateLayers(updatedLayers);
+    // Update the artboard with new layers
+    final updatedArtboard = artboard.copyWith(layers: updatedLayers);
+    final updatedArtboards = [...document.artboards];
+    updatedArtboards[0] = updatedArtboard;
+    _documentProvider.updateDocument(document.copyWith(artboards: updatedArtboards));
   }
 
   /// Helper to update a path by ID.
   void _updatePath(String pathId, domain.Path Function(domain.Path) update) {
-    final layers = _documentProvider.document.layers;
+    final document = _documentProvider.document;
+    final artboard = document.artboards.isNotEmpty ? document.artboards.first : null;
+    if (artboard == null) return;
+
+    final layers = artboard.layers;
 
     for (var i = 0; i < layers.length; i++) {
       final layer = layers[i];
@@ -275,7 +303,10 @@ class DocumentEventApplier {
 
             final updatedLayers = [...layers];
             updatedLayers[i] = updatedLayer;
-            _documentProvider.updateLayers(updatedLayers);
+            final updatedArtboard = artboard.copyWith(layers: updatedLayers);
+            final updatedArtboards = [...document.artboards];
+            updatedArtboards[0] = updatedArtboard;
+            _documentProvider.updateDocument(document.copyWith(artboards: updatedArtboards));
           },
           shape: (_, __, ___) {},
         );
@@ -286,23 +317,92 @@ class DocumentEventApplier {
 
   /// Helper to add an object to the first layer.
   void _addObjectToFirstLayer(VectorObject obj) {
-    final layers = _documentProvider.document.layers;
+    final document = _documentProvider.document;
+    final artboard = document.artboards.isNotEmpty ? document.artboards.first : null;
+    if (artboard == null) return;
+
+    final layers = artboard.layers;
+    final updatedLayers = <Layer>[];
+
     if (layers.isEmpty) {
       final defaultLayer = Layer(
         id: 'layer-default',
         name: 'Layer 1',
         objects: [obj],
       );
-      _documentProvider.updateLayers([defaultLayer]);
+      updatedLayers.add(defaultLayer);
     } else {
       final firstLayer = layers.first;
       final updatedLayer = firstLayer.copyWith(
         objects: [...firstLayer.objects, obj],
       );
-      _documentProvider.updateLayers([
+      updatedLayers.addAll([
         updatedLayer,
         ...layers.skip(1),
       ]);
     }
+
+    final updatedArtboard = artboard.copyWith(layers: updatedLayers);
+    final updatedArtboards = [...document.artboards];
+    updatedArtboards[0] = updatedArtboard;
+    _documentProvider.updateDocument(document.copyWith(artboards: updatedArtboards));
+  }
+
+  /// Applies a SelectObjectsEvent by updating the selection state.
+  void _applySelectObjects(SelectObjectsEvent event) {
+    final document = _documentProvider.document;
+    final artboard = document.artboards.isNotEmpty ? document.artboards.first : null;
+    if (artboard == null) return;
+
+    final currentSelection = artboard.selection;
+    Selection newSelection;
+
+    switch (event.mode) {
+      case SelectionMode.replace:
+        newSelection = Selection(objectIds: event.objectIds.toSet());
+        break;
+      case SelectionMode.add:
+        newSelection = Selection(
+          objectIds: {...currentSelection.objectIds, ...event.objectIds},
+        );
+        break;
+      case SelectionMode.toggle:
+        final newObjectIds = Set<String>.from(currentSelection.objectIds);
+        for (final id in event.objectIds) {
+          if (newObjectIds.contains(id)) {
+            newObjectIds.remove(id);
+          } else {
+            newObjectIds.add(id);
+          }
+        }
+        newSelection = Selection(objectIds: newObjectIds);
+        break;
+      case SelectionMode.subtract:
+        newSelection = Selection(
+          objectIds: currentSelection.objectIds.difference(event.objectIds.toSet()),
+        );
+        break;
+    }
+
+    _documentProvider.updateSelection(newSelection);
+  }
+
+  /// Applies a DeselectObjectsEvent by removing objects from selection.
+  void _applyDeselectObjects(DeselectObjectsEvent event) {
+    final document = _documentProvider.document;
+    final artboard = document.artboards.isNotEmpty ? document.artboards.first : null;
+    if (artboard == null) return;
+
+    final currentSelection = artboard.selection;
+    final newSelection = Selection(
+      objectIds: currentSelection.objectIds.difference(event.objectIds.toSet()),
+    );
+
+    _documentProvider.updateSelection(newSelection);
+  }
+
+  /// Applies a ClearSelectionEvent by clearing all selections.
+  void _applyClearSelection(ClearSelectionEvent event) {
+    _documentProvider.updateSelection(const Selection());
   }
 }

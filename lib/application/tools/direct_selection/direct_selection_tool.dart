@@ -195,8 +195,11 @@ class DirectSelectionTool implements ITool {
   bool onPointerDown(PointerDownEvent event) {
     final worldPos = _viewportController.screenToWorld(event.localPosition);
 
-    // Get selected objects from document
-    final selectedObjectIds = _document.selection.objectIds.toList();
+    // Get selected objects from the first artboard
+    final artboard = _document.artboards.isNotEmpty ? _document.artboards.first : null;
+    if (artboard == null) return false;
+
+    final selectedObjectIds = artboard.selection.objectIds.toList();
     if (selectedObjectIds.isEmpty) {
       _logger.d('No objects selected, cannot use direct selection');
       return false;
@@ -597,7 +600,8 @@ class DirectSelectionTool implements ITool {
 
   /// Updates hover state for cursor feedback.
   void _updateHover(Offset screenPos) {
-    final selectedObjectIds = _document.selection.objectIds.toList();
+    final artboard = _document.artboards.isNotEmpty ? _document.artboards.first : null;
+    final selectedObjectIds = artboard?.selection.objectIds.toList() ?? [];
     if (selectedObjectIds.isEmpty) {
       _hoveredAnchor = null;
       _currentCursor = SystemMouseCursors.basic;

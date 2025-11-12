@@ -91,6 +91,15 @@ class SelectionTool implements ITool {
   final Logger _logger = Logger();
   final Uuid _uuid = const Uuid();
 
+  /// Gets the active artboard ID. For now, always uses the first artboard.
+  /// In future iterations, this will be determined by the focused window.
+  String? get _activeArtboardId =>
+      _document.artboards.isNotEmpty ? _document.artboards.first.id : null;
+
+  /// Gets the active artboard. Returns null if no artboards exist.
+  Artboard? get _activeArtboard =>
+      _document.artboards.isNotEmpty ? _document.artboards.first : null;
+
   /// Snapping service for grid snapping during object drags.
   final SnappingService _snappingService;
 
@@ -146,12 +155,16 @@ class SelectionTool implements ITool {
             HardwareKeyboard.instance.isControlPressed);
 
     // Hit test for objects at click point
-    final hitObjects = _document.objectsAtPoint(worldPos);
+    final artboardId = _activeArtboardId;
+    if (artboardId == null) return false;
 
-    if (hitObjects.isNotEmpty) {
+    final hitObjects = _document.objectsAtPoint(worldPos, artboardId);
+    final artboard = _activeArtboard;
+
+    if (hitObjects.isNotEmpty && artboard != null) {
       // Clicked on an object
       final clickedObjectId = hitObjects.first.id;
-      final isAlreadySelected = _document.selection.contains(clickedObjectId);
+      final isAlreadySelected = artboard.selection.contains(clickedObjectId);
 
       // Track whether we should start a drag
       bool shouldStartDrag = false;
@@ -182,7 +195,7 @@ class SelectionTool implements ITool {
         // Otherwise, use just the clicked object
         final dragObjectIds =
             isAlreadySelected && !isShiftPressed && !isCmdPressed
-                ? _document.selection.objectIds.toList()
+                ? artboard.selection.objectIds.toList()
                 : [clickedObjectId];
         _startDrag(event.localPosition, worldPos, dragObjectIds);
       }
@@ -216,11 +229,14 @@ class SelectionTool implements ITool {
     }
 
     // Hover handling (for cursor updates)
-    final hitObjects = _document.objectsAtPoint(worldPos);
-    if (hitObjects.isNotEmpty) {
-      _currentCursor = SystemMouseCursors.click;
-    } else {
-      _currentCursor = SystemMouseCursors.basic;
+    final artboardId = _activeArtboardId;
+    if (artboardId != null) {
+      final hitObjects = _document.objectsAtPoint(worldPos, artboardId);
+      if (hitObjects.isNotEmpty) {
+        _currentCursor = SystemMouseCursors.click;
+      } else {
+        _currentCursor = SystemMouseCursors.basic;
+      }
     }
 
     return false;
@@ -383,9 +399,10 @@ class SelectionTool implements ITool {
     if (_marqueeController == null) return;
 
     final marqueeBounds = _marqueeController!.worldBounds;
-    if (marqueeBounds != null) {
+    final artboardId = _activeArtboardId;
+    if (marqueeBounds != null && artboardId != null) {
       // Find objects within marquee bounds
-      final selectedObjects = _document.objectsInBounds(marqueeBounds);
+      final selectedObjects = _document.objectsInBounds(marqueeBounds, artboardId);
       final selectedIds = selectedObjects.map((obj) => obj.id).toList();
 
       if (selectedIds.isNotEmpty) {

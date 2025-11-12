@@ -381,7 +381,7 @@ class SelectionOverlayPainter extends CustomPainter {
       );
     }
 
-    // Draw anchor point circle
+    // Draw anchor point (shape depends on anchor type)
     final isAnchorHovered =
         isHovered && (component == AnchorComponent.anchor || component == null);
     _drawAnchorPoint(
@@ -389,6 +389,7 @@ class SelectionOverlayPainter extends CustomPainter {
       anchor.position,
       isSelected: isSelected,
       isHovered: isAnchorHovered,
+      anchorType: anchor.anchorType,
     );
   }
 
@@ -437,18 +438,19 @@ class SelectionOverlayPainter extends CustomPainter {
     );
   }
 
-  /// Draws an anchor point circle.
+  /// Draws an anchor point (circle for smooth, square for corner).
   void _drawAnchorPoint(
     Canvas canvas,
     event_base.Point position, {
     required bool isSelected,
     required bool isHovered,
+    AnchorType anchorType = AnchorType.corner,
   }) {
     final color = isHovered
         ? SelectionOverlayConstants.hoverColor
         : SelectionOverlayConstants.selectedColor;
 
-    // Draw filled circle
+    // Draw filled shape
     final fillPaint = Paint()
       ..color = Colors.white
       ..style = PaintingStyle.fill;
@@ -459,20 +461,26 @@ class SelectionOverlayPainter extends CustomPainter {
       ..strokeWidth = 1.5 / viewportController.zoomLevel;
 
     // Convert anchor size from screen to world space
-    final worldRadius = SelectionOverlayConstants.anchorSize /
+    final worldSize = SelectionOverlayConstants.anchorSize /
         (2 * viewportController.zoomLevel);
 
-    canvas.drawCircle(
-      Offset(position.x, position.y),
-      worldRadius,
-      fillPaint,
-    );
+    final offset = Offset(position.x, position.y);
 
-    canvas.drawCircle(
-      Offset(position.x, position.y),
-      worldRadius,
-      strokePaint,
-    );
+    // Draw different shapes based on anchor type
+    if (anchorType == AnchorType.corner) {
+      // Draw square for corner anchors
+      final rect = Rect.fromCenter(
+        center: offset,
+        width: worldSize * 2,
+        height: worldSize * 2,
+      );
+      canvas.drawRect(rect, fillPaint);
+      canvas.drawRect(rect, strokePaint);
+    } else {
+      // Draw circle for smooth/symmetric anchors
+      canvas.drawCircle(offset, worldSize, fillPaint);
+      canvas.drawCircle(offset, worldSize, strokePaint);
+    }
   }
 
   @override

@@ -149,23 +149,31 @@ class DocumentPainter extends CustomPainter {
     canvas.transform(viewportController.worldToScreenMatrix.storage);
 
     // Create paint for path strokes
-    final paint = Paint()
+    final strokePaint = Paint()
       ..color = strokeColor
       ..style = PaintingStyle.stroke
       ..strokeWidth = strokeWidth
       ..strokeCap = StrokeCap.round
       ..strokeJoin = StrokeJoin.round;
 
-    // Render each path
+    // Create paint for shape fills
+    final fillPaint = Paint()
+      ..color = const Color(0xFFE0E0E0) // Light gray fill
+      ..style = PaintingStyle.fill;
+
+    // Render each path (stroke only)
     for (final domainPath in paths) {
       final uiPath = _convertDomainPathToUiPath(domainPath);
-      canvas.drawPath(uiPath, paint);
+      canvas.drawPath(uiPath, strokePaint);
     }
 
-    // Render each shape
+    // Render each shape (fill + stroke)
     for (final shape in shapes.values) {
       final uiPath = _convertShapeToUiPath(shape);
-      canvas.drawPath(uiPath, paint);
+      // Draw fill first
+      canvas.drawPath(uiPath, fillPaint);
+      // Then draw stroke on top
+      canvas.drawPath(uiPath, strokePaint);
     }
 
     canvas.restore();

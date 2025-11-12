@@ -8,6 +8,7 @@ import 'package:wiretuner/domain/document/document.dart';
 import 'package:wiretuner/domain/events/event_base.dart';
 import 'package:wiretuner/domain/events/path_events.dart';
 import 'package:wiretuner/domain/events/group_events.dart';
+import 'package:wiretuner/domain/events/selection_events.dart';
 import 'package:wiretuner/presentation/canvas/viewport/viewport_controller.dart';
 import 'package:wiretuner/presentation/canvas/overlays/pen_preview_overlay.dart';
 import 'dart:ui' as ui;
@@ -183,6 +184,10 @@ class PenTool implements ITool {
   /// First anchor (from CreatePathEvent) has index 0, subsequent anchors increment.
   int _anchorCount = 0;
 
+  /// List of all anchors placed in the current path with type information.
+  /// Used for rendering anchor points in the preview overlay.
+  final List<PreviewAnchor> _placedAnchors = [];
+
   @override
   String get toolId => 'pen';
 
@@ -201,6 +206,7 @@ class PenTool implements ITool {
         isDragging: _isDragging,
         isAdjustingHandles: _state == PathState.adjustingHandles,
         isAltPressed: HardwareKeyboard.instance.isAltPressed,
+        placedAnchors: List.unmodifiable(_placedAnchors),
       );
 
   @override
@@ -399,6 +405,7 @@ class PenTool implements ITool {
     _dragStartPosition = null;
     _currentDragPosition = null;
     _anchorCount = 0;
+    _placedAnchors.clear();
   }
 
   /// Starts a new path with the first anchor.
@@ -438,6 +445,8 @@ class PenTool implements ITool {
     _lastAnchorPosition = startAnchor;
     _firstAnchorPosition = startAnchor;
     _anchorCount = 1; // First anchor (index 0)
+    // First anchor is always a corner point
+    _placedAnchors.add(PreviewAnchor(position: startAnchor, isCorner: true));
 
     _logger.i('Path created: pathId=$pathId, groupId=$groupId');
   }
@@ -472,6 +481,8 @@ class PenTool implements ITool {
 
     _lastAnchorPosition = anchorPosition;
     _anchorCount++;
+    // Straight line anchors are corner points
+    _placedAnchors.add(PreviewAnchor(position: anchorPosition, isCorner: true));
 
     _logger.d('Straight line anchor added: position=$anchorPosition');
   }
@@ -528,6 +539,11 @@ class PenTool implements ITool {
 
     _lastAnchorPosition = anchorPosition;
     _anchorCount++;
+    // Bezier anchors are smooth points (unless Alt pressed for corner)
+    _placedAnchors.add(PreviewAnchor(
+      position: anchorPosition,
+      isCorner: isAltPressed, // Alt key creates corner bezier points
+    ));
 
     _logger.d(
       'Bezier anchor added: position=$anchorPosition, '
@@ -561,6 +577,16 @@ class PenTool implements ITool {
         eventId: _uuid.v4(),
         timestamp: now,
         groupId: _currentGroupId!,
+      ),
+    );
+
+    // Auto-select the newly created path
+    _eventRecorder.recordEvent(
+      SelectObjectsEvent(
+        eventId: _uuid.v4(),
+        timestamp: now,
+        objectIds: [_currentPathId!],
+        mode: SelectionMode.replace,
       ),
     );
 

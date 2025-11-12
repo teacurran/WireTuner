@@ -4,6 +4,7 @@ import 'package:app_shell/app_shell.dart';
 import 'package:wiretuner/application/services/keyboard_shortcut_service.dart';
 import 'package:wiretuner/application/tools/framework/tool_manager.dart';
 import 'package:wiretuner/domain/document/document.dart';
+import 'package:wiretuner/domain/document/selection.dart';
 import 'package:wiretuner/domain/models/path.dart' as domain;
 import 'package:wiretuner/domain/models/shape.dart';
 import 'package:wiretuner/presentation/canvas/viewport/viewport_binding.dart';
@@ -158,19 +159,24 @@ class _CanvasAdapter extends StatelessWidget {
     final paths = <domain.Path>[];
     final shapes = <String, Shape>{};
 
-    for (final layer in document.layers) {
-      for (final obj in layer.objects) {
-        obj.when(
-          path: (id, path, _) => paths.add(path),
-          shape: (id, shape, _) => shapes[id] = shape,
-        );
+    // Get the first artboard (or use a default empty state if none exists)
+    final artboard = document.artboards.isNotEmpty ? document.artboards.first : null;
+
+    if (artboard != null) {
+      for (final layer in artboard.layers) {
+        for (final obj in layer.objects) {
+          obj.when(
+            path: (id, path, _) => paths.add(path),
+            shape: (id, shape, _) => shapes[id] = shape,
+          );
+        }
       }
     }
 
     return WireTunerCanvas(
       paths: paths,
       shapes: shapes,
-      selection: document.selection,
+      selection: artboard?.selection ?? const Selection(),
       viewportController: viewportController,
       toolManager: toolManager,
     );

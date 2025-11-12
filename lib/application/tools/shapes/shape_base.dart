@@ -8,6 +8,7 @@ import 'package:wiretuner/application/tools/framework/tool_interface.dart';
 import 'package:wiretuner/domain/document/document.dart';
 import 'package:wiretuner/domain/events/event_base.dart';
 import 'package:wiretuner/domain/events/object_events.dart';
+import 'package:wiretuner/domain/events/selection_events.dart';
 import 'package:wiretuner/presentation/canvas/viewport/viewport_controller.dart';
 
 /// State machine for shape tools.
@@ -246,6 +247,17 @@ abstract class ShapeToolBase implements ITool {
     );
 
     _eventRecorder.recordEvent(event);
+
+    // Auto-select the newly created shape
+    _eventRecorder.recordEvent(
+      SelectObjectsEvent(
+        eventId: _uuid.v4(),
+        timestamp: now,
+        objectIds: [shapeId],
+        mode: SelectionMode.replace,
+      ),
+    );
+
     _logger.i(
       '$shapeTypeName created: shapeId=$shapeId, params=$parameters',
     );
