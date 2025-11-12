@@ -4,7 +4,7 @@
 [![Release](https://github.com/teacurran/WireTuner/actions/workflows/release.yml/badge.svg)](https://github.com/teacurran/WireTuner/actions/workflows/release.yml)
 [![License](https://img.shields.io/badge/license-TBD-blue.svg)](LICENSE)
 
-A professional event-sourced vector drawing application for macOS and Windows built with Flutter.
+This is a prompt-engineered codebase. 
 
 ## Overview
 
