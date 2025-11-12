@@ -106,16 +106,23 @@ class DocumentPainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
+    debugPrint('[DocumentPainter] paint() called with ${paths.length} paths, ${shapes.length} shapes');
+    debugPrint('[DocumentPainter] renderPipeline: ${renderPipeline != null ? "enabled" : "disabled"}');
+
     // Use render pipeline if available
     if (renderPipeline != null) {
+      debugPrint('[DocumentPainter] Using render pipeline');
       _paintWithPipeline(canvas, size);
     } else {
+      debugPrint('[DocumentPainter] Using legacy renderer');
       _paintLegacy(canvas, size);
     }
   }
 
   /// Renders using the advanced render pipeline.
   void _paintWithPipeline(Canvas canvas, Size size) {
+    debugPrint('[DocumentPainter._paintWithPipeline] Converting ${paths.length} paths, ${shapes.length} shapes');
+
     // Convert paths to renderable objects with default style
     final defaultStyle = PaintStyle.stroke(
       color: strokeColor,
@@ -133,6 +140,9 @@ class DocumentPainter extends CustomPainter {
       );
     }
 
+    debugPrint('[DocumentPainter._paintWithPipeline] Calling render pipeline with ${renderablePaths.length} renderable paths');
+    debugPrint('[DocumentPainter._paintWithPipeline] WARNING: Shapes are NOT being rendered by the pipeline!');
+
     // Render via pipeline
     renderPipeline!.render(
       canvas: canvas,
@@ -144,6 +154,9 @@ class DocumentPainter extends CustomPainter {
 
   /// Legacy rendering approach (backward compatibility).
   void _paintLegacy(Canvas canvas, Size size) {
+    // Debug: Log what we're rendering
+    debugPrint('[DocumentPainter] Rendering ${paths.length} paths, ${shapes.length} shapes');
+
     // Apply viewport transformation
     canvas.save();
     canvas.transform(viewportController.worldToScreenMatrix.storage);
@@ -169,6 +182,7 @@ class DocumentPainter extends CustomPainter {
 
     // Render each shape (fill + stroke)
     for (final shape in shapes.values) {
+      debugPrint('[DocumentPainter] Drawing shape: ${shape.kind}, center: ${shape.center}, width: ${shape.width}, height: ${shape.height}');
       final uiPath = _convertShapeToUiPath(shape);
       // Draw fill first
       canvas.drawPath(uiPath, fillPaint);

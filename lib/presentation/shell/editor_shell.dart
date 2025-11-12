@@ -14,6 +14,7 @@ import 'package:wiretuner/presentation/state/document_provider.dart';
 import 'package:wiretuner/presentation/shell/tool_toolbar.dart';
 import 'package:wiretuner/presentation/history/history_panel.dart';
 import 'package:wiretuner/presentation/history/history_scrubber.dart';
+import 'package:wiretuner/presentation/layers/layers_panel.dart';
 
 /// Main editor shell widget that contains the toolbar, canvas, and history panel.
 ///
@@ -123,8 +124,8 @@ class EditorShell extends StatelessWidget {
                       ),
                     ),
 
-                    // Right sidebar: History panel (Task I4.T4)
-                    const HistoryPanel(),
+                    // Right sidebar: Tabbed panel with Layers and History
+                    _RightSidebarTabs(),
                   ],
                 ),
               ),
@@ -163,15 +164,25 @@ class _CanvasAdapter extends StatelessWidget {
     final artboard = document.artboards.isNotEmpty ? document.artboards.first : null;
 
     if (artboard != null) {
+      debugPrint('[_CanvasAdapter] Extracting from ${artboard.layers.length} layers');
       for (final layer in artboard.layers) {
+        debugPrint('[_CanvasAdapter] Layer ${layer.id} has ${layer.objects.length} objects');
         for (final obj in layer.objects) {
           obj.when(
-            path: (id, path, _) => paths.add(path),
-            shape: (id, shape, _) => shapes[id] = shape,
+            path: (id, path, _) {
+              debugPrint('[_CanvasAdapter] Adding path: $id');
+              paths.add(path);
+            },
+            shape: (id, shape, _) {
+              debugPrint('[_CanvasAdapter] Adding shape: $id (${shape.kind})');
+              shapes[id] = shape;
+            },
           );
         }
       }
     }
+
+    debugPrint('[_CanvasAdapter] Passing to canvas: ${paths.length} paths, ${shapes.length} shapes');
 
     return WireTunerCanvas(
       paths: paths,
@@ -179,6 +190,70 @@ class _CanvasAdapter extends StatelessWidget {
       selection: artboard?.selection ?? const Selection(),
       viewportController: viewportController,
       toolManager: toolManager,
+    );
+  }
+}
+
+/// Tabbed widget for right sidebar showing Layers and History panels.
+class _RightSidebarTabs extends StatefulWidget {
+  @override
+  State<_RightSidebarTabs> createState() => _RightSidebarTabsState();
+}
+
+class _RightSidebarTabsState extends State<_RightSidebarTabs>
+    with SingleTickerProviderStateMixin {
+  late TabController _tabController;
+
+  @override
+  void initState() {
+    super.initState();
+    _tabController = TabController(length: 2, vsync: this);
+  }
+
+  @override
+  void dispose() {
+    _tabController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 200,
+      decoration: BoxDecoration(
+        border: Border(
+          left: BorderSide(color: Colors.grey[400]!),
+        ),
+      ),
+      child: Column(
+        children: [
+          TabBar(
+            controller: _tabController,
+            labelColor: Colors.black,
+            unselectedLabelColor: Colors.grey,
+            indicatorColor: Colors.blue,
+            tabs: const [
+              Tab(
+                icon: Icon(Icons.layers, size: 16),
+                text: 'Layers',
+              ),
+              Tab(
+                icon: Icon(Icons.history, size: 16),
+                text: 'History',
+              ),
+            ],
+          ),
+          Expanded(
+            child: TabBarView(
+              controller: _tabController,
+              children: const [
+                LayersPanel(),
+                HistoryPanel(),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

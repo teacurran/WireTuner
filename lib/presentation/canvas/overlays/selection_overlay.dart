@@ -146,16 +146,20 @@ class SelectionOverlayPainter extends CustomPainter {
 
     // Draw anchor points and handles
     final selectedAnchors = selection.getSelectedAnchors(objectId);
+    final hasSelectedAnchors = selectedAnchors.isNotEmpty;
+
     for (int i = 0; i < path.anchors.length; i++) {
       final anchor = path.anchors[i];
-      final isSelected = selectedAnchors.contains(i);
+      // If specific anchors are selected, only those are "selected"
+      // If no specific anchors are selected (object is selected), all anchors should be shown
+      final isAnchorSelected = hasSelectedAnchors ? selectedAnchors.contains(i) : true;
       final isHovered = hoveredAnchor?.objectId == objectId &&
           hoveredAnchor?.anchorIndex == i;
 
       _drawAnchor(
         canvas,
         anchor,
-        isSelected: isSelected,
+        isSelected: isAnchorSelected,
         isHovered: isHovered,
         component: hoveredAnchor?.component,
       );
@@ -176,16 +180,20 @@ class SelectionOverlayPainter extends CustomPainter {
 
     // Draw anchor points and handles
     final selectedAnchors = selection.getSelectedAnchors(objectId);
+    final hasSelectedAnchors = selectedAnchors.isNotEmpty;
+
     for (int i = 0; i < path.anchors.length; i++) {
       final anchor = path.anchors[i];
-      final isSelected = selectedAnchors.contains(i);
+      // If specific anchors are selected, only those are "selected"
+      // If no specific anchors are selected (object is selected), all anchors should be shown
+      final isAnchorSelected = hasSelectedAnchors ? selectedAnchors.contains(i) : true;
       final isHovered = hoveredAnchor?.objectId == objectId &&
           hoveredAnchor?.anchorIndex == i;
 
       _drawAnchor(
         canvas,
         anchor,
-        isSelected: isSelected,
+        isSelected: isAnchorSelected,
         isHovered: isHovered,
         component: hoveredAnchor?.component,
       );
