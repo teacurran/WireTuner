@@ -156,6 +156,7 @@ class DocumentEventApplier {
         final centerY = event.parameters['centerY'] ?? 0.0;
         final radius = event.parameters['radius'] ?? 50.0;
         final sides = event.parameters['sides']?.toInt() ?? 6;
+
         shape = Shape.polygon(
           center: events.Point(x: centerX, y: centerY),
           radius: radius,
@@ -168,6 +169,7 @@ class DocumentEventApplier {
         final outerRadius = event.parameters['outerRadius'] ?? 50.0;
         final innerRadius = event.parameters['innerRadius'] ?? 25.0;
         final points = event.parameters['points']?.toInt() ?? 5;
+
         shape = Shape.star(
           center: events.Point(x: centerX, y: centerY),
           outerRadius: outerRadius,
@@ -177,9 +179,53 @@ class DocumentEventApplier {
         break;
     }
 
+    // Check if we need to apply a transform for non-uniform scaling
+    Transform? transform;
+    if (event.shapeType == events.ShapeType.polygon || event.shapeType == events.ShapeType.star) {
+      // Check for bounding box parameters (new approach)
+      final boundingLeft = event.parameters['boundingLeft'];
+      final boundingTop = event.parameters['boundingTop'];
+      final boundingWidth = event.parameters['boundingWidth'];
+      final boundingHeight = event.parameters['boundingHeight'];
+
+      if (boundingLeft != null && boundingTop != null &&
+          boundingWidth != null && boundingHeight != null) {
+        // Create a composite transform:
+        // 1. Scale the unit shape to the bounding box size
+        // 2. Translate to the bounding box position
+        final scaleX = boundingWidth / 2;  // Shape has unit radius = 1, diameter = 2
+        final scaleY = boundingHeight / 2;
+        final translateX = boundingLeft + boundingWidth / 2;  // Center of bounding box
+        final translateY = boundingTop + boundingHeight / 2;
+
+        // Create scale transform at origin
+        final scaleTransform = Transform.scale(scaleX, scaleY);
+        // Create translation transform
+        final translateTransform = Transform.translate(translateX, translateY);
+        // Compose: scale first, then translate
+        transform = scaleTransform.compose(translateTransform);
+      } else {
+        // Fallback to old approach if using old parameters
+        final scaleX = event.parameters['scaleX'];
+        final scaleY = event.parameters['scaleY'];
+
+        if (scaleX != null && scaleY != null) {
+          // Create a scale transform centered at the shape's center
+          final centerX = event.parameters['centerX'] ?? 0.0;
+          final centerY = event.parameters['centerY'] ?? 0.0;
+          transform = Transform.scaleAround(
+            sx: scaleX,
+            sy: scaleY,
+            center: events.Point(x: centerX, y: centerY),
+          );
+        }
+      }
+    }
+
     final shapeObject = VectorObject.shape(
       id: event.shapeId,
       shape: shape,
+      transform: transform,
     );
 
     _addObjectToFirstLayer(shapeObject);
@@ -256,7 +302,13 @@ class DocumentEventApplier {
 
     for (final layer in layers) {
       final updatedObjects = layer.objects
-          .where((obj) => !event.objectIds.contains(obj.id))
+          .where((obj) {
+            final objId = obj.when(
+              path: (id, _, __) => id,
+              shape: (id, _, __) => id,
+            );
+            return !event.objectIds.contains(objId);
+          })
           .toList();
 
       updatedLayers.add(layer.copyWith(objects: updatedObjects));

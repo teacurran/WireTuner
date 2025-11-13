@@ -462,6 +462,7 @@ class Shape with _$Shape {
     final n = sides;
 
     final anchors = <ap.AnchorPoint>[];
+    final segments = <Segment>[];
 
     for (int i = 0; i < n; i++) {
       // Calculate angle for this vertex
@@ -473,7 +474,17 @@ class Shape with _$Shape {
       anchors.add(ap.AnchorPoint.corner(Point(x: x, y: y)));
     }
 
-    return Path.fromAnchors(anchors: anchors, closed: true);
+    // Create explicit line segments
+    for (int i = 0; i < anchors.length; i++) {
+      segments.add(
+        Segment.line(
+          startIndex: i,
+          endIndex: (i + 1) % anchors.length,
+        ),
+      );
+    }
+
+    return Path(anchors: anchors, segments: segments, closed: true);
   }
 
   /// Converts star to path.
@@ -483,6 +494,7 @@ class Shape with _$Shape {
     final n = sides;
 
     final anchors = <ap.AnchorPoint>[];
+    final segments = <Segment>[];
 
     // Star has 2n vertices (alternating outer and inner points)
     for (int i = 0; i < 2 * n; i++) {
@@ -498,7 +510,17 @@ class Shape with _$Shape {
       anchors.add(ap.AnchorPoint.corner(Point(x: x, y: y)));
     }
 
-    return Path.fromAnchors(anchors: anchors, closed: true);
+    // Create explicit line segments
+    for (int i = 0; i < anchors.length; i++) {
+      segments.add(
+        Segment.line(
+          startIndex: i,
+          endIndex: (i + 1) % anchors.length,
+        ),
+      );
+    }
+
+    return Path(anchors: anchors, segments: segments, closed: true);
   }
 
   /// Rotates a point around the shape's center by the rotation angle.

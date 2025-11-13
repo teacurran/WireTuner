@@ -1,5 +1,6 @@
-import 'dart:math';
+import 'dart:math' show cos, max, min, pi, sin, sqrt;
 import 'dart:ui' as ui;
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:logger/logger.dart';
 import 'package:wiretuner/application/tools/shapes/shape_base.dart';
@@ -56,8 +57,8 @@ class StarTool extends ShapeToolBase {
   /// Inner radius as a ratio of outer radius (0.0 to 1.0).
   ///
   /// Future enhancement: Make this adjustable via property panel.
-  /// For MVP, use fixed value of 0.5 (pleasing star shape).
-  static const double _defaultInnerRadiusRatio = 0.5;
+  /// Using 0.38 for a more pronounced star shape that works at all sizes.
+  static const double _defaultInnerRadiusRatio = 0.38;
   final double _innerRadiusRatio = _defaultInnerRadiusRatio;
 
   @override
@@ -73,51 +74,45 @@ class StarTool extends ShapeToolBase {
     bool isShiftPressed,
     bool isAltPressed,
   ) {
-    // Convert bounding box to star parameters
+    // The star should fit exactly in the bounding box
+    // We'll create a star with radius 1 and then scale it to fit
     final center = Point(
       x: boundingBox.center.dx,
       y: boundingBox.center.dy,
     );
-    final radiusX = boundingBox.width / 2;
-    final radiusY = boundingBox.height / 2;
-    final outerRadius = max(radiusX, radiusY);
+
+    // Calculate scaling factors for width and height
+    final scaleX = boundingBox.width / 2;
+    final scaleY = boundingBox.height / 2;
+
+    // Create star points scaled to fit the bounding box exactly
+    final outerRadius = 1.0; // Unit circle
     final innerRadius = outerRadius * _innerRadiusRatio;
 
-    // Validate inner radius
-    if (innerRadius >= outerRadius || innerRadius <= 0) {
-      _logger.w(
-          'Invalid star parameters: innerRadius=$innerRadius, outerRadius=$outerRadius');
-      return;
-    }
-
-    // Create temporary shape for preview
-    final previewShape = shape_model.Shape.star(
-      center: center,
-      outerRadius: outerRadius,
-      innerRadius: innerRadius,
-      pointCount: _pointCount,
-      rotation: 0.0,
-    );
-
-    // Convert to path for rendering
-    final path = previewShape.toPath();
-
-    // Build Flutter Path from our domain Path
+    // Create the star path manually with proper scaling
     final flutterPath = ui.Path();
-    if (path.anchors.isNotEmpty) {
-      final firstAnchor = path.anchors.first;
-      flutterPath.moveTo(firstAnchor.position.x, firstAnchor.position.y);
 
-      for (int i = 1; i < path.anchors.length; i++) {
-        final anchor = path.anchors[i];
-        flutterPath.lineTo(anchor.position.x, anchor.position.y);
-      }
+    // Generate star points
+    final totalPoints = _pointCount * 2; // Alternating outer and inner points
+    for (int i = 0; i < totalPoints; i++) {
+      final isOuter = i % 2 == 0;
+      final r = isOuter ? outerRadius : innerRadius;
 
-      // Close the path
-      if (path.closed) {
-        flutterPath.close();
+      // Calculate angle (start from top, go clockwise)
+      final angle = -pi / 2 + (2 * pi * i / totalPoints);
+
+      // Calculate point position with non-uniform scaling
+      final x = center.x + r * cos(angle) * scaleX;
+      final y = center.y + r * sin(angle) * scaleY;
+
+      if (i == 0) {
+        flutterPath.moveTo(x, y);
+      } else {
+        flutterPath.lineTo(x, y);
       }
     }
+
+    flutterPath.close();
 
     // Fill preview with semi-transparent blue
     final fillPaint = Paint()
@@ -150,52 +145,23 @@ class StarTool extends ShapeToolBase {
 
   @override
   Map<String, double> createShapeParameters(Rect boundingBox) {
-    // Convert bounding box to star parameters
-    final center = boundingBox.center;
-    final radiusX = boundingBox.width / 2;
-    final radiusY = boundingBox.height / 2;
-    final outerRadius = max(radiusX, radiusY);
-    final innerRadius = outerRadius * _innerRadiusRatio;
+    // Inner radius is typically 38% of outer radius for classic star appearance
+    final unitInnerRadius = 0.38;
 
-    // Validate inner radius before creating parameters
-    if (innerRadius >= outerRadius) {
-      _logger.w(
-        'Invalid star: innerRadius ($innerRadius) >= outerRadius ($outerRadius)',
-      );
-      // Use a safe default - ensure inner radius is less than outer
-      final safeInnerRadius = outerRadius * 0.5;
-      return {
-        'centerX': center.dx,
-        'centerY': center.dy,
-        'radius': outerRadius, // "radius" field = outer radius
-        'innerRadius': safeInnerRadius,
-        'sides': max(_pointCount, 3).toDouble(), // Enforce minimum
-        'rotation': 0.0,
-      };
-    }
-
-    if (innerRadius <= 0) {
-      _logger.w('Invalid star: innerRadius ($innerRadius) <= 0');
-      // Use a safe minimum
-      final safeInnerRadius = max(outerRadius * 0.1, 0.01);
-      return {
-        'centerX': center.dx,
-        'centerY': center.dy,
-        'radius': outerRadius,
-        'innerRadius': safeInnerRadius,
-        'sides': max(_pointCount, 3).toDouble(),
-        'rotation': 0.0,
-      };
-    }
-
+    // Store the actual bounding box parameters
+    // We'll create the shape at origin and use transform to position and scale it
     return {
-      'centerX': center.dx,
-      'centerY': center.dy,
-      'radius': outerRadius, // "radius" field = outer radius
-      'innerRadius': innerRadius,
-      'sides':
-          max(_pointCount, 3).toDouble(), // Enforce minimum, convert to double
+      'centerX': 0.0, // Shape at origin
+      'centerY': 0.0,
+      'outerRadius': 1.0, // Unit radius, will be scaled by transform
+      'innerRadius': unitInnerRadius,
+      'points': max(_pointCount, 3).toDouble(), // Must be 'points' not 'sides'
       'rotation': 0.0,
+      // Store bounding box for transform calculation
+      'boundingLeft': boundingBox.left,
+      'boundingTop': boundingBox.top,
+      'boundingWidth': boundingBox.width,
+      'boundingHeight': boundingBox.height,
     };
   }
 
@@ -263,5 +229,26 @@ class StarTool extends ShapeToolBase {
 
     // Draw text
     textPainter.paint(canvas, labelOffset);
+  }
+
+  /// Calculates dynamic inner radius ratio based on star size.
+  ///
+  /// Smaller stars need smaller inner radius for sharper points,
+  /// while larger stars can have larger inner radius for better proportions.
+  double _calculateDynamicInnerRadiusRatio(double outerRadius) {
+    // For very small stars (< 20px), use smaller ratio for sharper points
+    if (outerRadius < 20) {
+      return 0.3;
+    }
+    // For small to medium stars (20-50px), gradually increase ratio
+    if (outerRadius < 50) {
+      return 0.3 + (outerRadius - 20) * 0.01; // 0.3 to 0.6
+    }
+    // For medium to large stars (50-100px), use moderate ratio
+    if (outerRadius < 100) {
+      return 0.4 + (outerRadius - 50) * 0.002; // 0.4 to 0.5
+    }
+    // For large stars (>= 100px), use consistent ratio
+    return 0.5;
   }
 }

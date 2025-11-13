@@ -64,6 +64,7 @@ class PenPreviewState {
   /// Creates a pen preview state.
   const PenPreviewState({
     this.lastAnchorPosition,
+    this.lastAnchorHandleOut,
     this.hoverPosition,
     this.dragStartPosition,
     this.currentDragPosition,
@@ -75,6 +76,9 @@ class PenPreviewState {
 
   /// Position of the last anchor placed (world coordinates).
   final Point? lastAnchorPosition;
+
+  /// Handle out of the last anchor placed (relative to anchor, world coordinates).
+  final Point? lastAnchorHandleOut;
 
   /// Current hover position for preview rendering (world coordinates).
   final Point? hoverPosition;
@@ -242,6 +246,47 @@ class PenPreviewOverlayPainter extends CustomPainter {
       ..color = PenPreviewConstants.anchorStrokeColor
       ..style = ui.PaintingStyle.stroke
       ..strokeWidth = PenPreviewConstants.strokeWidth / zoomLevel;
+
+    // Draw curved path preview if there's a last anchor
+    if (state.lastAnchorPosition != null) {
+      final lastOffset = ui.Offset(state.lastAnchorPosition!.x, state.lastAnchorPosition!.y);
+
+      // Paint for the curved path preview
+      final curvePaint = ui.Paint()
+        ..color = PenPreviewConstants.anchorStrokeColor
+        ..style = ui.PaintingStyle.stroke
+        ..strokeWidth = PenPreviewConstants.strokeWidth / zoomLevel
+        ..strokeCap = ui.StrokeCap.round;
+
+      // Calculate control points for the curve
+      // Control point 1: last anchor's handleOut if it exists, otherwise last anchor position
+      final cp1 = state.lastAnchorHandleOut != null
+          ? ui.Offset(
+              lastOffset.dx + state.lastAnchorHandleOut!.x,
+              lastOffset.dy + state.lastAnchorHandleOut!.y,
+            )
+          : lastOffset;
+
+      // Control point 2: current anchor's handleIn (mirrored from handleOut)
+      final cp2 = ui.Offset(
+        anchorOffset.dx - (dragOffset.dx - anchorOffset.dx),
+        anchorOffset.dy - (dragOffset.dy - anchorOffset.dy),
+      );
+
+      // Create a bezier path from last anchor to current anchor position
+      final path = ui.Path()
+        ..moveTo(lastOffset.dx, lastOffset.dy)
+        ..cubicTo(
+          cp1.dx,
+          cp1.dy,
+          cp2.dx,
+          cp2.dy,
+          anchorOffset.dx,
+          anchorOffset.dy,
+        );
+
+      canvas.drawPath(path, curvePaint);
+    }
 
     // Draw handleOut line from anchor to drag position
     canvas.drawLine(anchorOffset, dragOffset, handlePaint);

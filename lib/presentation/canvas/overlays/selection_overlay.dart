@@ -1,3 +1,4 @@
+import 'dart:typed_data';
 import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
@@ -8,6 +9,7 @@ import 'package:wiretuner/domain/models/geometry/point_extensions.dart';
 import 'package:wiretuner/domain/models/geometry/rectangle.dart' as geom;
 import 'package:wiretuner/domain/models/path.dart' as domain;
 import 'package:wiretuner/domain/models/shape.dart';
+import 'package:wiretuner/domain/models/transform.dart' as domain_transform;
 import 'package:wiretuner/presentation/canvas/painter/path_renderer.dart';
 import 'package:wiretuner/presentation/canvas/viewport/viewport_controller.dart';
 
@@ -82,6 +84,7 @@ class SelectionOverlayPainter extends CustomPainter {
     required this.selection,
     required this.paths,
     required this.shapes,
+    this.shapeTransforms = const {},
     required this.viewportController,
     required this.pathRenderer,
     this.hoveredAnchor,
@@ -95,6 +98,9 @@ class SelectionOverlayPainter extends CustomPainter {
 
   /// Map of shape objects by ID.
   final Map<String, Shape> shapes;
+
+  /// Map of shape transforms by ID.
+  final Map<String, domain_transform.Transform> shapeTransforms;
 
   /// Viewport controller providing transformation state.
   final ViewportController viewportController;
@@ -175,6 +181,19 @@ class SelectionOverlayPainter extends CustomPainter {
       return;
     }
 
+    // Get the shape's transform if it exists
+    final transform = shapeTransforms[objectId];
+
+    // Save canvas state if we need to apply transform
+    if (transform != null) {
+      canvas.save();
+      // Apply the shape-specific transform
+      final matrix = transform.matrix;
+      // Convert Float32List to Float64List
+      final storage64 = Float64List.fromList(matrix.storage);
+      canvas.transform(storage64);
+    }
+
     // Draw bounding box
     _drawBoundingBox(canvas, path.bounds());
 
@@ -198,6 +217,11 @@ class SelectionOverlayPainter extends CustomPainter {
         component: hoveredAnchor?.component,
       );
     }
+
+    // Restore canvas state if transform was applied
+    if (transform != null) {
+      canvas.restore();
+    }
   }
 
   /// Paints a unified bounding box that encompasses all selected objects.
@@ -216,7 +240,15 @@ class SelectionOverlayPainter extends CustomPainter {
         selectedBounds.add(path.bounds());
       } else if (shape != null) {
         final shapePath = shape.toPath();
-        if (shapePath.anchors.isNotEmpty) {
+
+        // Apply transform to shape bounds if present
+        final transform = shapeTransforms[objectId];
+        if (transform != null && shapePath.anchors.isNotEmpty) {
+          // Transform the shape's bounding rectangle
+          final originalBounds = shapePath.bounds();
+          final transformedBounds = transform.transformRectangle(originalBounds);
+          selectedBounds.add(transformedBounds);
+        } else if (shapePath.anchors.isNotEmpty) {
           selectedBounds.add(shapePath.bounds());
         }
       }

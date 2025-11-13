@@ -3,6 +3,7 @@ import 'package:wiretuner/application/tools/framework/tool_manager.dart';
 import 'package:wiretuner/domain/document/selection.dart';
 import 'package:wiretuner/domain/models/path.dart' as domain;
 import 'package:wiretuner/domain/models/shape.dart';
+import 'package:wiretuner/domain/models/transform.dart' as domain_transform;
 import 'package:wiretuner/infrastructure/telemetry/telemetry_service.dart';
 import 'package:wiretuner/presentation/canvas/overlay_layer.dart';
 import 'package:wiretuner/presentation/canvas/overlay_registry.dart';
@@ -85,6 +86,7 @@ class WireTunerCanvas extends StatefulWidget {
   ///
   /// The [paths] list contains document path objects to render.
   /// The [shapes] map contains shape objects by ID.
+  /// The [shapeTransforms] map contains optional transforms for shapes by ID.
   /// The [selection] defines which objects/anchors are currently selected.
   /// The [viewportController] manages pan/zoom transformations.
   /// The [telemetryService] is optional and enables performance monitoring.
@@ -97,6 +99,7 @@ class WireTunerCanvas extends StatefulWidget {
   const WireTunerCanvas({
     required this.paths,
     required this.shapes,
+    this.shapeTransforms = const {},
     required this.selection,
     required this.viewportController,
     this.telemetryService,
@@ -111,6 +114,9 @@ class WireTunerCanvas extends StatefulWidget {
 
   /// Map of shape objects by ID.
   final Map<String, Shape> shapes;
+
+  /// Map of shape transforms by ID.
+  final Map<String, domain_transform.Transform> shapeTransforms;
 
   /// Current selection state.
   final Selection selection;
@@ -244,6 +250,7 @@ class _WireTunerCanvasState extends State<WireTunerCanvas> {
               painter: DocumentPainter(
                 paths: widget.paths,
                 shapes: widget.shapes,
+                shapeTransforms: widget.shapeTransforms,
                 viewportController: widget.viewportController,
                 strokeWidth: 2.0,
                 strokeColor: Colors.black87,
@@ -283,6 +290,7 @@ class _WireTunerCanvasState extends State<WireTunerCanvas> {
             selection: widget.selection,
             paths: pathsMap,
             shapes: widget.shapes,
+            shapeTransforms: widget.shapeTransforms,
             viewportController: widget.viewportController,
             pathRenderer: _pathRenderer,
             hoveredAnchor: widget.hoveredAnchor,

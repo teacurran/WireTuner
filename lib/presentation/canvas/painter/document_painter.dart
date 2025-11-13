@@ -1,4 +1,5 @@
 import 'dart:math' show cos, sin;
+import 'dart:typed_data';
 import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
@@ -7,6 +8,7 @@ import 'package:wiretuner/domain/models/geometry/point_extensions.dart';
 import 'package:wiretuner/domain/models/path.dart' as domain;
 import 'package:wiretuner/domain/models/segment.dart';
 import 'package:wiretuner/domain/models/shape.dart';
+import 'package:wiretuner/domain/models/transform.dart' as domain_transform;
 import 'package:wiretuner/presentation/canvas/paint_styles.dart';
 import 'package:wiretuner/presentation/canvas/render_pipeline.dart';
 import 'package:wiretuner/presentation/canvas/viewport/viewport_controller.dart';
@@ -64,6 +66,7 @@ class DocumentPainter extends CustomPainter {
   DocumentPainter({
     required this.paths,
     required this.shapes,
+    this.shapeTransforms = const {},
     required this.viewportController,
     this.strokeWidth = 1.0,
     this.strokeColor = Colors.black,
@@ -78,6 +81,9 @@ class DocumentPainter extends CustomPainter {
 
   /// The map of shapes to render by ID.
   final Map<String, Shape> shapes;
+
+  /// The map of shape transforms by ID.
+  final Map<String, domain_transform.Transform> shapeTransforms;
 
   /// The viewport controller providing transformation state.
   ///
@@ -181,13 +187,38 @@ class DocumentPainter extends CustomPainter {
     }
 
     // Render each shape (fill + stroke)
-    for (final shape in shapes.values) {
-      debugPrint('[DocumentPainter] Drawing shape: ${shape.kind}, center: ${shape.center}, width: ${shape.width}, height: ${shape.height}');
+    for (final entry in shapes.entries) {
+      final shapeId = entry.key;
+      final shape = entry.value;
+      final transform = shapeTransforms[shapeId];
+
+      debugPrint('[DocumentPainter] Drawing shape: ${shape.kind}, center: ${shape.center}, width: ${shape.width}, height: ${shape.height}, transform: $transform');
+
+      // Convert shape to path first
       final uiPath = _convertShapeToUiPath(shape);
-      // Draw fill first
-      canvas.drawPath(uiPath, fillPaint);
-      // Then draw stroke on top
-      canvas.drawPath(uiPath, strokePaint);
+
+      // If there's a transform, we need to apply it to the path, not the canvas
+      // to avoid scaling the stroke width
+      if (transform != null) {
+        // Apply transform to the path itself
+        final matrix = transform.matrix;
+        // Convert Float32List to Float64List for the transformation
+        final storage64 = Float64List.fromList(matrix.storage);
+
+        // Transform the path
+        final transformedPath = uiPath.transform(storage64);
+
+        // Draw fill first
+        canvas.drawPath(transformedPath, fillPaint);
+        // Then draw stroke on top with original stroke width
+        canvas.drawPath(transformedPath, strokePaint);
+      } else {
+        // No transform, draw normally
+        // Draw fill first
+        canvas.drawPath(uiPath, fillPaint);
+        // Then draw stroke on top
+        canvas.drawPath(uiPath, strokePaint);
+      }
     }
 
     canvas.restore();
@@ -195,6 +226,7 @@ class DocumentPainter extends CustomPainter {
 
   /// Converts a parametric Shape to a dart:ui Path for rendering.
   ui.Path _convertShapeToUiPath(Shape shape) {
+    debugPrint('[DocumentPainter._convertShapeToUiPath] Converting ${shape.kind} shape');
     final path = ui.Path();
 
     switch (shape.kind) {
@@ -269,6 +301,8 @@ class DocumentPainter extends CustomPainter {
   ) {
     if (pointCount < 2) return;
 
+    debugPrint('[DocumentPainter._addStarToPath] Creating star with $pointCount points, outer: $outerRadius, inner: $innerRadius, center: ${center.x},${center.y}');
+
     final angleStep = 3.141592653589793 / pointCount; // π / pointCount
     final startAngle = -3.141592653589793 / 2; // Start at top
 
@@ -276,6 +310,7 @@ class DocumentPainter extends CustomPainter {
     final firstX = center.x + outerRadius * cos(startAngle);
     final firstY = center.y + outerRadius * sin(startAngle);
     path.moveTo(firstX, firstY);
+    debugPrint('[DocumentPainter._addStarToPath] First point: $firstX, $firstY');
 
     // Alternate between outer and inner vertices
     for (var i = 0; i < pointCount * 2; i++) {
@@ -283,6 +318,7 @@ class DocumentPainter extends CustomPainter {
       final radius = (i % 2 == 0) ? innerRadius : outerRadius;
       final x = center.x + radius * cos(angle);
       final y = center.y + radius * sin(angle);
+      debugPrint('[DocumentPainter._addStarToPath] Point ${i+1}: $x, $y (${(i % 2 == 0) ? 'inner' : 'outer'})');
       path.lineTo(x, y);
     }
 

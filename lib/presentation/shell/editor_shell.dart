@@ -7,6 +7,7 @@ import 'package:wiretuner/domain/document/document.dart';
 import 'package:wiretuner/domain/document/selection.dart';
 import 'package:wiretuner/domain/models/path.dart' as domain;
 import 'package:wiretuner/domain/models/shape.dart';
+import 'package:wiretuner/domain/models/transform.dart' as domain_transform;
 import 'package:wiretuner/presentation/canvas/viewport/viewport_binding.dart';
 import 'package:wiretuner/presentation/canvas/viewport/viewport_controller.dart';
 import 'package:wiretuner/presentation/canvas/wiretuner_canvas.dart';
@@ -159,6 +160,7 @@ class _CanvasAdapter extends StatelessWidget {
     // Extract paths and shapes from all layers
     final paths = <domain.Path>[];
     final shapes = <String, Shape>{};
+    final shapeTransforms = <String, domain_transform.Transform>{};
 
     // Get the first artboard (or use a default empty state if none exists)
     final artboard = document.artboards.isNotEmpty ? document.artboards.first : null;
@@ -169,24 +171,29 @@ class _CanvasAdapter extends StatelessWidget {
         debugPrint('[_CanvasAdapter] Layer ${layer.id} has ${layer.objects.length} objects');
         for (final obj in layer.objects) {
           obj.when(
-            path: (id, path, _) {
+            path: (id, path, transform) {
               debugPrint('[_CanvasAdapter] Adding path: $id');
               paths.add(path);
+              // TODO: Handle path transforms
             },
-            shape: (id, shape, _) {
-              debugPrint('[_CanvasAdapter] Adding shape: $id (${shape.kind})');
+            shape: (id, shape, transform) {
+              debugPrint('[_CanvasAdapter] Adding shape: $id (${shape.kind}), transform: $transform');
               shapes[id] = shape;
+              if (transform != null) {
+                shapeTransforms[id] = transform as domain_transform.Transform;
+              }
             },
           );
         }
       }
     }
 
-    debugPrint('[_CanvasAdapter] Passing to canvas: ${paths.length} paths, ${shapes.length} shapes');
+    debugPrint('[_CanvasAdapter] Passing to canvas: ${paths.length} paths, ${shapes.length} shapes, ${shapeTransforms.length} transforms');
 
     return WireTunerCanvas(
       paths: paths,
       shapes: shapes,
+      shapeTransforms: shapeTransforms,
       selection: artboard?.selection ?? const Selection(),
       viewportController: viewportController,
       toolManager: toolManager,

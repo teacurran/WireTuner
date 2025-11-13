@@ -92,22 +92,97 @@ class VectorObject with _$VectorObject {
   ///
   /// For paths, returns the path's control point bounds.
   /// For shapes, converts to path first then calculates bounds.
+  /// If a transform is applied, the bounds are transformed accordingly.
   Rectangle getBounds() => when(
-        path: (_, path, __) => path.bounds(),
-        shape: (_, shape, __) => shape.toPath().bounds(),
+        path: (_, path, transform) {
+          final bounds = path.bounds();
+          return transform != null ? _transformBounds(bounds, transform) : bounds;
+        },
+        shape: (_, shape, transform) {
+          final bounds = shape.toPath().bounds();
+          return transform != null ? _transformBounds(bounds, transform) : bounds;
+        },
       );
+
+  /// Transforms a rectangle by the given transform matrix.
+  Rectangle _transformBounds(Rectangle bounds, Transform transform) {
+    // Get the four corners of the bounds
+    final corners = [
+      Point(x: bounds.x, y: bounds.y),
+      Point(x: bounds.x + bounds.width, y: bounds.y),
+      Point(x: bounds.x, y: bounds.y + bounds.height),
+      Point(x: bounds.x + bounds.width, y: bounds.y + bounds.height),
+    ];
+
+    // Transform each corner
+    final transformedCorners = corners.map((corner) =>
+      transform.transformPoint(corner)
+    ).toList();
+
+    // Find the axis-aligned bounding box of the transformed corners
+    double minX = transformedCorners[0].x;
+    double maxX = transformedCorners[0].x;
+    double minY = transformedCorners[0].y;
+    double maxY = transformedCorners[0].y;
+
+    for (final corner in transformedCorners) {
+      minX = minX < corner.x ? minX : corner.x;
+      maxX = maxX > corner.x ? maxX : corner.x;
+      minY = minY < corner.y ? minY : corner.y;
+      maxY = maxY > corner.y ? maxY : corner.y;
+    }
+
+    return Rectangle(
+      x: minX,
+      y: minY,
+      width: maxX - minX,
+      height: maxY - minY,
+    );
+  }
 
   /// Performs a hit test at the given point.
   ///
   /// Returns true if the point is within the object's bounds.
+  /// For objects with transforms, the point is tested against transformed bounds.
   /// Note: This is a simple bounds-based hit test. Future iterations
   /// will implement precise geometric hit testing.
   bool hitTest(Point point) {
-    final bounds = getBounds();
-    return point.x >= bounds.x &&
-        point.x <= bounds.x + bounds.width &&
-        point.y >= bounds.y &&
-        point.y <= bounds.y + bounds.height;
+    return when(
+      path: (_, path, transform) {
+        if (transform != null) {
+          // For transformed objects, check against transformed bounds
+          final transformedBounds = _transformBounds(path.bounds(), transform);
+          return point.x >= transformedBounds.x &&
+              point.x <= transformedBounds.x + transformedBounds.width &&
+              point.y >= transformedBounds.y &&
+              point.y <= transformedBounds.y + transformedBounds.height;
+        } else {
+          // No transform, use original bounds
+          final bounds = path.bounds();
+          return point.x >= bounds.x &&
+              point.x <= bounds.x + bounds.width &&
+              point.y >= bounds.y &&
+              point.y <= bounds.y + bounds.height;
+        }
+      },
+      shape: (_, shape, transform) {
+        final baseBounds = shape.toPath().bounds();
+        if (transform != null) {
+          // For transformed objects, check against transformed bounds
+          final transformedBounds = _transformBounds(baseBounds, transform);
+          return point.x >= transformedBounds.x &&
+              point.x <= transformedBounds.x + transformedBounds.width &&
+              point.y >= transformedBounds.y &&
+              point.y <= transformedBounds.y + transformedBounds.height;
+        } else {
+          // No transform, use original bounds
+          return point.x >= baseBounds.x &&
+              point.x <= baseBounds.x + baseBounds.width &&
+              point.y >= baseBounds.y &&
+              point.y <= baseBounds.y + baseBounds.height;
+        }
+      },
+    );
   }
 }
 

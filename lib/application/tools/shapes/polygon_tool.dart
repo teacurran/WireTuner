@@ -1,4 +1,4 @@
-import 'dart:math';
+import 'dart:math' show cos, max, pi, sin;
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:wiretuner/application/tools/shapes/shape_base.dart';
@@ -59,42 +59,36 @@ class PolygonTool extends ShapeToolBase {
     bool isShiftPressed,
     bool isAltPressed,
   ) {
-    // Convert bounding box to polygon parameters
+    // The polygon should fit exactly in the bounding box
     final center = Point(
       x: boundingBox.center.dx,
       y: boundingBox.center.dy,
     );
-    final radiusX = boundingBox.width / 2;
-    final radiusY = boundingBox.height / 2;
-    final radius = max(radiusX, radiusY);
 
-    // Create temporary shape for preview
-    final previewShape = shape_model.Shape.polygon(
-      center: center,
-      radius: radius,
-      sides: _sideCount,
-      rotation: 0.0,
-    );
+    // Calculate scaling factors for width and height
+    final scaleX = boundingBox.width / 2;
+    final scaleY = boundingBox.height / 2;
 
-    // Convert to path for rendering
-    final path = previewShape.toPath();
-
-    // Build Flutter Path from our domain Path
+    // Create the polygon path manually with proper scaling
     final flutterPath = ui.Path();
-    if (path.anchors.isNotEmpty) {
-      final firstAnchor = path.anchors.first;
-      flutterPath.moveTo(firstAnchor.position.x, firstAnchor.position.y);
 
-      for (int i = 1; i < path.anchors.length; i++) {
-        final anchor = path.anchors[i];
-        flutterPath.lineTo(anchor.position.x, anchor.position.y);
-      }
+    // Generate polygon points
+    for (int i = 0; i < _sideCount; i++) {
+      // Calculate angle (start from top, go clockwise)
+      final angle = -pi / 2 + (2 * pi * i / _sideCount);
 
-      // Close the path
-      if (path.closed) {
-        flutterPath.close();
+      // Calculate point position with non-uniform scaling
+      final x = center.x + cos(angle) * scaleX;
+      final y = center.y + sin(angle) * scaleY;
+
+      if (i == 0) {
+        flutterPath.moveTo(x, y);
+      } else {
+        flutterPath.lineTo(x, y);
       }
     }
+
+    flutterPath.close();
 
     // Fill preview with semi-transparent blue
     final fillPaint = Paint()
@@ -127,18 +121,19 @@ class PolygonTool extends ShapeToolBase {
 
   @override
   Map<String, double> createShapeParameters(Rect boundingBox) {
-    // Convert bounding box to polygon parameters
-    final center = boundingBox.center;
-    final radiusX = boundingBox.width / 2;
-    final radiusY = boundingBox.height / 2;
-    final radius = max(radiusX, radiusY);
-
+    // Store the actual bounding box parameters
+    // We'll create the shape at origin and use transform to position and scale it
     return {
-      'centerX': center.dx,
-      'centerY': center.dy,
-      'radius': radius,
+      'centerX': 0.0, // Shape at origin
+      'centerY': 0.0,
+      'radius': 1.0, // Unit radius
       'sides': max(_sideCount, 3).toDouble(), // Enforce minimum
       'rotation': 0.0,
+      // Store bounding box for transform calculation
+      'boundingLeft': boundingBox.left,
+      'boundingTop': boundingBox.top,
+      'boundingWidth': boundingBox.width,
+      'boundingHeight': boundingBox.height,
     };
   }
 

@@ -188,6 +188,10 @@ class PenTool implements ITool {
   /// Used for rendering anchor points in the preview overlay.
   final List<PreviewAnchor> _placedAnchors = [];
 
+  /// The handleOut of the last anchor (if it has one).
+  /// Used to create the handleIn for the next anchor to form a smooth curve.
+  Point? _lastAnchorHandleOut;
+
   @override
   String get toolId => 'pen';
 
@@ -200,6 +204,7 @@ class PenTool implements ITool {
   /// painter can use to render visual feedback during path creation.
   PenPreviewState get previewState => PenPreviewState(
         lastAnchorPosition: _lastAnchorPosition,
+        lastAnchorHandleOut: _lastAnchorHandleOut,
         hoverPosition: _hoverPosition,
         dragStartPosition: _dragStartPosition,
         currentDragPosition: _currentDragPosition,
@@ -243,6 +248,10 @@ class PenTool implements ITool {
       // First click - start new path
       _startPath(worldPos);
       _updateClickTracking(worldPos, now);
+      // Track for potential drag to create handles
+      _dragStartPosition = worldPos;
+      _currentDragPosition = worldPos;
+      _isDragging = false;
       return true;
     } else if (_state == PathState.creatingPath) {
       // Check if click is on first anchor (close path)
@@ -273,12 +282,21 @@ class PenTool implements ITool {
         return true;
       }
 
-      // Track drag start for potential Bezier curve creation
-      // But don't emit event yet - wait to see if user drags or just clicks
+      // Create anchor immediately at click position
+      if (_anchorCount == 0) {
+        // First anchor - just start the path
+        _startPath(worldPos);
+      } else {
+        // Subsequent anchor - add it without any handles initially
+        _addStraightLineAnchor(worldPos, event);
+      }
+
+      // Track drag start for potential position update or handle creation
       _dragStartPosition = worldPos;
       _currentDragPosition = worldPos;
       _isDragging = false; // Will become true if pointer moves
       _updateClickTracking(worldPos, now);
+
       return true;
     }
 
@@ -291,10 +309,81 @@ class PenTool implements ITool {
     _hoverPosition = worldPos;
 
     // If drag start is tracked (pointer is down), this is a drag gesture
-    if (_dragStartPosition != null) {
+    if (_dragStartPosition != null && _lastAnchorPosition != null) {
       _isDragging = true;
       _currentDragPosition = worldPos;
-      // No event emission during drag - just update preview state
+
+      // Check if modifier key is pressed
+      final isModifierPressed = HardwareKeyboard.instance.isAltPressed ||
+                               HardwareKeyboard.instance.isMetaPressed;
+
+      if (!isModifierPressed && _currentPathId != null && _anchorCount > 0) {
+        // Normal drag: Update the position of the last anchor
+        final now = DateTime.now().millisecondsSinceEpoch;
+
+        _eventRecorder.recordEvent(
+          ModifyAnchorEvent(
+            eventId: _uuid.v4(),
+            timestamp: now,
+            pathId: _currentPathId!,
+            anchorIndex: _anchorCount - 1,
+            position: worldPos,
+          ),
+        );
+
+        // Update our tracking
+        _lastAnchorPosition = worldPos;
+
+        // Update preview anchor
+        if (_placedAnchors.isNotEmpty) {
+          _placedAnchors[_placedAnchors.length - 1] = PreviewAnchor(
+            position: worldPos,
+            isCorner: true,
+          );
+        }
+      } else if (isModifierPressed && _currentPathId != null && _anchorCount > 0) {
+        // Modifier + drag: Update handles in real-time
+        final anchorPos = _dragStartPosition!;
+        final dragEnd = worldPos;
+
+        // Apply angle constraint if Shift is also pressed
+        Point constrainedDragEnd = dragEnd;
+        if (HardwareKeyboard.instance.isShiftPressed) {
+          constrainedDragEnd = _constrainToAngle(anchorPos, dragEnd);
+        }
+
+        // Calculate symmetric handles
+        final handleOut = Point(
+          x: constrainedDragEnd.x - anchorPos.x,
+          y: constrainedDragEnd.y - anchorPos.y,
+        );
+        final handleIn = Point(x: -handleOut.x, y: -handleOut.y);
+
+        // Update the anchor with handles in real-time
+        final now = DateTime.now().millisecondsSinceEpoch;
+        _eventRecorder.recordEvent(
+          ModifyAnchorEvent(
+            eventId: _uuid.v4(),
+            timestamp: now,
+            pathId: _currentPathId!,
+            anchorIndex: _anchorCount - 1,
+            anchorType: AnchorType.bezier,
+            handleIn: handleIn,
+            handleOut: handleOut,
+          ),
+        );
+
+        // Update preview to show it's now a smooth point
+        if (_placedAnchors.isNotEmpty) {
+          _placedAnchors[_placedAnchors.length - 1] = PreviewAnchor(
+            position: anchorPos,
+            isCorner: false,
+          );
+        }
+
+        // Store the handleOut for potential use with next anchor
+        _lastAnchorHandleOut = handleOut;
+      }
     }
 
     // No active handling, just update preview
@@ -318,26 +407,36 @@ class PenTool implements ITool {
       return true;
     }
 
-    // Calculate drag distance to determine if this was a click or drag
+    // Calculate drag distance
     final dragDistance = _calculateDistance(
       _dragStartPosition!,
       _currentDragPosition ?? _dragStartPosition!,
     );
 
-    // If drag distance is below threshold, treat as click (straight line anchor)
-    if (dragDistance < _minDragDistance) {
-      _logger.d(
-          'Short drag ($dragDistance < $_minDragDistance) - treating as click');
-      _addStraightLineAnchor(_dragStartPosition!, event);
+    // Check if Alt or Cmd key is pressed (modifier for handle creation)
+    final isModifierPressed = HardwareKeyboard.instance.isAltPressed ||
+                             HardwareKeyboard.instance.isMetaPressed;
+
+    if (dragDistance >= _minDragDistance && isModifierPressed) {
+      // Modifier + drag: Handles were already updated in real-time during drag
+      _logger.d('Modifier + drag completed - handles already updated');
+
+      // Handles have already been updated in onPointerMove
+      // Nothing more to do
+
+    } else if (dragDistance >= _minDragDistance && !isModifierPressed) {
+      // Normal drag (no modifier): Anchor was already moved during drag
+      _logger.d('Normal drag completed - anchor already at drag position');
+
+      // Anchor position was already updated during onPointerMove
+      // Nothing more to do
+
     } else {
-      // Actual drag - create Bezier anchor with handles
-      _logger.d(
-          'Drag detected (distance: $dragDistance) - creating Bezier anchor');
-      _addBezierAnchor(
-        anchorPosition: _dragStartPosition!,
-        dragEndPosition: _currentDragPosition ?? _dragStartPosition!,
-        event: event,
-      );
+      // No drag or very short drag: Anchor already at click position
+      _logger.d('No drag detected - anchor already at click position');
+
+      // Anchor is already at the right position
+      // Nothing to do
     }
 
     // Clear drag state
@@ -406,6 +505,7 @@ class PenTool implements ITool {
     _currentDragPosition = null;
     _anchorCount = 0;
     _placedAnchors.clear();
+    _lastAnchorHandleOut = null;
   }
 
   /// Starts a new path with the first anchor.
@@ -443,6 +543,7 @@ class PenTool implements ITool {
     _currentPathId = pathId;
     _currentGroupId = groupId;
     _lastAnchorPosition = startAnchor;
+    _lastAnchorHandleOut = null; // First anchor has no handles initially
     _firstAnchorPosition = startAnchor;
     _anchorCount = 1; // First anchor (index 0)
     // First anchor is always a corner point
@@ -468,7 +569,10 @@ class PenTool implements ITool {
 
     final now = DateTime.now().millisecondsSinceEpoch;
 
-    // Emit AddAnchorEvent for straight line
+    // Don't automatically create handles - this should be a straight line anchor
+    // Handles will only be added if the user drags with a modifier key
+
+    // Emit AddAnchorEvent for a corner anchor (no handles)
     _eventRecorder.recordEvent(
       AddAnchorEvent(
         eventId: _uuid.v4(),
@@ -476,15 +580,53 @@ class PenTool implements ITool {
         pathId: _currentPathId!,
         position: anchorPosition,
         anchorType: AnchorType.line,
+        handleIn: null,
+        handleOut: null,
       ),
     );
 
     _lastAnchorPosition = anchorPosition;
     _anchorCount++;
+    // Clear the previous handle out since this is a straight line anchor
+    _lastAnchorHandleOut = null;
     // Straight line anchors are corner points
     _placedAnchors.add(PreviewAnchor(position: anchorPosition, isCorner: true));
 
     _logger.d('Straight line anchor added: position=$anchorPosition');
+  }
+
+  /// Adds an anchor with specific handles to the current path.
+  void _addAnchorWithHandles(Point anchorPosition, Point handleIn, Point handleOut, PointerEvent event) {
+    if (_currentPathId == null) {
+      _logger.e('Cannot add anchor: no active path');
+      return;
+    }
+
+    final now = DateTime.now().millisecondsSinceEpoch;
+
+    // Emit AddAnchorEvent with handles
+    _eventRecorder.recordEvent(
+      AddAnchorEvent(
+        eventId: _uuid.v4(),
+        timestamp: now,
+        pathId: _currentPathId!,
+        position: anchorPosition,
+        anchorType: AnchorType.bezier,
+        handleIn: handleIn,
+        handleOut: handleOut,
+      ),
+    );
+
+    _lastAnchorPosition = anchorPosition;
+    _anchorCount++;
+
+    // Add to preview anchors as smooth point
+    _placedAnchors.add(PreviewAnchor(
+      position: anchorPosition,
+      isCorner: false,
+    ));
+
+    _logger.d('Anchor with handles added: position=$anchorPosition, handleIn=$handleIn, handleOut=$handleOut');
   }
 
   /// Adds a Bezier anchor with handles to the current path.
@@ -549,6 +691,89 @@ class PenTool implements ITool {
       'Bezier anchor added: position=$anchorPosition, '
       'handleOut=$handleOut, handleIn=$handleIn, '
       'isAlt=$isAltPressed',
+    );
+  }
+
+  /// Adds a Bezier anchor with handles in FontForge style.
+  /// The drag creates symmetric handles that define the tangent at this point.
+  void _addBezierAnchorFontForgeStyle({
+    required Point anchorPosition,
+    required Point dragEndPosition,
+    required PointerEvent event,
+  }) {
+    if (_currentPathId == null) {
+      _logger.e('Cannot add FontForge-style anchor: no active path');
+      return;
+    }
+
+    // Apply angle constraint if Shift is pressed
+    Point constrainedDragEnd = dragEndPosition;
+    if (HardwareKeyboard.instance.isShiftPressed) {
+      constrainedDragEnd = _constrainToAngle(anchorPosition, dragEndPosition);
+      _logger.d('Shift pressed - constrained handle angle: $constrainedDragEnd');
+    }
+
+    // Calculate handleOut as relative offset from anchor to constrained drag end
+    final handleOut = Point(
+      x: constrainedDragEnd.x - anchorPosition.x,
+      y: constrainedDragEnd.y - anchorPosition.y,
+    );
+
+    // FontForge-style: Always create symmetric handles (mirrored)
+    // The handleIn is the mirror of handleOut
+    final handleIn = Point(x: -handleOut.x, y: -handleOut.y);
+
+    final now = DateTime.now().millisecondsSinceEpoch;
+
+    // First anchor: just store its handleOut for the next segment
+    if (_anchorCount == 0) {
+      // Start the path
+      _startPath(anchorPosition);
+
+      // For the first anchor, we only need handleOut (for the next segment)
+      // handleIn would be used for a closing segment in a closed path
+      _eventRecorder.recordEvent(
+        AddAnchorEvent(
+          eventId: _uuid.v4(),
+          timestamp: now,
+          pathId: _currentPathId!,
+          position: anchorPosition,
+          anchorType: AnchorType.bezier,
+          handleIn: handleIn,  // Store for potential closing segment
+          handleOut: handleOut,
+        ),
+      );
+
+      _lastAnchorHandleOut = handleOut;
+    } else {
+      // Subsequent anchors: use previous anchor's handleOut and this anchor's handleIn
+      _eventRecorder.recordEvent(
+        AddAnchorEvent(
+          eventId: _uuid.v4(),
+          timestamp: now,
+          pathId: _currentPathId!,
+          position: anchorPosition,
+          anchorType: AnchorType.bezier,
+          handleIn: handleIn,
+          handleOut: handleOut,
+        ),
+      );
+
+      _lastAnchorHandleOut = handleOut;
+    }
+
+    _lastAnchorPosition = anchorPosition;
+    _anchorCount++;
+
+    // FontForge-style anchors are always smooth (not corner)
+    _placedAnchors.add(PreviewAnchor(
+      position: anchorPosition,
+      isCorner: false,
+    ));
+
+    _logger.d(
+      'FontForge-style anchor added: position=$anchorPosition, '
+      'handleOut=$handleOut, handleIn=$handleIn',
     );
   }
 
@@ -706,6 +931,49 @@ class PenTool implements ITool {
 
     final distance = _calculateDistance(worldPos, _lastAnchorPosition!);
     return distance < _doubleClickDistanceThreshold;
+  }
+
+  /// Modifies the last anchor to add Bézier handles.
+  ///
+  /// This is called when the user drags during anchor placement (FontForge-style).
+  /// The anchor was already placed as a corner point on pointer down,
+  /// now we modify it to have symmetric handles based on the drag.
+  void _modifyLastAnchorWithHandles({required Point handleIn, required Point handleOut}) {
+    if (_currentPathId == null || _lastAnchorPosition == null) {
+      _logger.e('Cannot modify anchor: no active path or anchor');
+      return;
+    }
+
+    final now = DateTime.now().millisecondsSinceEpoch;
+
+    // Emit ModifyAnchorEvent to add handles to the last anchor
+    _eventRecorder.recordEvent(
+      ModifyAnchorEvent(
+        eventId: _uuid.v4(),
+        timestamp: now,
+        pathId: _currentPathId!,
+        anchorIndex: _anchorCount - 1, // Last anchor (0-based index)
+        anchorType: AnchorType.bezier, // Convert to Bezier type
+        handleOut: handleOut,
+        handleIn: handleIn,
+      ),
+    );
+
+    // Store the handleOut for the next anchor to use
+    _lastAnchorHandleOut = handleOut;
+
+    // Update the last placed anchor preview to show it's now a smooth point
+    if (_placedAnchors.isNotEmpty) {
+      _placedAnchors[_placedAnchors.length - 1] = PreviewAnchor(
+        position: _lastAnchorPosition!,
+        isCorner: false, // Now it's a smooth point with handles
+      );
+    }
+
+    _logger.d(
+      'Modified last anchor with handles: anchorIndex=${_anchorCount - 1}, '
+      'handleOut=$handleOut, handleIn=$handleIn',
+    );
   }
 
   /// Commits handle adjustment for the last anchor.
