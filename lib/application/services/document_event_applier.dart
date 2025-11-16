@@ -54,6 +54,7 @@ class DocumentEventApplier {
 
   /// Applies a CreatePathEvent by creating a new path with initial anchor.
   void _applyCreatePath(CreatePathEvent event) {
+    debugPrint('[DocumentEventApplier._applyCreatePath] Creating path ${event.pathId}');
     final anchor = models.AnchorPoint(
       position: event.startAnchor,
       anchorType: models.AnchorType.corner,
@@ -70,6 +71,7 @@ class DocumentEventApplier {
       path: path,
     );
 
+    debugPrint('[DocumentEventApplier._applyCreatePath] Adding path object to layer');
     _addObjectToFirstLayer(pathObject);
   }
 
@@ -323,9 +325,13 @@ class DocumentEventApplier {
 
   /// Helper to update a path by ID.
   void _updatePath(String pathId, domain.Path Function(domain.Path) update) {
+    debugPrint('[DocumentEventApplier._updatePath] Updating path $pathId');
     final document = _documentProvider.document;
     final artboard = document.artboards.isNotEmpty ? document.artboards.first : null;
-    if (artboard == null) return;
+    if (artboard == null) {
+      debugPrint('[DocumentEventApplier._updatePath] No artboard found!');
+      return;
+    }
 
     final layers = artboard.layers;
 
@@ -339,10 +345,13 @@ class DocumentEventApplier {
       );
 
       if (objIndex != -1) {
+        debugPrint('[DocumentEventApplier._updatePath] Found path in layer $i at index $objIndex');
         final pathObj = layer.objects[objIndex];
         pathObj.when(
           path: (id, path, transform) {
+            debugPrint('[DocumentEventApplier._updatePath] Current path has ${path.anchors.length} anchors');
             final updatedPath = update(path);
+            debugPrint('[DocumentEventApplier._updatePath] Updated path has ${updatedPath.anchors.length} anchors');
             final updatedPathObj = VectorObject.path(
               id: id,
               path: updatedPath,
@@ -359,24 +368,33 @@ class DocumentEventApplier {
             final updatedArtboards = [...document.artboards];
             updatedArtboards[0] = updatedArtboard;
             _documentProvider.updateDocument(document.copyWith(artboards: updatedArtboards));
+            debugPrint('[DocumentEventApplier._updatePath] Path updated successfully');
           },
-          shape: (_, __, ___) {},
+          shape: (_, __, ___) {
+            debugPrint('[DocumentEventApplier._updatePath] ERROR: Found shape instead of path!');
+          },
         );
         return;
       }
     }
+    debugPrint('[DocumentEventApplier._updatePath] Path $pathId not found in any layer!');
   }
 
   /// Helper to add an object to the first layer.
   void _addObjectToFirstLayer(VectorObject obj) {
+    debugPrint('[DocumentEventApplier._addObjectToFirstLayer] Adding object to layer');
     final document = _documentProvider.document;
     final artboard = document.artboards.isNotEmpty ? document.artboards.first : null;
-    if (artboard == null) return;
+    if (artboard == null) {
+      debugPrint('[DocumentEventApplier._addObjectToFirstLayer] No artboard found!');
+      return;
+    }
 
     final layers = artboard.layers;
     final updatedLayers = <Layer>[];
 
     if (layers.isEmpty) {
+      debugPrint('[DocumentEventApplier._addObjectToFirstLayer] Creating default layer');
       final defaultLayer = Layer(
         id: 'layer-default',
         name: 'Layer 1',
@@ -384,6 +402,7 @@ class DocumentEventApplier {
       );
       updatedLayers.add(defaultLayer);
     } else {
+      debugPrint('[DocumentEventApplier._addObjectToFirstLayer] Adding to existing layer');
       final firstLayer = layers.first;
       final updatedLayer = firstLayer.copyWith(
         objects: [...firstLayer.objects, obj],
@@ -394,10 +413,12 @@ class DocumentEventApplier {
       ]);
     }
 
+    debugPrint('[DocumentEventApplier._addObjectToFirstLayer] Updating document');
     final updatedArtboard = artboard.copyWith(layers: updatedLayers);
     final updatedArtboards = [...document.artboards];
     updatedArtboards[0] = updatedArtboard;
     _documentProvider.updateDocument(document.copyWith(artboards: updatedArtboards));
+    debugPrint('[DocumentEventApplier._addObjectToFirstLayer] Document updated!');
   }
 
   /// Applies a SelectObjectsEvent by updating the selection state.

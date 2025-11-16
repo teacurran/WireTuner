@@ -1,4 +1,4 @@
-import 'dart:typed_data';
+import 'dart:typed_data' show Float64List;
 import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
@@ -83,6 +83,7 @@ class SelectionOverlayPainter extends CustomPainter {
   SelectionOverlayPainter({
     required this.selection,
     required this.paths,
+    this.pathTransforms = const {},
     required this.shapes,
     this.shapeTransforms = const {},
     required this.viewportController,
@@ -95,6 +96,9 @@ class SelectionOverlayPainter extends CustomPainter {
 
   /// Map of path objects by ID.
   final Map<String, domain.Path> paths;
+
+  /// Map of path transforms by ID.
+  final Map<String, domain_transform.Transform> pathTransforms;
 
   /// Map of shape objects by ID.
   final Map<String, Shape> shapes;
@@ -147,50 +151,14 @@ class SelectionOverlayPainter extends CustomPainter {
       return;
     }
 
-    // Draw bounding box
-    _drawBoundingBox(canvas, path.bounds());
+    // Get transform if it exists
+    final transform = pathTransforms[objectId];
 
-    // Draw anchor points and handles
-    final selectedAnchors = selection.getSelectedAnchors(objectId);
-    final hasSelectedAnchors = selectedAnchors.isNotEmpty;
-
-    for (int i = 0; i < path.anchors.length; i++) {
-      final anchor = path.anchors[i];
-      // If specific anchors are selected, only those are "selected"
-      // If no specific anchors are selected (object is selected), all anchors should be shown
-      final isAnchorSelected = hasSelectedAnchors ? selectedAnchors.contains(i) : true;
-      final isHovered = hoveredAnchor?.objectId == objectId &&
-          hoveredAnchor?.anchorIndex == i;
-
-      _drawAnchor(
-        canvas,
-        anchor,
-        isSelected: isAnchorSelected,
-        isHovered: isHovered,
-        component: hoveredAnchor?.component,
-      );
-    }
-  }
-
-  /// Paints selection decorations for a shape object.
-  void _paintShapeSelection(Canvas canvas, String objectId, Shape shape) {
-    // Convert shape to path for bounds and anchor rendering
-    final path = shape.toPath();
-
-    if (path.anchors.isEmpty) {
-      return;
-    }
-
-    // Get the shape's transform if it exists
-    final transform = shapeTransforms[objectId];
-
-    // Save canvas state if we need to apply transform
+    // Apply transform if present
     if (transform != null) {
       canvas.save();
-      // Apply the shape-specific transform
-      final matrix = transform.matrix;
-      // Convert Float32List to Float64List
-      final storage64 = Float64List.fromList(matrix.storage);
+      // Convert Float32List to Float64List for canvas.transform
+      final storage64 = Float64List.fromList(transform.matrix.storage);
       canvas.transform(storage64);
     }
 
@@ -205,7 +173,8 @@ class SelectionOverlayPainter extends CustomPainter {
       final anchor = path.anchors[i];
       // If specific anchors are selected, only those are "selected"
       // If no specific anchors are selected (object is selected), all anchors should be shown
-      final isAnchorSelected = hasSelectedAnchors ? selectedAnchors.contains(i) : true;
+      final isAnchorSelected =
+          hasSelectedAnchors ? selectedAnchors.contains(i) : true;
       final isHovered = hoveredAnchor?.objectId == objectId &&
           hoveredAnchor?.anchorIndex == i;
 
@@ -218,9 +187,45 @@ class SelectionOverlayPainter extends CustomPainter {
       );
     }
 
-    // Restore canvas state if transform was applied
+    // Restore canvas if transform was applied
     if (transform != null) {
       canvas.restore();
+    }
+  }
+
+  /// Paints selection decorations for a shape object.
+  void _paintShapeSelection(Canvas canvas, String objectId, Shape shape) {
+    // Convert shape to path for bounds and anchor rendering
+    final path = shape.toPath();
+
+    if (path.anchors.isEmpty) {
+      return;
+    }
+
+    // For now, just draw the bounding box without transform handling
+    // since we're moving away from shapes to pure paths
+    _drawBoundingBox(canvas, path.bounds());
+
+    // Draw anchor points and handles
+    final selectedAnchors = selection.getSelectedAnchors(objectId);
+    final hasSelectedAnchors = selectedAnchors.isNotEmpty;
+
+    for (int i = 0; i < path.anchors.length; i++) {
+      final anchor = path.anchors[i];
+      // If specific anchors are selected, only those are "selected"
+      // If no specific anchors are selected (object is selected), all anchors should be shown
+      final isAnchorSelected =
+          hasSelectedAnchors ? selectedAnchors.contains(i) : true;
+      final isHovered = hoveredAnchor?.objectId == objectId &&
+          hoveredAnchor?.anchorIndex == i;
+
+      _drawAnchor(
+        canvas,
+        anchor,
+        isSelected: isAnchorSelected,
+        isHovered: isHovered,
+        component: hoveredAnchor?.component,
+      );
     }
   }
 
@@ -237,7 +242,15 @@ class SelectionOverlayPainter extends CustomPainter {
       final shape = shapes[objectId];
 
       if (path != null && path.anchors.isNotEmpty) {
-        selectedBounds.add(path.bounds());
+        // Apply transform to path bounds if present
+        final transform = pathTransforms[objectId];
+        if (transform != null) {
+          final originalBounds = path.bounds();
+          final transformedBounds = transform.transformRectangle(originalBounds);
+          selectedBounds.add(transformedBounds);
+        } else {
+          selectedBounds.add(path.bounds());
+        }
       } else if (shape != null) {
         final shapePath = shape.toPath();
 
@@ -246,7 +259,8 @@ class SelectionOverlayPainter extends CustomPainter {
         if (transform != null && shapePath.anchors.isNotEmpty) {
           // Transform the shape's bounding rectangle
           final originalBounds = shapePath.bounds();
-          final transformedBounds = transform.transformRectangle(originalBounds);
+          final transformedBounds =
+              transform.transformRectangle(originalBounds);
           selectedBounds.add(transformedBounds);
         } else if (shapePath.anchors.isNotEmpty) {
           selectedBounds.add(shapePath.bounds());
@@ -534,8 +548,14 @@ class SelectionOverlayPainter extends CustomPainter {
     // Repaint if paths changed
     if (paths != oldDelegate.paths) return true;
 
+    // Repaint if path transforms changed
+    if (pathTransforms != oldDelegate.pathTransforms) return true;
+
     // Repaint if shapes changed
     if (shapes != oldDelegate.shapes) return true;
+
+    // Repaint if shape transforms changed
+    if (shapeTransforms != oldDelegate.shapeTransforms) return true;
 
     // Repaint if hover state changed
     if (hoveredAnchor != oldDelegate.hoveredAnchor) return true;

@@ -109,12 +109,12 @@ class ThumbnailGenerator {
 
     try {
       // Extract all paths from all layers in all artboards
-      final allPaths = <domain.Path>[];
+      final allPaths = <String, domain.Path>{};
       for (final artboard in document.artboards) {
         for (final layer in artboard.layers) {
           for (final obj in layer.objects) {
             obj.when(
-              path: (id, path, _) => allPaths.add(path),
+              path: (id, path, _) => allPaths[id] = path,
               shape: (id, shape, _) {
                 // Skip shapes for now or convert to path if needed
               },

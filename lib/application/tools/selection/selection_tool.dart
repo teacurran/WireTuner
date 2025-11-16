@@ -161,9 +161,11 @@ class SelectionTool implements ITool {
     final hitObjects = _document.objectsAtPoint(worldPos, artboardId);
     final artboard = _activeArtboard;
 
+    _logger.d('Hit test at $worldPos found ${hitObjects.length} objects');
     if (hitObjects.isNotEmpty && artboard != null) {
       // Clicked on an object
       final clickedObjectId = hitObjects.first.id;
+      _logger.d('Clicked on object: $clickedObjectId');
       final isAlreadySelected = artboard.selection.contains(clickedObjectId);
 
       // Track whether we should start a drag
@@ -197,7 +199,10 @@ class SelectionTool implements ITool {
             isAlreadySelected && !isShiftPressed && !isCmdPressed
                 ? artboard.selection.objectIds.toList()
                 : [clickedObjectId];
+        _logger.d('Starting drag for objects: $dragObjectIds');
         _startDrag(event.localPosition, worldPos, dragObjectIds);
+      } else {
+        _logger.d('Not starting drag (shouldStartDrag=$shouldStartDrag)');
       }
 
       return true;

@@ -76,8 +76,10 @@ class EventSampler {
   /// - Events < [samplingInterval] apart: buffered (last one kept)
   /// - Sampling disabled ([samplingInterval] = 0): all events emitted
   void recordEvent(EventBase event) {
+    print('[EventSampler] recordEvent called for: ${event.eventType}');
     // If sampling is disabled (zero interval), emit immediately
     if (_samplingInterval == Duration.zero) {
+      print('[EventSampler] Sampling disabled, emitting immediately');
       _emitEvent(event);
       return;
     }
@@ -89,9 +91,11 @@ class EventSampler {
 
     if (shouldEmit) {
       // Emit immediately and update timestamp
+      print('[EventSampler] Time elapsed, emitting immediately');
       _emitEvent(event);
     } else {
       // Buffer event (replaces any previously buffered event)
+      print('[EventSampler] Buffering event (replacing previous): ${event.eventType}');
       _bufferedEvent = event;
     }
   }

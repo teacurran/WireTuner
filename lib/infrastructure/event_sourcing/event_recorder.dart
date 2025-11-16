@@ -237,6 +237,7 @@ class EventRecorder with ChangeNotifier {
   /// - Multiple events may be persisting concurrently
   /// - EventStore handles sequence numbering correctly via database transactions
   void _persistEvent(EventBase event) async {
+    _logger.d('_persistEvent called for event: ${event.eventType}');
     // Check backpressure before persistence
     _checkBackpressure();
 

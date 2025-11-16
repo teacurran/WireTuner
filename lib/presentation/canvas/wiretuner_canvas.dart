@@ -61,7 +61,7 @@ import 'package:wiretuner/presentation/canvas/viewport/viewport_state.dart';
 ///
 /// ```dart
 /// WireTunerCanvas(
-///   paths: document.paths,
+///   paths: document.getPathsMap(), // Map<String, Path>
 ///   shapes: document.shapes,
 ///   selection: document.selection,
 ///   viewportController: viewportController,
@@ -84,7 +84,7 @@ class WireTunerCanvas extends StatefulWidget {
   /// All parameters are required except [telemetryService], [hoveredAnchor],
   /// [toolManager], and [enableRenderPipeline].
   ///
-  /// The [paths] list contains document path objects to render.
+  /// The [paths] map contains document path objects to render, keyed by ID.
   /// The [shapes] map contains shape objects by ID.
   /// The [shapeTransforms] map contains optional transforms for shapes by ID.
   /// The [selection] defines which objects/anchors are currently selected.
@@ -100,6 +100,7 @@ class WireTunerCanvas extends StatefulWidget {
     required this.paths,
     required this.shapes,
     this.shapeTransforms = const {},
+    this.pathTransforms = const {},
     required this.selection,
     required this.viewportController,
     this.telemetryService,
@@ -109,14 +110,17 @@ class WireTunerCanvas extends StatefulWidget {
     super.key,
   });
 
-  /// List of paths to render in the document.
-  final List<domain.Path> paths;
+  /// Map of paths to render in the document, keyed by their IDs.
+  final Map<String, domain.Path> paths;
 
   /// Map of shape objects by ID.
   final Map<String, Shape> shapes;
 
   /// Map of shape transforms by ID.
   final Map<String, domain_transform.Transform> shapeTransforms;
+
+  /// Map of path transforms by ID.
+  final Map<String, domain_transform.Transform> pathTransforms;
 
   /// Current selection state.
   final Selection selection;
@@ -228,16 +232,8 @@ class _WireTunerCanvasState extends State<WireTunerCanvas> {
       }
     }
 
-    // Convert paths list to map for selection overlay painter
-    final pathsMap = <String, domain.Path>{};
-    for (var i = 0; i < widget.paths.length; i++) {
-      // Generate temporary IDs for mock data
-      // In production, paths should have persistent IDs
-      pathsMap['path-$i'] = widget.paths[i];
-    }
-
     // Register overlays in the registry with deterministic z-index
-    _registerOverlays(pathsMap);
+    _registerOverlays(widget.paths);
 
     final canvasWidget = RepaintBoundary(
       child: Listener(
@@ -249,6 +245,7 @@ class _WireTunerCanvasState extends State<WireTunerCanvas> {
             CustomPaint(
               painter: DocumentPainter(
                 paths: widget.paths,
+                pathTransforms: widget.pathTransforms,
                 shapes: widget.shapes,
                 shapeTransforms: widget.shapeTransforms,
                 viewportController: widget.viewportController,
@@ -289,6 +286,7 @@ class _WireTunerCanvasState extends State<WireTunerCanvas> {
           painter: SelectionOverlayPainter(
             selection: widget.selection,
             paths: pathsMap,
+            pathTransforms: widget.pathTransforms,
             shapes: widget.shapes,
             shapeTransforms: widget.shapeTransforms,
             viewportController: widget.viewportController,

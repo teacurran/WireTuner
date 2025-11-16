@@ -57,7 +57,8 @@ import 'package:wiretuner/presentation/canvas/viewport/viewport_controller.dart'
 class DocumentPainter extends CustomPainter {
   /// Creates a document painter with the specified paths and viewport.
   ///
-  /// The [paths] list should contain the paths to render.
+  /// The [paths] map should contain the paths to render.
+  /// The [pathTransforms] map contains optional transforms for paths.
   /// The [shapes] map should contain shape objects by ID.
   /// The [viewportController] provides the pan/zoom transformation state.
   /// The [strokeWidth] and [strokeColor] are placeholder style properties.
@@ -65,6 +66,7 @@ class DocumentPainter extends CustomPainter {
   /// provided, the painter uses the legacy direct rendering approach.
   DocumentPainter({
     required this.paths,
+    this.pathTransforms = const {},
     required this.shapes,
     this.shapeTransforms = const {},
     required this.viewportController,
@@ -73,11 +75,14 @@ class DocumentPainter extends CustomPainter {
     this.renderPipeline,
   }) : super(repaint: viewportController);
 
-  /// The list of paths to render.
+  /// The map of paths to render by ID.
   ///
   /// These are domain [Path] objects that will be converted to
   /// dart:ui paths for rendering.
-  final List<domain.Path> paths;
+  final Map<String, domain.Path> paths;
+
+  /// The map of path transforms by ID.
+  final Map<String, domain_transform.Transform> pathTransforms;
 
   /// The map of shapes to render by ID.
   final Map<String, Shape> shapes;
@@ -136,11 +141,14 @@ class DocumentPainter extends CustomPainter {
     );
 
     final renderablePaths = <RenderablePath>[];
-    for (var i = 0; i < paths.length; i++) {
+    for (final entry in paths.entries) {
+      final pathId = entry.key;
+      final path = entry.value;
+
       renderablePaths.add(
         RenderablePath(
-          id: 'path-$i',
-          path: paths[i],
+          id: pathId,
+          path: path,
           style: defaultStyle,
         ),
       );
@@ -181,9 +189,22 @@ class DocumentPainter extends CustomPainter {
       ..style = PaintingStyle.fill;
 
     // Render each path (stroke only)
-    for (final domainPath in paths) {
+    for (final entry in paths.entries) {
+      final pathId = entry.key;
+      final domainPath = entry.value;
+      final transform = pathTransforms[pathId];
+
       final uiPath = _convertDomainPathToUiPath(domainPath);
-      canvas.drawPath(uiPath, strokePaint);
+
+      if (transform != null) {
+        // Apply transform to the path
+        final matrix = transform.matrix;
+        final storage64 = Float64List.fromList(matrix.storage);
+        final transformedPath = uiPath.transform(storage64);
+        canvas.drawPath(transformedPath, strokePaint);
+      } else {
+        canvas.drawPath(uiPath, strokePaint);
+      }
     }
 
     // Render each shape (fill + stroke)

@@ -158,9 +158,10 @@ class _CanvasAdapter extends StatelessWidget {
     final toolManager = context.watch<ToolManager>();
 
     // Extract paths and shapes from all layers
-    final paths = <domain.Path>[];
+    final paths = <String, domain.Path>{};
     final shapes = <String, Shape>{};
     final shapeTransforms = <String, domain_transform.Transform>{};
+    final pathTransforms = <String, domain_transform.Transform>{};
 
     // Get the first artboard (or use a default empty state if none exists)
     final artboard = document.artboards.isNotEmpty ? document.artboards.first : null;
@@ -172,9 +173,11 @@ class _CanvasAdapter extends StatelessWidget {
         for (final obj in layer.objects) {
           obj.when(
             path: (id, path, transform) {
-              debugPrint('[_CanvasAdapter] Adding path: $id');
-              paths.add(path);
-              // TODO: Handle path transforms
+              debugPrint('[_CanvasAdapter] Adding path: $id, transform: $transform');
+              paths[id] = path;
+              if (transform != null) {
+                pathTransforms[id] = transform;
+              }
             },
             shape: (id, shape, transform) {
               debugPrint('[_CanvasAdapter] Adding shape: $id (${shape.kind}), transform: $transform');
@@ -188,12 +191,13 @@ class _CanvasAdapter extends StatelessWidget {
       }
     }
 
-    debugPrint('[_CanvasAdapter] Passing to canvas: ${paths.length} paths, ${shapes.length} shapes, ${shapeTransforms.length} transforms');
+    debugPrint('[_CanvasAdapter] Passing to canvas: ${paths.length} paths, ${shapes.length} shapes, ${shapeTransforms.length} shape transforms, ${pathTransforms.length} path transforms');
 
     return WireTunerCanvas(
       paths: paths,
       shapes: shapes,
       shapeTransforms: shapeTransforms,
+      pathTransforms: pathTransforms,
       selection: artboard?.selection ?? const Selection(),
       viewportController: viewportController,
       toolManager: toolManager,

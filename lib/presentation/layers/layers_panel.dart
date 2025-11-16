@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:wiretuner/application/tools/framework/tool_manager.dart';
 import 'package:wiretuner/domain/document/document.dart';
 import 'package:wiretuner/domain/document/selection.dart';
 import 'package:wiretuner/domain/events/selection_events.dart';
@@ -149,6 +150,19 @@ class _LayersPanelState extends State<LayersPanel> {
     documentProvider.updateSelection(
       Selection(objectIds: {objectId}),
     );
+
+    // Activate selection tool if not already active
+    // This ensures drag and drop will work
+    try {
+      final toolManager = context.read<ToolManager>();
+      if (toolManager.activeToolId != 'selection') {
+        toolManager.activateTool('selection');
+        debugPrint('[LayersPanel] Activated selection tool for drag support');
+      }
+    } catch (e) {
+      // ToolManager might not be available in all contexts
+      debugPrint('[LayersPanel] Could not activate selection tool: $e');
+    }
   }
 }
 

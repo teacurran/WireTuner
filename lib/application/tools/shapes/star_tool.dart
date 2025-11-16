@@ -1,25 +1,23 @@
-import 'dart:math' show cos, max, min, pi, sin, sqrt;
+import 'dart:math' show cos, max, sin, pi, sqrt;
 import 'dart:ui' as ui;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:logger/logger.dart';
+import 'package:uuid/uuid.dart';
 import 'package:wiretuner/application/tools/shapes/shape_base.dart';
 import 'package:wiretuner/domain/events/event_base.dart';
-import 'package:wiretuner/domain/models/shape.dart' as shape_model;
+import 'package:wiretuner/domain/events/path_events.dart';
+import 'package:wiretuner/domain/events/selection_events.dart';
+import 'package:wiretuner/domain/events/group_events.dart';
+import 'package:wiretuner/infrastructure/event_sourcing/event_recorder.dart';
+import 'package:wiretuner/domain/document/document.dart';
+import 'package:wiretuner/presentation/canvas/viewport/viewport_controller.dart';
 
-/// Tool for creating star shapes.
+/// Tool for creating star-shaped paths.
 ///
-/// Creates stars through drag interaction:
-/// - Default: Corner-to-corner drag defines bounding box, converted to center + outer radius
-/// - Option/Alt: Draw from center (drag distance = outer radius)
-/// - Shift: No effect (stars are inherently symmetric)
-///
-/// ## Star Parameters
-///
-/// - **Point Count**: Number of star points (default: 5, minimum: 3)
-/// - **Outer Radius**: Distance from center to outer points
-/// - **Inner Radius**: Distance from center to inner points (default: 0.5 × outer radius)
-/// - **Rotation**: Angle in radians (default: 0, pointing straight up)
+/// Creates stars through drag interaction, generating a path with anchor points
+/// that is indistinguishable from a star created manually with the pen tool.
 ///
 /// ## Usage
 ///
@@ -33,33 +31,30 @@ import 'package:wiretuner/domain/models/shape.dart' as shape_model;
 /// toolManager.registerTool(starTool);
 /// toolManager.activateTool('star');
 /// ```
-///
-/// Related: T028 (Star Tool), I4.T2
 class StarTool extends ShapeToolBase {
   /// Creates a new StarTool instance.
-  ///
-  /// Requires [document] for shape storage, [viewportController] for coordinate
-  /// conversion, and [eventRecorder] for event sourcing.
   StarTool({
-    required super.document,
-    required super.viewportController,
-    required super.eventRecorder,
-  });
+    required Document document,
+    required this.viewportController,
+    required EventRecorder eventRecorder,
+  }) : _eventRecorder = eventRecorder,
+       super(
+         document: document,
+         viewportController: viewportController,
+         eventRecorder: eventRecorder,
+       );
+
   final Logger _logger = Logger();
+  final _uuid = const Uuid();
+  final EventRecorder _eventRecorder;
 
   /// Number of points for the star (minimum 3, maximum 20).
-  ///
-  /// Can be configured via [setPointCount] method.
-  /// Default: 5 (classic 5-point star).
   static const int _defaultPointCount = 5;
   int _pointCount = _defaultPointCount;
 
   /// Inner radius as a ratio of outer radius (0.0 to 1.0).
-  ///
-  /// Future enhancement: Make this adjustable via property panel.
-  /// Using 0.38 for a more pronounced star shape that works at all sizes.
   static const double _defaultInnerRadiusRatio = 0.38;
-  final double _innerRadiusRatio = _defaultInnerRadiusRatio;
+  double _innerRadiusRatio = _defaultInnerRadiusRatio;
 
   @override
   String get toolId => 'star';
@@ -74,36 +69,33 @@ class StarTool extends ShapeToolBase {
     bool isShiftPressed,
     bool isAltPressed,
   ) {
-    // The star should fit exactly in the bounding box
-    // We'll create a star with radius 1 and then scale it to fit
-    final center = Point(
-      x: boundingBox.center.dx,
-      y: boundingBox.center.dy,
+    final center = Offset(
+      boundingBox.center.dx,
+      boundingBox.center.dy,
     );
 
-    // Calculate scaling factors for width and height
-    final scaleX = boundingBox.width / 2;
-    final scaleY = boundingBox.height / 2;
+    // Calculate the actual radii based on bounding box
+    final outerRadiusX = boundingBox.width / 2;
+    final outerRadiusY = boundingBox.height / 2;
+    final innerRadiusX = outerRadiusX * _innerRadiusRatio;
+    final innerRadiusY = outerRadiusY * _innerRadiusRatio;
 
-    // Create star points scaled to fit the bounding box exactly
-    final outerRadius = 1.0; // Unit circle
-    final innerRadius = outerRadius * _innerRadiusRatio;
-
-    // Create the star path manually with proper scaling
+    // Create the star path
     final flutterPath = ui.Path();
 
     // Generate star points
     final totalPoints = _pointCount * 2; // Alternating outer and inner points
     for (int i = 0; i < totalPoints; i++) {
       final isOuter = i % 2 == 0;
-      final r = isOuter ? outerRadius : innerRadius;
+      final radiusX = isOuter ? outerRadiusX : innerRadiusX;
+      final radiusY = isOuter ? outerRadiusY : innerRadiusY;
 
       // Calculate angle (start from top, go clockwise)
       final angle = -pi / 2 + (2 * pi * i / totalPoints);
 
-      // Calculate point position with non-uniform scaling
-      final x = center.x + r * cos(angle) * scaleX;
-      final y = center.y + r * sin(angle) * scaleY;
+      // Calculate point position
+      final x = center.dx + radiusX * cos(angle);
+      final y = center.dy + radiusY * sin(angle);
 
       if (i == 0) {
         flutterPath.moveTo(x, y);
@@ -126,55 +118,160 @@ class StarTool extends ShapeToolBase {
       ..style = PaintingStyle.stroke
       ..strokeWidth = 1.0;
     canvas.drawPath(flutterPath, strokePaint);
+  }
 
-    // Optional: Draw center point for visual feedback
-    final centerPaint = Paint()
-      ..color = Colors.blue.withValues(alpha: 0.5)
-      ..style = PaintingStyle.fill;
-    canvas.drawCircle(
-      Offset(center.x, center.y),
-      3.0,
-      centerPaint,
+  /// Override the shape creation to generate path events instead
+  @override
+  bool onPointerUp(PointerUpEvent event) {
+    if (_state != ShapeState.dragging || _dragStartPos == null) {
+      debugPrint('[StarTool.onPointerUp] Ignoring - not dragging or no start pos');
+      return false;
+    }
+
+    final worldPos = viewportController.screenToWorld(
+      event.localPosition,
+    );
+    _currentDragPos = worldPos;
+
+    // Check minimum drag distance
+    final dragDistance = _calculateDistance(_dragStartPos!, _currentDragPos!);
+    if (dragDistance < _minDragDistance) {
+      _logger.d('Drag distance ($dragDistance) below threshold - ignoring');
+      _resetState();
+      return false;
+    }
+
+    // Calculate bounding box with modifier key support
+    final isShiftPressed = HardwareKeyboard.instance.isShiftPressed;
+    final isAltPressed = HardwareKeyboard.instance.isAltPressed;
+    final boundingBox = _calculateBoundingBox(
+      _dragStartPos!,
+      _currentDragPos!,
+      isShiftPressed,
+      isAltPressed,
     );
 
-    // Optional: Draw constraint labels for visual feedback
-    if (isAltPressed) {
-      _drawConstraintLabels(canvas, boundingBox, isAltPressed);
+    // Create the star as a path
+    _createStarPath(boundingBox);
+    _resetState();
+    return true;
+  }
+
+  /// Creates a star as a path with individual anchors
+  void _createStarPath(Rect boundingBox) {
+    final pathId = 'path_${_uuid.v4()}';
+    final groupId = 'group_${_uuid.v4()}';
+    final now = DateTime.now().millisecondsSinceEpoch;
+
+    // Calculate center and radii in world space
+    final centerX = boundingBox.center.dx;
+    final centerY = boundingBox.center.dy;
+    final outerRadiusX = boundingBox.width / 2;
+    final outerRadiusY = boundingBox.height / 2;
+    final innerRadiusX = outerRadiusX * _innerRadiusRatio;
+    final innerRadiusY = outerRadiusY * _innerRadiusRatio;
+
+    // Generate star points
+    final totalPoints = _pointCount * 2;
+    final anchors = <Point>[];
+
+    for (int i = 0; i < totalPoints; i++) {
+      final isOuter = i % 2 == 0;
+      final radiusX = isOuter ? outerRadiusX : innerRadiusX;
+      final radiusY = isOuter ? outerRadiusY : innerRadiusY;
+
+      // Calculate angle (start from top, go clockwise)
+      final angle = -pi / 2 + (2 * pi * i / totalPoints);
+
+      // Calculate point position in world space
+      final x = centerX + radiusX * cos(angle);
+      final y = centerY + radiusY * sin(angle);
+
+      anchors.add(Point(x: x, y: y));
     }
+
+    // Start group for the star creation
+    _eventRecorder.recordEvent(
+      StartGroupEvent(
+        eventId: _uuid.v4(),
+        timestamp: now,
+        groupId: groupId,
+        description: 'Create star',
+      ),
+    );
+
+    // Create the path with the first anchor
+    _eventRecorder.recordEvent(
+      CreatePathEvent(
+        eventId: _uuid.v4(),
+        timestamp: now,
+        pathId: pathId,
+        startAnchor: anchors[0],
+        strokeColor: '#000000',
+        strokeWidth: 1.0,  // Thinner stroke
+      ),
+    );
+
+    // Add remaining anchors
+    for (int i = 1; i < anchors.length; i++) {
+      _eventRecorder.recordEvent(
+        AddAnchorEvent(
+          eventId: _uuid.v4(),
+          timestamp: now,
+          pathId: pathId,
+          position: anchors[i],
+          anchorType: AnchorType.line, // Star points are straight lines
+        ),
+      );
+    }
+
+    // Close the path by connecting back to the first point
+    _eventRecorder.recordEvent(
+      FinishPathEvent(
+        eventId: _uuid.v4(),
+        timestamp: now,
+        pathId: pathId,
+        closed: true,
+      ),
+    );
+
+    // End the group
+    _eventRecorder.recordEvent(
+      EndGroupEvent(
+        eventId: _uuid.v4(),
+        timestamp: now,
+        groupId: groupId,
+      ),
+    );
+
+    // Auto-select the newly created path
+    _eventRecorder.recordEvent(
+      SelectObjectsEvent(
+        eventId: _uuid.v4(),
+        timestamp: now,
+        objectIds: [pathId],
+        mode: SelectionMode.replace,
+      ),
+    );
+
+    // Flush events to ensure they're processed immediately
+    _eventRecorder.flush();
+
+    _logger.i(
+      'Star path created: pathId=$pathId with ${anchors.length} anchors',
+    );
   }
 
   @override
   Map<String, double> createShapeParameters(Rect boundingBox) {
-    // Inner radius is typically 38% of outer radius for classic star appearance
-    final unitInnerRadius = 0.38;
-
-    // Store the actual bounding box parameters
-    // We'll create the shape at origin and use transform to position and scale it
-    return {
-      'centerX': 0.0, // Shape at origin
-      'centerY': 0.0,
-      'outerRadius': 1.0, // Unit radius, will be scaled by transform
-      'innerRadius': unitInnerRadius,
-      'points': max(_pointCount, 3).toDouble(), // Must be 'points' not 'sides'
-      'rotation': 0.0,
-      // Store bounding box for transform calculation
-      'boundingLeft': boundingBox.left,
-      'boundingTop': boundingBox.top,
-      'boundingWidth': boundingBox.width,
-      'boundingHeight': boundingBox.height,
-    };
+    // Not used anymore since we're creating paths directly
+    return {};
   }
 
   @override
   ShapeType getShapeType() => ShapeType.star;
 
   /// Sets the number of points for the star.
-  ///
-  /// The point count must be between 3 and 20 (inclusive).
-  /// Values outside this range will be clamped.
-  ///
-  /// This method allows configuring the star before dragging.
-  /// In the future, this will be integrated with the property panel UI.
   void setPointCount(int count) {
     _pointCount = count.clamp(3, 20);
   }
@@ -182,73 +279,106 @@ class StarTool extends ShapeToolBase {
   /// Gets the current number of points.
   int get pointCount => _pointCount;
 
-  /// Draws constraint labels to provide visual feedback during drag.
-  void _drawConstraintLabels(
-    ui.Canvas canvas,
-    Rect boundingBox,
-    bool isAltPressed,
-  ) {
-    final labels = <String>[];
-    if (isAltPressed) labels.add('From Center');
-    labels.add('$_pointCount points');
+  // Helper fields and methods since we can't access private members from base
 
-    if (labels.isEmpty) return;
+  ShapeState _state = ShapeState.idle;
+  Point? _dragStartPos;
+  Point? _currentDragPos;
+  static const double _minDragDistance = 5.0;
+  final ViewportController viewportController;
 
-    final labelText = labels.join(' • ');
-    final textSpan = TextSpan(
-      text: labelText,
-      style: const TextStyle(
-        color: Colors.blue,
-        fontSize: 12,
-        fontWeight: FontWeight.bold,
-      ),
+  @override
+  bool onPointerDown(PointerDownEvent event) {
+    final worldPos = viewportController.screenToWorld(
+      event.localPosition,
     );
-
-    final textPainter = TextPainter(
-      text: textSpan,
-      textDirection: TextDirection.ltr,
-    )..layout();
-
-    // Draw label above the star
-    final labelOffset = Offset(
-      boundingBox.center.dx - textPainter.width / 2,
-      boundingBox.top - 20,
-    );
-
-    // Draw background
-    final backgroundRect = Rect.fromLTWH(
-      labelOffset.dx - 4,
-      labelOffset.dy - 2,
-      textPainter.width + 8,
-      textPainter.height + 4,
-    );
-    final backgroundPaint = Paint()
-      ..color = Colors.white.withValues(alpha: 0.9)
-      ..style = PaintingStyle.fill;
-    canvas.drawRect(backgroundRect, backgroundPaint);
-
-    // Draw text
-    textPainter.paint(canvas, labelOffset);
+    _dragStartPos = worldPos;
+    _state = ShapeState.dragging;
+    debugPrint('[StarTool] Started drag at $worldPos');
+    return true;
   }
 
-  /// Calculates dynamic inner radius ratio based on star size.
-  ///
-  /// Smaller stars need smaller inner radius for sharper points,
-  /// while larger stars can have larger inner radius for better proportions.
-  double _calculateDynamicInnerRadiusRatio(double outerRadius) {
-    // For very small stars (< 20px), use smaller ratio for sharper points
-    if (outerRadius < 20) {
-      return 0.3;
+  @override
+  bool onPointerMove(PointerMoveEvent event) {
+    if (_state != ShapeState.dragging) {
+      return false;
     }
-    // For small to medium stars (20-50px), gradually increase ratio
-    if (outerRadius < 50) {
-      return 0.3 + (outerRadius - 20) * 0.01; // 0.3 to 0.6
+
+    _currentDragPos = viewportController.screenToWorld(
+      event.localPosition,
+    );
+    return true;
+  }
+
+  void _resetState() {
+    _state = ShapeState.idle;
+    _dragStartPos = null;
+    _currentDragPos = null;
+  }
+
+  double _calculateDistance(Point p1, Point p2) {
+    final dx = p2.x - p1.x;
+    final dy = p2.y - p1.y;
+    return sqrt(dx * dx + dy * dy);
+  }
+
+  Rect _calculateBoundingBox(
+    Point start,
+    Point end,
+    bool constrainAspect,
+    bool drawFromCenter,
+  ) {
+    double left, right, top, bottom;
+
+    if (drawFromCenter) {
+      // Alt key: draw from center
+      final deltaX = (end.x - start.x).abs();
+      final deltaY = (end.y - start.y).abs();
+
+      if (constrainAspect) {
+        // Shift + Alt: square from center
+        final radius = max(deltaX, deltaY);
+        left = start.x - radius;
+        right = start.x + radius;
+        top = start.y - radius;
+        bottom = start.y + radius;
+      } else {
+        // Alt only: rectangle from center
+        left = start.x - deltaX;
+        right = start.x + deltaX;
+        top = start.y - deltaY;
+        bottom = start.y + deltaY;
+      }
+    } else {
+      // Default: corner to corner
+      left = min(start.x, end.x);
+      right = max(start.x, end.x);
+      top = min(start.y, end.y);
+      bottom = max(start.y, end.y);
+
+      if (constrainAspect) {
+        // Shift only: constrain to square
+        final size = max((right - left), (bottom - top));
+
+        // Adjust based on drag direction
+        if (end.x > start.x) {
+          right = left + size;
+        } else {
+          left = right - size;
+        }
+
+        if (end.y > start.y) {
+          bottom = top + size;
+        } else {
+          top = bottom - size;
+        }
+      }
     }
-    // For medium to large stars (50-100px), use moderate ratio
-    if (outerRadius < 100) {
-      return 0.4 + (outerRadius - 50) * 0.002; // 0.4 to 0.5
-    }
-    // For large stars (>= 100px), use consistent ratio
-    return 0.5;
+
+    return Rect.fromLTRB(left, top, right, bottom);
   }
 }
+
+// Helper function to get min/max
+T min<T extends num>(T a, T b) => a < b ? a : b;
+T max<T extends num>(T a, T b) => a > b ? a : b;
