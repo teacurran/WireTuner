@@ -11,6 +11,7 @@ import 'package:wiretuner/domain/events/selection_events.dart' as events;
 import 'package:wiretuner/domain/events/object_events.dart';
 import 'package:wiretuner/domain/events/group_events.dart';
 import 'package:wiretuner/presentation/canvas/viewport/viewport_controller.dart';
+import 'package:wiretuner/presentation/state/document_provider.dart';
 import 'marquee_controller.dart';
 import 'object_drag_controller.dart';
 import 'dart:ui' as ui;
@@ -72,11 +73,11 @@ class SelectionTool implements ITool {
   /// [eventRecorder] records user interactions as events.
   /// [snappingService] provides optional grid snapping functionality.
   SelectionTool({
-    required Document document,
+    required DocumentProvider documentProvider,
     required ViewportController viewportController,
     required dynamic eventRecorder,
     SnappingService? snappingService,
-  })  : _document = document,
+  })  : _documentProvider = documentProvider,
         _viewportController = viewportController,
         _eventRecorder = eventRecorder,
         _snappingService = snappingService ??
@@ -85,8 +86,11 @@ class SelectionTool implements ITool {
             ObjectDragController(snappingService: snappingService) {
     _logger.i('SelectionTool initialized');
   }
-  final Document _document;
+  final DocumentProvider _documentProvider;
   final ViewportController _viewportController;
+
+  /// Gets the current document from the provider.
+  Document get _document => _documentProvider.document;
   final dynamic _eventRecorder;
   final Logger _logger = Logger();
   final Uuid _uuid = const Uuid();
@@ -162,6 +166,9 @@ class SelectionTool implements ITool {
     final artboard = _activeArtboard;
 
     _logger.d('Hit test at $worldPos found ${hitObjects.length} objects');
+    if (hitObjects.isNotEmpty) {
+      _logger.d('Hit objects: ${hitObjects.map((o) => o.id).toList()}');
+    }
     if (hitObjects.isNotEmpty && artboard != null) {
       // Clicked on an object
       final clickedObjectId = hitObjects.first.id;

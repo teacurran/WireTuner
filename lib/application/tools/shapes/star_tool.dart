@@ -1,4 +1,4 @@
-import 'dart:math' show cos, max, sin, pi, sqrt;
+import 'dart:math' show cos, max, min, sin, pi, sqrt;
 import 'dart:ui' as ui;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -35,15 +35,17 @@ class StarTool extends ShapeToolBase {
   /// Creates a new StarTool instance.
   StarTool({
     required Document document,
-    required this.viewportController,
+    required ViewportController viewportController,
     required EventRecorder eventRecorder,
-  }) : _eventRecorder = eventRecorder,
+  }) : _viewportController = viewportController,
+       _eventRecorder = eventRecorder,
        super(
          document: document,
          viewportController: viewportController,
          eventRecorder: eventRecorder,
        );
 
+  final ViewportController _viewportController;
   final Logger _logger = Logger();
   final _uuid = const Uuid();
   final EventRecorder _eventRecorder;
@@ -120,25 +122,51 @@ class StarTool extends ShapeToolBase {
     canvas.drawPath(flutterPath, strokePaint);
   }
 
-  /// Override the shape creation to generate path events instead
+  // Override pointer handling to manage our own state and avoid base class shape creation
+
+  ShapeState _state = ShapeState.idle;
+  Point? _dragStartPos;
+  Point? _currentDragPos;
+  static const double _minDragDistance = 5.0;
+
+  @override
+  bool onPointerDown(PointerDownEvent event) {
+    final worldPos = _viewportController.screenToWorld(event.localPosition);
+    _dragStartPos = worldPos;
+    _currentDragPos = worldPos;
+    _state = ShapeState.dragging;
+    _logger.d('Started star drag at $worldPos');
+    return true;
+  }
+
+  @override
+  bool onPointerMove(PointerMoveEvent event) {
+    if (_state != ShapeState.dragging) return false;
+    final worldPos = _viewportController.screenToWorld(event.localPosition);
+    _currentDragPos = worldPos;
+    return true;
+  }
+
+  /// Override onPointerUp to create ONLY a path, not a shape.
+  /// We completely bypass the base class's shape creation logic.
   @override
   bool onPointerUp(PointerUpEvent event) {
     if (_state != ShapeState.dragging || _dragStartPos == null) {
-      debugPrint('[StarTool.onPointerUp] Ignoring - not dragging or no start pos');
       return false;
     }
 
-    final worldPos = viewportController.screenToWorld(
-      event.localPosition,
-    );
+    final worldPos = _viewportController.screenToWorld(event.localPosition);
     _currentDragPos = worldPos;
 
     // Check minimum drag distance
-    final dragDistance = _calculateDistance(_dragStartPos!, _currentDragPos!);
+    final dx = _currentDragPos!.x - _dragStartPos!.x;
+    final dy = _currentDragPos!.y - _dragStartPos!.y;
+    final dragDistance = sqrt(dx * dx + dy * dy);
+
     if (dragDistance < _minDragDistance) {
       _logger.d('Drag distance ($dragDistance) below threshold - ignoring');
       _resetState();
-      return false;
+      return true;
     }
 
     // Calculate bounding box with modifier key support
@@ -151,10 +179,108 @@ class StarTool extends ShapeToolBase {
       isAltPressed,
     );
 
-    // Create the star as a path
+    // Create the star as a path (NOT a shape)
     _createStarPath(boundingBox);
+
     _resetState();
     return true;
+  }
+
+  void _resetState() {
+    _state = ShapeState.idle;
+    _dragStartPos = null;
+    _currentDragPos = null;
+  }
+
+  Rect _calculateBoundingBox(
+    Point start,
+    Point end,
+    bool constrainAspect,
+    bool drawFromCenter,
+  ) {
+    double left, right, top, bottom;
+
+    if (drawFromCenter) {
+      final deltaX = (end.x - start.x).abs();
+      final deltaY = (end.y - start.y).abs();
+
+      if (constrainAspect) {
+        final radius = max(deltaX, deltaY);
+        left = start.x - radius;
+        right = start.x + radius;
+        top = start.y - radius;
+        bottom = start.y + radius;
+      } else {
+        left = start.x - deltaX;
+        right = start.x + deltaX;
+        top = start.y - deltaY;
+        bottom = start.y + deltaY;
+      }
+    } else {
+      left = min(start.x, end.x);
+      right = max(start.x, end.x);
+      top = min(start.y, end.y);
+      bottom = max(start.y, end.y);
+
+      if (constrainAspect) {
+        final size = max((right - left), (bottom - top));
+
+        if (end.x > start.x) {
+          right = left + size;
+        } else {
+          left = right - size;
+        }
+
+        if (end.y > start.y) {
+          bottom = top + size;
+        } else {
+          top = bottom - size;
+        }
+      }
+    }
+
+    return Rect.fromLTRB(left, top, right, bottom);
+  }
+
+  /// Override renderOverlay to use our own state instead of base class state
+  @override
+  void renderOverlay(ui.Canvas canvas, ui.Size size) {
+    if (_state != ShapeState.dragging ||
+        _dragStartPos == null ||
+        _currentDragPos == null) {
+      return;
+    }
+
+    final isShiftPressed = HardwareKeyboard.instance.isShiftPressed;
+    final isAltPressed = HardwareKeyboard.instance.isAltPressed;
+
+    // Calculate bounding box in world coordinates
+    final boundingBox = _calculateBoundingBox(
+      _dragStartPos!,
+      _currentDragPos!,
+      isShiftPressed,
+      isAltPressed,
+    );
+
+    // Convert bounding box corners from world to screen coordinates
+    final topLeft = _viewportController.worldToScreen(
+      Point(x: boundingBox.left, y: boundingBox.top),
+    );
+    final bottomRight = _viewportController.worldToScreen(
+      Point(x: boundingBox.right, y: boundingBox.bottom),
+    );
+
+    // Create screen-space bounding box
+    final screenBoundingBox = Rect.fromPoints(topLeft, bottomRight);
+
+    renderShapePreview(canvas, screenBoundingBox, isShiftPressed, isAltPressed);
+  }
+
+  /// Override createShapeParameters - not used since we handle everything in onPointerUp
+  @override
+  Map<String, double> createShapeParameters(Rect boundingBox) {
+    // This should never be called since we override onPointerUp
+    return {};
   }
 
   /// Creates a star as a path with individual anchors
@@ -211,6 +337,8 @@ class StarTool extends ShapeToolBase {
         strokeWidth: 1.0,  // Thinner stroke
       ),
     );
+    // Flush immediately to ensure CreatePathEvent is processed
+    _eventRecorder.flush();
 
     // Add remaining anchors
     for (int i = 1; i < anchors.length; i++) {
@@ -223,6 +351,8 @@ class StarTool extends ShapeToolBase {
           anchorType: AnchorType.line, // Star points are straight lines
         ),
       );
+      // Flush after each anchor to ensure it's not lost in buffering
+      _eventRecorder.flush();
     }
 
     // Close the path by connecting back to the first point
@@ -234,6 +364,7 @@ class StarTool extends ShapeToolBase {
         closed: true,
       ),
     );
+    _eventRecorder.flush();
 
     // End the group
     _eventRecorder.recordEvent(
@@ -243,6 +374,7 @@ class StarTool extends ShapeToolBase {
         groupId: groupId,
       ),
     );
+    _eventRecorder.flush();
 
     // Auto-select the newly created path
     _eventRecorder.recordEvent(
@@ -253,19 +385,11 @@ class StarTool extends ShapeToolBase {
         mode: SelectionMode.replace,
       ),
     );
-
-    // Flush events to ensure they're processed immediately
     _eventRecorder.flush();
 
     _logger.i(
       'Star path created: pathId=$pathId with ${anchors.length} anchors',
     );
-  }
-
-  @override
-  Map<String, double> createShapeParameters(Rect boundingBox) {
-    // Not used anymore since we're creating paths directly
-    return {};
   }
 
   @override
@@ -278,107 +402,4 @@ class StarTool extends ShapeToolBase {
 
   /// Gets the current number of points.
   int get pointCount => _pointCount;
-
-  // Helper fields and methods since we can't access private members from base
-
-  ShapeState _state = ShapeState.idle;
-  Point? _dragStartPos;
-  Point? _currentDragPos;
-  static const double _minDragDistance = 5.0;
-  final ViewportController viewportController;
-
-  @override
-  bool onPointerDown(PointerDownEvent event) {
-    final worldPos = viewportController.screenToWorld(
-      event.localPosition,
-    );
-    _dragStartPos = worldPos;
-    _state = ShapeState.dragging;
-    debugPrint('[StarTool] Started drag at $worldPos');
-    return true;
-  }
-
-  @override
-  bool onPointerMove(PointerMoveEvent event) {
-    if (_state != ShapeState.dragging) {
-      return false;
-    }
-
-    _currentDragPos = viewportController.screenToWorld(
-      event.localPosition,
-    );
-    return true;
-  }
-
-  void _resetState() {
-    _state = ShapeState.idle;
-    _dragStartPos = null;
-    _currentDragPos = null;
-  }
-
-  double _calculateDistance(Point p1, Point p2) {
-    final dx = p2.x - p1.x;
-    final dy = p2.y - p1.y;
-    return sqrt(dx * dx + dy * dy);
-  }
-
-  Rect _calculateBoundingBox(
-    Point start,
-    Point end,
-    bool constrainAspect,
-    bool drawFromCenter,
-  ) {
-    double left, right, top, bottom;
-
-    if (drawFromCenter) {
-      // Alt key: draw from center
-      final deltaX = (end.x - start.x).abs();
-      final deltaY = (end.y - start.y).abs();
-
-      if (constrainAspect) {
-        // Shift + Alt: square from center
-        final radius = max(deltaX, deltaY);
-        left = start.x - radius;
-        right = start.x + radius;
-        top = start.y - radius;
-        bottom = start.y + radius;
-      } else {
-        // Alt only: rectangle from center
-        left = start.x - deltaX;
-        right = start.x + deltaX;
-        top = start.y - deltaY;
-        bottom = start.y + deltaY;
-      }
-    } else {
-      // Default: corner to corner
-      left = min(start.x, end.x);
-      right = max(start.x, end.x);
-      top = min(start.y, end.y);
-      bottom = max(start.y, end.y);
-
-      if (constrainAspect) {
-        // Shift only: constrain to square
-        final size = max((right - left), (bottom - top));
-
-        // Adjust based on drag direction
-        if (end.x > start.x) {
-          right = left + size;
-        } else {
-          left = right - size;
-        }
-
-        if (end.y > start.y) {
-          bottom = top + size;
-        } else {
-          top = bottom - size;
-        }
-      }
-    }
-
-    return Rect.fromLTRB(left, top, right, bottom);
-  }
 }
-
-// Helper function to get min/max
-T min<T extends num>(T a, T b) => a < b ? a : b;
-T max<T extends num>(T a, T b) => a > b ? a : b;

@@ -194,13 +194,33 @@ class _WireTunerCanvasState extends State<WireTunerCanvas> {
 
     // Listen to viewport controller for frame time measurement
     widget.viewportController.addListener(_onViewportChanged);
+
+    // Listen to tool manager to trigger repaints for tool overlays
+    widget.toolManager?.addListener(_onToolManagerChanged);
+  }
+
+  @override
+  void didUpdateWidget(WireTunerCanvas oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.toolManager != oldWidget.toolManager) {
+      oldWidget.toolManager?.removeListener(_onToolManagerChanged);
+      widget.toolManager?.addListener(_onToolManagerChanged);
+    }
   }
 
   @override
   void dispose() {
     widget.viewportController.removeListener(_onViewportChanged);
+    widget.toolManager?.removeListener(_onToolManagerChanged);
     _viewportState.dispose();
     super.dispose();
+  }
+
+  /// Handles tool manager changes to trigger overlay repaints.
+  void _onToolManagerChanged() {
+    if (mounted) {
+      setState(() {});
+    }
   }
 
   /// Handles telemetry callback from viewport state.

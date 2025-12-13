@@ -1,3 +1,7 @@
+import 'dart:math';
+import 'package:flutter/foundation.dart';
+import 'package:vector_math/vector_math_64.dart';
+import 'package:wiretuner/domain/models/geometry/point_extensions.dart';
 import 'package:freezed_annotation/freezed_annotation.dart';
 import 'package:wiretuner/domain/document/json_converters.dart';
 import 'package:wiretuner/domain/document/selection.dart';
@@ -149,40 +153,84 @@ class VectorObject with _$VectorObject {
   bool hitTest(Point point) {
     return when(
       path: (_, path, transform) {
+        const anchorTolerance = 8.0;
+        Point transformedPoint = point;
+
         if (transform != null) {
-          // For transformed objects, check against transformed bounds
-          final transformedBounds = _transformBounds(path.bounds(), transform);
-          return point.x >= transformedBounds.x &&
-              point.x <= transformedBounds.x + transformedBounds.width &&
-              point.y >= transformedBounds.y &&
-              point.y <= transformedBounds.y + transformedBounds.height;
-        } else {
-          // No transform, use original bounds
-          final bounds = path.bounds();
-          return point.x >= bounds.x &&
-              point.x <= bounds.x + bounds.width &&
-              point.y >= bounds.y &&
-              point.y <= bounds.y + bounds.height;
+          try {
+            final invertedMatrix = transform.matrix.clone()..invert();
+            transformedPoint = invertedMatrix.transform3(point.toVector3()).toPoint();
+          } catch (e) {
+            // Matrix is non-invertible, so we cannot perform a reliable inverse transformation.
+            // As a fallback, we can use the old bounding box logic.
+            final transformedBounds = _transformBounds(path.bounds(), transform);
+            const pathPadding = 5.0;
+            return transformedPoint.x >= transformedBounds.x - pathPadding &&
+                transformedPoint.x <= transformedBounds.x + transformedBounds.width + pathPadding &&
+                transformedPoint.y >= transformedBounds.y - pathPadding &&
+                transformedPoint.y <= transformedBounds.y + transformedBounds.height + pathPadding;
+          }
         }
+        
+        for (final anchor in path.anchors) {
+          final dx = transformedPoint.x - anchor.position.x;
+          final dy = transformedPoint.y - anchor.position.y;
+          if ((dx * dx + dy * dy) <= anchorTolerance * anchorTolerance) {
+            return true;
+          }
+        }
+
+        const double lineTolerance = 5.0;
+        final List<Point> vertices = path.anchors.map((a) => a.position).toList();
+        if (path.closed && vertices.length > 1) {
+          vertices.add(vertices.first);
+        }
+
+        for (int i = 0; i < vertices.length - 1; i++) {
+          final p1 = vertices[i];
+          final p2 = vertices[i+1];
+          final double dist = _pointToSegmentDistance(transformedPoint, p1, p2);
+          if (dist <= lineTolerance) {
+            return true;
+          }
+        }
+
+        return false;
       },
       shape: (_, shape, transform) {
         final baseBounds = shape.toPath().bounds();
+        const pathPadding = 5.0;
+
         if (transform != null) {
-          // For transformed objects, check against transformed bounds
           final transformedBounds = _transformBounds(baseBounds, transform);
-          return point.x >= transformedBounds.x &&
-              point.x <= transformedBounds.x + transformedBounds.width &&
-              point.y >= transformedBounds.y &&
-              point.y <= transformedBounds.y + transformedBounds.height;
+          return point.x >= transformedBounds.x - pathPadding &&
+              point.x <= transformedBounds.x + transformedBounds.width + pathPadding &&
+              point.y >= transformedBounds.y - pathPadding &&
+              point.y <= transformedBounds.y + transformedBounds.height + pathPadding;
         } else {
-          // No transform, use original bounds
-          return point.x >= baseBounds.x &&
-              point.x <= baseBounds.x + baseBounds.width &&
-              point.y >= baseBounds.y &&
-              point.y <= baseBounds.y + baseBounds.height;
+          return point.x >= baseBounds.x - pathPadding &&
+              point.x <= baseBounds.x + baseBounds.width + pathPadding &&
+              point.y >= baseBounds.y - pathPadding &&
+              point.y <= baseBounds.y + baseBounds.height + pathPadding;
         }
       },
     );
+  }
+
+  double _pointToSegmentDistance(Point p, Point a, Point b) {
+    final double l2 = (a.x - b.x) * (a.x - b.x) + (a.y - b.y) * (a.y - b.y);
+    if (l2 == 0.0) {
+      final dx = p.x - a.x;
+      final dy = p.y - a.y;
+      return sqrt(dx * dx + dy * dy);
+    }
+    final double t = ((p.x - a.x) * (b.x - a.x) + (p.y - a.y) * (b.y - a.y)) / l2;
+    final double nt = t.clamp(0.0, 1.0);
+    final double projX = a.x + nt * (b.x - a.x);
+    final double projY = a.y + nt * (b.y - a.y);
+    final dx = p.x - projX;
+    final dy = p.y - projY;
+    return sqrt(dx * dx + dy * dy);
   }
 }
 
@@ -484,13 +532,18 @@ class Artboard with _$Artboard {
   /// Objects are returned in reverse rendering order (top-most first).
   /// This is useful for hit testing during selection.
   List<VectorObject> objectsAtPoint(Point point) {
+    debugPrint('[Artboard.objectsAtPoint] Testing point $point against ${layers.length} layers');
     final results = <VectorObject>[];
     // Iterate layers in reverse (top layer first)
     for (final layer in layers.reversed) {
+      debugPrint('[Artboard.objectsAtPoint] Layer ${layer.id}: visible=${layer.visible}, locked=${layer.locked}, objects=${layer.objects.length}');
       if (layer.visible && !layer.locked) {
-        results.addAll(layer.objectsAtPoint(point));
+        final layerHits = layer.objectsAtPoint(point);
+        debugPrint('[Artboard.objectsAtPoint] Layer ${layer.id} found ${layerHits.length} hits');
+        results.addAll(layerHits);
       }
     }
+    debugPrint('[Artboard.objectsAtPoint] Total hits: ${results.length}');
     return results;
   }
 

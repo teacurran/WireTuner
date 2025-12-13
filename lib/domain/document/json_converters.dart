@@ -1,5 +1,5 @@
 import 'package:json_annotation/json_annotation.dart';
-import 'package:vector_math/vector_math.dart';
+import 'package:vector_math/vector_math_64.dart';
 import 'package:wiretuner/domain/events/event_base.dart';
 import 'package:wiretuner/domain/models/anchor_point.dart' as ap;
 import 'package:wiretuner/domain/models/geometry/rectangle.dart';

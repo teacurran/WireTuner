@@ -15,7 +15,7 @@ import 'package:wiretuner/application/tools/selection/selection_tool.dart';
 import 'package:wiretuner/application/tools/shapes/ellipse_tool.dart';
 import 'package:wiretuner/application/tools/shapes/polygon_tool.dart';
 import 'package:wiretuner/application/tools/shapes/rectangle_tool.dart';
-import 'package:wiretuner/application/tools/shapes/star_tool_fixed.dart';
+import 'package:wiretuner/application/tools/shapes/star_tool.dart';
 import 'package:wiretuner/domain/document/document.dart';
 import 'package:wiretuner/domain/document/selection.dart';
 import 'package:wiretuner/domain/models/geometry/rectangle.dart';
@@ -221,7 +221,7 @@ class _AppInitializerState extends State<_AppInitializer> {
     // Register Selection Tool
     _toolManager.registerTool(
       SelectionTool(
-        document: _documentProvider.document,
+        documentProvider: _documentProvider,
         viewportController: _viewportController,
         eventRecorder: _eventRecorder,
       ),
@@ -230,7 +230,7 @@ class _AppInitializerState extends State<_AppInitializer> {
     // Register Direct Selection Tool
     _toolManager.registerTool(
       DirectSelectionTool(
-        document: _documentProvider.document,
+        documentProvider: _documentProvider,
         viewportController: _viewportController,
         eventRecorder: _eventRecorder,
         pathRenderer: _pathRenderer,
@@ -276,7 +276,7 @@ class _AppInitializerState extends State<_AppInitializer> {
 
     // Register Star Tool
     _toolManager.registerTool(
-      StarToolFixed(
+      StarTool(
         document: _documentProvider.document,
         viewportController: _viewportController,
         eventRecorder: _eventRecorder,

@@ -77,6 +77,26 @@ class EventSampler {
   /// - Sampling disabled ([samplingInterval] = 0): all events emitted
   void recordEvent(EventBase event) {
     print('[EventSampler] recordEvent called for: ${event.eventType}');
+
+    // Critical events that should never be buffered/sampled
+    final criticalEvents = {
+      'CreatePathEvent',
+      'AddAnchorEvent',
+      'FinishPathEvent',
+      'StartGroupEvent',
+      'EndGroupEvent',
+      'SelectObjectsEvent',
+      'ClearSelectionEvent',
+      'DeselectObjectsEvent',
+    };
+
+    // Emit critical events immediately regardless of sampling
+    if (criticalEvents.contains(event.eventType)) {
+      print('[EventSampler] Critical event, emitting immediately: ${event.eventType}');
+      _emitEvent(event);
+      return;
+    }
+
     // If sampling is disabled (zero interval), emit immediately
     if (_samplingInterval == Duration.zero) {
       print('[EventSampler] Sampling disabled, emitting immediately');

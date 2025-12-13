@@ -1,7 +1,7 @@
 import 'dart:math' as math;
 
 import 'package:flutter/foundation.dart';
-import 'package:vector_math/vector_math.dart';
+import 'package:vector_math/vector_math_64.dart';
 import 'package:wiretuner/domain/events/event_base.dart';
 import 'package:wiretuner/domain/models/geometry/rectangle.dart';
 

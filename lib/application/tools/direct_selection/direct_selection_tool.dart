@@ -25,6 +25,7 @@ import 'package:wiretuner/presentation/canvas/overlays/hit_tester.dart'
 import 'package:wiretuner/presentation/canvas/overlays/selection_overlay.dart';
 import 'package:wiretuner/presentation/canvas/painter/path_renderer.dart';
 import 'package:wiretuner/presentation/canvas/viewport/viewport_controller.dart';
+import 'package:wiretuner/presentation/state/document_provider.dart';
 
 /// Tool for direct manipulation of anchor points and Bezier control points.
 ///
@@ -80,13 +81,13 @@ import 'package:wiretuner/presentation/canvas/viewport/viewport_controller.dart'
 /// ```
 class DirectSelectionTool implements ITool {
   DirectSelectionTool({
-    required Document document,
+    required DocumentProvider documentProvider,
     required ViewportController viewportController,
     required EventRecorder eventRecorder,
     required PathRenderer pathRenderer,
     OperationGroupingService? operationGroupingService,
     TelemetryService? telemetryService,
-  })  : _document = document,
+  })  : _documentProvider = documentProvider,
         _viewportController = viewportController,
         _eventRecorder = eventRecorder,
         _pathRenderer = pathRenderer,
@@ -130,8 +131,11 @@ class DirectSelectionTool implements ITool {
 
     _logger.i('DirectSelectionTool initialized');
   }
-  final Document _document;
+  final DocumentProvider _documentProvider;
   final ViewportController _viewportController;
+
+  /// Gets the current document from the provider.
+  Document get _document => _documentProvider.document;
   final EventRecorder _eventRecorder;
   final PathRenderer _pathRenderer;
   final OperationGroupingService? _operationGroupingService;
@@ -477,6 +481,9 @@ class DirectSelectionTool implements ITool {
         handleOut: result.handleOut,
       ),
     );
+
+    // Flush immediately to see real-time updates
+    _eventRecorder.flush();
 
     // Update drag context with feedback metrics
     _dragContext = context.copyWith(

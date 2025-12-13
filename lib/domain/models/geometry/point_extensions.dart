@@ -1,4 +1,5 @@
 import 'dart:math';
+import 'package:vector_math/vector_math_64.dart';
 
 import 'package:wiretuner/domain/events/event_base.dart';
 
@@ -7,6 +8,9 @@ import 'package:wiretuner/domain/events/event_base.dart';
 /// Adds vector arithmetic and distance calculations to the existing Point class.
 /// All operations preserve immutability by returning new Point instances.
 extension PointGeometry on Point {
+  /// Converts this Point to a Vector3, with z set to 0.
+  Vector3 toVector3() => Vector3(x, y, 0);
+
   /// Calculates the Euclidean distance to another point.
   ///
   /// Uses the formula: sqrt((x2-x1)^2 + (y2-y1)^2)
@@ -130,4 +134,10 @@ extension PointGeometry on Point {
   /// print(p1.cross(p2)); // -2.0 (2*5 - 3*4)
   /// ```
   double cross(Point other) => x * other.y - y * other.x;
+}
+
+/// Extension methods to convert a Vector3 to a Point.
+extension Vector3ToPoint on Vector3 {
+  /// Converts this Vector3 to a Point, discarding the z component.
+  Point toPoint() => Point(x: x, y: y);
 }

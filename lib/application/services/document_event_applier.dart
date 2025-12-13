@@ -250,17 +250,11 @@ class DocumentEventApplier {
 
       for (final obj in layer.objects) {
         if (event.objectIds.contains(obj.id)) {
-          // Apply translation to this object
-          final currentTransform = obj.when(
-            path: (_, __, transform) => transform,
-            shape: (_, __, transform) => transform,
-          );
-
-          // Compose: current transform then translation
-          // If no existing transform, just use translation
-          final newTransform = currentTransform != null
-              ? currentTransform.compose(translation)
-              : translation;
+          // Replace transform with cumulative delta
+          // NOTE: MoveObjectEvents contain cumulative deltas from drag start,
+          // so we replace the transform instead of composing it to avoid
+          // accumulating the same delta multiple times
+          final newTransform = translation;
 
           // Update object with new transform
           final updatedObj = obj.when(
